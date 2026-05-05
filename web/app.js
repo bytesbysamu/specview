@@ -1,13 +1,16 @@
 const API = '/api';
-let activeProject = null;
+const REFRESH_INTERVAL = 30_000; // poll every 30s
+
+let allProjects = [];
+let activeSection = 'all';
 let activeFile = null;
-let projects = [];
+let activeProject = null;
+let knownCount = 0;
 
 // ── Theme ──────────────────────────────────────
 const savedTheme = localStorage.getItem('theme') || 'light';
 if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
-
 document.getElementById('theme-toggle').addEventListener('click', () => {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const next = isDark ? 'light' : 'dark';
@@ -16,109 +19,235 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
   document.getElementById('theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
 });
 
-// ── Date ───────────────────────────────────────
 document.getElementById('masthead-date').textContent =
   new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+// ── Categorise ────────────────────────────────
+const SECTIONS = [
+  { id: 'context',     label: 'Context',      icon: '📐' },
+  { id: 'all',         label: 'All',           icon: '' },
+  { id: 'products',    label: 'Products',      icon: '🚀' },
+  { id: 'platform',    label: 'Platform',      icon: '⚙️' },
+  { id: 'braindumps',  label: 'Braindumps',    icon: '🧠' },
+  { id: 'engineering', label: 'Engineering',   icon: '🔧' },
+  { id: 'devex',       label: 'Dev Experience',icon: '🛠' },
+  { id: 'distribution',label: 'Distribution',  icon: '📣' },
+  { id: 'status',      label: 'Status',        icon: '📊' },
+  { id: 'misc',        label: 'Misc',          icon: '📁' },
+];
+
+function categorise(id) {
+  const s = id.toLowerCase();
+  if (/braindump/.test(s) || /phase\d+-.*braindump/.test(s) || /model-chains-braindump/.test(s)) return 'braindumps';
+  if (/^(bubls|trendfy|howdays|relateai|babyname|photoshoot|wardrobai|tennispartner|relationship|specdocv2|michi|portfolio|cold-dm-templates|voice|twitter-bio|linkedin|reddit|the-post|landing-copy|waitlist|github-readme)/.test(s)) return 'products';
+  if (/^(saas|v2-spec-doc|spec-doc-flask|spec-doc-api|spec-doc-self|aligning-spec-doc|deployment-stack|saas-feature|saas-port|spec-doc-improvements|status-|run-2026)/.test(s)) return 'platform';
+  if (/^(chain|workflow|pipeline|bootstrap|batch|text-chains|two-separate|parallel|iteration|generate-next|run-chain|raise-max|runtime-cancel|retry-recovery)/.test(s)) return 'engineering';
+  if (/^(dev-experience|e2e|test-|gherkin|codebase-cleanup|architecture-cleanup|apply-button|integration-test|express-retirement|modular-restructure|directory-listing|port-)/.test(s)) return 'devex';
+  if (/^(landing-page|distribution-experiment|the-post|waitlist|linkedin-update|twitter|reddit-post|cold-dm|voice-demo|voice-input|github-readme)/.test(s)) return 'distribution';
+  if (/^(status|phase2-|phase3-|phase4-|phase5-|saas-feature-roadmap|saas-port-roadmap|spec-doc-improvements|run-2026)/.test(s)) return 'status';
+  return 'misc';
+}
+
+// ── Context files ─────────────────────────────
+const CONTEXT_FILES = [
+  { key: 'builder',    label: 'Builder',    desc: 'How to build with spec-doc' },
+  { key: 'principles', label: 'Principles', desc: 'Core development principles' },
+  { key: 'codebase',   label: 'Codebase',   desc: 'Codebase overview & conventions' },
+  { key: 'references', label: 'References', desc: 'External references & links' },
+  { key: 'quality',    label: 'Quality',    desc: 'Quality rules & linting' },
+  { key: 'versions',   label: 'Versions',   desc: 'Deployment fact sheet' },
+];
 
 // ── Helpers ────────────────────────────────────
 function stripMarkdown(md = '') {
   return md
-    .replace(/```[\s\S]*?```/g, '')   // code blocks
-    .replace(/`[^`]*`/g, '')           // inline code
-    .replace(/#{1,6}\s+/g, '')         // headings
-    .replace(/\*\*([^*]*)\*\*/g, '$1') // bold
-    .replace(/\*([^*]*)\*/g, '$1')     // italic
-    .replace(/!\[.*?\]\(.*?\)/g, '')   // images
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // links
-    .replace(/[-*+]\s+/g, '')          // list bullets
-    .replace(/\n+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`[^`]*`/g, '')
+    .replace(/#{1,6}\s+/g, '')
+    .replace(/\*\*([^*]*)\*\*/g, '$1')
+    .replace(/\*([^*]*)\*/g, '$1')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[-*+]\s+/g, '')
+    .replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function teaser(content, maxLen = 120) {
+function teaser(content, len = 140) {
   const plain = stripMarkdown(content);
-  return plain.length > maxLen ? plain.slice(0, maxLen).trimEnd() + '…' : plain;
+  return plain.length > len ? plain.slice(0, len).trimEnd() + '…' : plain;
 }
 
-// ── Init ───────────────────────────────────────
+function sectionFor(id) {
+  return SECTIONS.find(s => s.id === id) || SECTIONS[SECTIONS.length - 1];
+}
+
+// ── Init & polling ────────────────────────────
 async function init() {
-  const res = await fetch(`${API}/projects`);
-  projects = await res.json();
-  renderNav();
-  if (projects.length > 0) selectProject(projects[0].id);
+  await loadProjects();
+  setInterval(checkForUpdates, REFRESH_INTERVAL);
 }
 
+async function loadProjects() {
+  const res = await fetch(`${API}/projects`);
+  allProjects = await res.json();
+  knownCount = allProjects.length;
+  renderNav();
+  renderSection(activeSection);
+}
+
+async function checkForUpdates() {
+  try {
+    const res = await fetch(`${API}/projects`);
+    const fresh = await res.json();
+    if (fresh.length !== knownCount) {
+      allProjects = fresh;
+      knownCount = fresh.length;
+      showUpdateBanner(fresh.length - knownCount);
+      renderNav();
+      if (activeSection !== 'context') renderSection(activeSection);
+    }
+  } catch (_) {}
+}
+
+function showUpdateBanner(diff) {
+  const existing = document.getElementById('update-banner');
+  if (existing) existing.remove();
+  const b = document.createElement('div');
+  b.id = 'update-banner';
+  b.className = 'update-banner';
+  b.innerHTML = `${diff > 0 ? `+${diff} new` : 'Projects updated'} · <button onclick="document.getElementById('update-banner').remove()">dismiss</button>`;
+  document.querySelector('.section-nav').after(b);
+}
+
+// ── Nav ───────────────────────────────────────
 function renderNav() {
+  const counts = {};
+  allProjects.forEach(p => {
+    const cat = categorise(p.id);
+    counts[cat] = (counts[cat] || 0) + 1;
+    counts['all'] = (counts['all'] || 0) + 1;
+  });
+
   const nav = document.getElementById('project-nav');
-  nav.innerHTML = projects.map(p => `
-    <button class="section-link" data-id="${p.id}">${p.name}</button>
-  `).join('');
+  nav.innerHTML = SECTIONS.map(s => {
+    const count = s.id === 'context' ? CONTEXT_FILES.length : (counts[s.id] ?? '');
+    const label = count !== '' ? `${s.icon} ${s.label} <span class="section-count">${count}</span>` : `${s.icon} ${s.label}`;
+    return `<button class="section-link${s.id === activeSection ? ' active' : ''}" data-section="${s.id}">${label}</button>`;
+  }).join('');
+
   nav.querySelectorAll('.section-link').forEach(btn => {
-    btn.addEventListener('click', () => selectProject(btn.dataset.id));
+    btn.addEventListener('click', () => {
+      activeSection = btn.dataset.section;
+      closeExpanded();
+      renderSection(activeSection);
+      nav.querySelectorAll('.section-link').forEach(b => b.classList.toggle('active', b.dataset.section === activeSection));
+    });
   });
 }
 
-async function selectProject(id) {
-  document.querySelectorAll('#project-nav .section-link').forEach(b =>
-    b.classList.toggle('active', b.dataset.id === id)
-  );
-  closeExpanded();
-  activeFile = null;
+// ── Section render ────────────────────────────
+function renderSection(section) {
+  if (section === 'context') {
+    renderContextSection();
+    return;
+  }
+  const projects = section === 'all'
+    ? allProjects
+    : allProjects.filter(p => categorise(p.id) === section);
 
-  document.getElementById('file-grid').innerHTML =
-    '<div class="empty-state">Loading…</div>';
-
-  const res = await fetch(`${API}/projects/${id}`);
-  activeProject = await res.json();
-  renderFileGrid();
+  renderProjectGrid(projects);
 }
 
-function renderFileGrid() {
+function renderContextSection() {
   const grid = document.getElementById('file-grid');
-  const specs = activeProject.specs ?? [];
+  grid.innerHTML = `
+    <div class="context-grid">
+      ${CONTEXT_FILES.map(f => `
+        <div class="context-card" data-key="${f.key}">
+          <div class="context-card__label">${f.label}</div>
+          <div class="context-card__desc">${f.desc}</div>
+        </div>
+      `).join('')}
+    </div>`;
 
-  if (specs.length === 0) {
-    grid.innerHTML = '<div class="empty-state">No files in this project.</div>';
+  grid.querySelectorAll('.context-card').forEach(card => {
+    card.addEventListener('click', () => openContextFile(card.dataset.key));
+  });
+}
+
+async function openContextFile(key) {
+  const ctx = CONTEXT_FILES.find(f => f.key === key);
+  const res = await fetch(`${API}/context/${key}`);
+  const data = await res.json();
+  const content = data.content || data.text || '';
+
+  document.getElementById('expanded-project').textContent = 'Context';
+  document.getElementById('expanded-file').textContent = `${key}.md`;
+  document.getElementById('expanded-title').textContent = ctx.label;
+  document.getElementById('expanded-body').innerHTML = content
+    ? marked.parse(content)
+    : '<p style="color:var(--ink-muted);font-style:italic">No content.</p>';
+
+  const panel = document.getElementById('expanded-panel');
+  panel.classList.add('active');
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+
+// ── Project grid ──────────────────────────────
+function renderProjectGrid(projects) {
+  const grid = document.getElementById('file-grid');
+
+  if (projects.length === 0) {
+    grid.innerHTML = '<div class="empty-state">No projects in this section.</div>';
     return;
   }
 
-  // Distribute top-down across columns so columns are even, not left-heavy
-  const numCols = Math.min(3, specs.length);
+  const numCols = Math.min(3, Math.ceil(projects.length / 2));
   const cols = Array.from({ length: numCols }, () => []);
-  specs.forEach((s, i) => cols[i % numCols].push(s));
+  projects.forEach((p, i) => cols[i % numCols].push(p));
 
   grid.innerHTML = cols.map((col, ci) => `
     <div class="file-column">
       <div class="file-header">
-        ${ci === 0
-          ? `<span style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">${activeProject.name}</span>`
-          : ''}
+        ${ci === 0 ? `<span class="col-label">${projects.length} ${activeSection === 'all' ? 'projects' : sectionFor(activeSection).label.toLowerCase()}</span>` : ''}
       </div>
-      ${col.map(s => `
-        <div class="file-item" data-file="${s.filename}">
-          <div class="file-item-title">${s.label}</div>
-          ${s.content ? `<div class="file-item-teaser">${teaser(s.content)}</div>` : ''}
-          <div class="file-item-meta">${s.filename}</div>
-        </div>
-      `).join('')}
+      ${col.map(p => {
+        const firstSpec = p.specs?.[0];
+        return `
+          <div class="file-item" data-id="${p.id}">
+            <div class="file-item-title">${p.name}</div>
+            ${firstSpec ? `<div class="file-item-teaser">${teaser(firstSpec.content || '')}</div>` : ''}
+            <div class="file-item-meta">${p.specs?.length ?? 0} files · ${categorise(p.id)}</div>
+          </div>`;
+      }).join('')}
     </div>
   `).join('');
 
   grid.querySelectorAll('.file-item').forEach(item => {
-    item.addEventListener('click', () => openFile(item.dataset.file));
+    item.addEventListener('click', () => selectProject(item.dataset.id));
   });
 }
 
-function openFile(filename) {
+// ── Project & file open ───────────────────────
+async function selectProject(id) {
+  document.querySelectorAll('.file-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.id === id)
+  );
+
+  const cached = allProjects.find(p => p.id === id);
+  const res = await fetch(`${API}/projects/${id}`);
+  activeProject = await res.json();
+  activeFile = activeProject.specs?.[0]?.filename ?? null;
+
+  openFileInExpanded(activeFile);
+}
+
+function openFileInExpanded(filename) {
+  if (!activeProject || !filename) return;
   const spec = activeProject.specs.find(s => s.filename === filename);
   if (!spec) return;
 
-  // Mark active file in grid
   activeFile = filename;
-  document.querySelectorAll('.file-item').forEach(el =>
-    el.classList.toggle('active', el.dataset.file === filename)
-  );
 
   document.getElementById('expanded-project').textContent = activeProject.name;
   document.getElementById('expanded-file').textContent = filename;
@@ -127,20 +256,39 @@ function openFile(filename) {
     ? marked.parse(spec.content)
     : '<p style="color:var(--ink-muted);font-style:italic">No content.</p>';
 
+  // Render file tabs inside expanded header
+  const tabsEl = document.getElementById('expanded-tabs');
+  if (tabsEl && activeProject.specs.length > 1) {
+    tabsEl.innerHTML = activeProject.specs.map(s => `
+      <button class="tab-btn${s.filename === filename ? ' active' : ''}" data-file="${s.filename}">${s.label}</button>
+    `).join('');
+    tabsEl.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabsEl.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.file === btn.dataset.file));
+        openFileInExpanded(btn.dataset.file);
+      });
+    });
+    tabsEl.style.display = '';
+  } else if (tabsEl) {
+    tabsEl.style.display = 'none';
+  }
+
   const panel = document.getElementById('expanded-panel');
-  panel.classList.add('active');
-  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  if (!panel.classList.contains('active')) {
+    panel.classList.add('active');
+    setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
 }
 
 function closeExpanded() {
   document.getElementById('expanded-panel').classList.remove('active');
   document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+  activeProject = null;
   activeFile = null;
 }
 
 document.getElementById('expanded-close').addEventListener('click', () => {
   closeExpanded();
-  // Scroll back up to the file grid
   document.getElementById('file-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 

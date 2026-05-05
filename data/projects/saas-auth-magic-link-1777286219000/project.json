@@ -1,0 +1,17 @@
+{
+  "name": "SaaS Auth — Magic Link",
+  "createdAt": "2026-04-26T00:00:00.000Z",
+  "slug": "saas-auth-magic-link",
+  "source": "projects/braindump-saas-auth-magic-link.md",
+  "capabilityFamily": "saas",
+  "blocks": ["saas-stripe-billing", "saas-usage-metering"],
+  "dependsOn": ["saas-persistence", "modular-restructure"],
+  "lockedDecisions": {
+    "authProvider": "neon-auth",
+    "jwtAlgorithm": "RS256",
+    "jwtSubjectColumn": "User.auth_user_id",
+    "modulePlacement": "modules/auth (top-level SAAS_OPTIONAL)",
+    "decoratorContract": "@require_auth sets g.current_user",
+    "frontendStorage": "localStorage spec_doc_jwt"
+  }
+}

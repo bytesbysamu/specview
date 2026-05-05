@@ -354,6 +354,109 @@ body {
   grid-column: 1 / -1;
 }
 
+/* ── Section count badge ─────────────────────── */
+.section-count {
+  font-size: 9px;
+  color: var(--ink-muted);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+/* ── Col label ───────────────────────────────── */
+.col-label {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+}
+
+/* ── Update banner ───────────────────────────── */
+.update-banner {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 12px;
+  background: var(--ink);
+  color: var(--bg);
+  text-align: center;
+  padding: 8px 16px;
+  margin: 8px 0;
+}
+.update-banner button {
+  background: none;
+  border: 1px solid var(--bg);
+  color: var(--bg);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-left: 12px;
+  border-radius: 2px;
+  font-family: 'Source Sans 3', sans-serif;
+}
+
+/* ── Context section ─────────────────────────── */
+.context-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 24px 0;
+  grid-column: 1 / -1;
+}
+
+.context-card {
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.context-card:hover {
+  border-color: var(--ink);
+  background: rgba(0,0,0,0.02);
+}
+[data-theme="dark"] .context-card:hover { background: rgba(255,255,255,0.03); }
+
+.context-card__label {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.context-card__desc {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+/* ── File tabs ───────────────────────────────── */
+.expanded-tabs {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 16px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  font-weight: 600;
+}
+
 /* ── Footer ──────────────────────────────────── */
 .footer { text-align: center; padding: 20px 0; }
 .footer p { font-family: 'Source Sans 3', sans-serif; font-size: 11px; color: var(--ink-muted); }

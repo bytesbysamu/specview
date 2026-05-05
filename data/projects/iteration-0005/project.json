@@ -1,0 +1,20 @@
+{
+  "id": "iteration-0005",
+  "name": "Iteration 0005",
+  "description": "Added Document Type Legend to README and Spec-Index, enhanced parallel lane visualization, emoji in all Related Documents links",
+  "createdAt": "2026-03-30T00:00:00Z",
+  "files": [
+    "README.md",
+    "analysis.md",
+    "epic.md",
+    "architecture.md",
+    "spec-index.md",
+    "timeline.md",
+    "task-1-document-first-editor.md",
+    "task-2-ai-text-operations.md",
+    "task-3-spec-bootstrap.md",
+    "task-4-agent-integration.md",
+    "task-5-git-integration.md",
+    "EVALUATION-V2.md"
+  ]
+}

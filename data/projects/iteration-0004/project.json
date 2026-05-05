@@ -1,0 +1,20 @@
+{
+  "id": "iteration-0004",
+  "name": "Iteration 0004",
+  "description": "Added emoji to titles (🔍🎯🏗️🛠️📅📋📖), Parallel column in task tables, Parallel With/Blocks metadata in implementation guides",
+  "createdAt": "2026-03-30T00:00:00Z",
+  "files": [
+    "README.md",
+    "analysis.md",
+    "epic.md",
+    "architecture.md",
+    "spec-index.md",
+    "timeline.md",
+    "task-1-document-first-editor.md",
+    "task-2-ai-text-operations.md",
+    "task-3-spec-bootstrap.md",
+    "task-4-agent-integration.md",
+    "task-5-git-integration.md",
+    "EVALUATION-V2.md"
+  ]
+}
