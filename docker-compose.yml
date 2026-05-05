@@ -8,6 +8,8 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    networks:
+      - specview
 
   api:
     build:
@@ -21,5 +23,14 @@ services:
       DATABASE_URL: ""
       CORS_ORIGINS: "*"
     volumes:
-      - ${SPECVIEW_DATA_DIR:-/opt/specview/data}:/data/spec-doc
+      - specview-data:/data/spec-doc
     restart: unless-stopped
+    networks:
+      - specview
+
+networks:
+  specview:
+    driver: bridge
+
+volumes:
+  specview-data:
