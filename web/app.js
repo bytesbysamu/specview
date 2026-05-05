@@ -6,6 +6,7 @@ let activeSection = 'all';
 let activeFile = null;
 let activeProject = null;
 let knownCount = 0;
+let searchQuery = '';
 
 // ── Theme ──────────────────────────────────────
 const savedTheme = localStorage.getItem('theme') || 'light';
@@ -138,6 +139,8 @@ function renderNav() {
   nav.querySelectorAll('.section-link').forEach(btn => {
     btn.addEventListener('click', () => {
       activeSection = btn.dataset.section;
+      searchQuery = '';
+      document.getElementById('search-input').value = '';
       closeExpanded();
       renderSection(activeSection);
       nav.querySelectorAll('.section-link').forEach(b => b.classList.toggle('active', b.dataset.section === activeSection));
@@ -145,15 +148,33 @@ function renderNav() {
   });
 }
 
+// ── Search ────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', e => {
+  searchQuery = e.target.value.trim().toLowerCase();
+  if (activeSection !== 'context') renderSection(activeSection);
+});
+
 // ── Section render ────────────────────────────
 function renderSection(section) {
   if (section === 'context') {
+    document.getElementById('search-bar').style.display = 'none';
     renderContextSection();
     return;
   }
-  const projects = section === 'all'
+  document.getElementById('search-bar').style.display = '';
+  let projects = section === 'all'
     ? allProjects
     : allProjects.filter(p => categorise(p.id) === section);
+
+  if (searchQuery) {
+    projects = projects.filter(p =>
+      p.name.toLowerCase().includes(searchQuery) ||
+      p.id.toLowerCase().includes(searchQuery)
+    );
+  }
+
+  const countEl = document.getElementById('search-count');
+  countEl.textContent = searchQuery ? `${projects.length} match${projects.length !== 1 ? 'es' : ''}` : '';
 
   renderProjectGrid(projects);
 }
