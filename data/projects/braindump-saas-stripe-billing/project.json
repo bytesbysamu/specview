@@ -1,1 +1,4 @@
-{"id":"braindump-saas-stripe-billing","name":"ubraindump saas stripe ubilling","createdAt":"2026-01-01T00:00:00.000Z","files":[{"filename":"README.md","label":"Content"}]}
+{
+  "name": "Braindump Saas Stripe Billing",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}

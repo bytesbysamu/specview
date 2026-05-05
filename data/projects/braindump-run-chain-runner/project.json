@@ -1,1 +1,4 @@
-{"id":"braindump-run-chain-runner","name":"ubraindump run chain runner","createdAt":"2026-01-01T00:00:00.000Z","files":[{"filename":"README.md","label":"Content"}]}
+{
+  "name": "Braindump Run Chain Runner",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}

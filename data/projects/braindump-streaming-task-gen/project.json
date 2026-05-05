@@ -1,1 +1,4 @@
-{"id":"braindump-streaming-task-gen","name":"ubraindump streaming task gen","createdAt":"2026-01-01T00:00:00.000Z","files":[{"filename":"README.md","label":"Content"}]}
+{
+  "name": "Braindump Streaming Task Gen",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}

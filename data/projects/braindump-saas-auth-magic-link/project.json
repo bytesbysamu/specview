@@ -1,1 +1,4 @@
-{"id":"braindump-saas-auth-magic-link","name":"ubraindump saas auth magic link","createdAt":"2026-01-01T00:00:00.000Z","files":[{"filename":"README.md","label":"Content"}]}
+{
+  "name": "Braindump Saas Auth Magic Link",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}

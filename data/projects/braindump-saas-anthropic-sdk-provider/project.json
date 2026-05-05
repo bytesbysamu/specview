@@ -1,1 +1,4 @@
-{"id":"braindump-saas-anthropic-sdk-provider","name":"ubraindump saas anthropic sdk provider","createdAt":"2026-01-01T00:00:00.000Z","files":[{"filename":"README.md","label":"Content"}]}
+{
+  "name": "Braindump Saas Anthropic Sdk Provider",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}

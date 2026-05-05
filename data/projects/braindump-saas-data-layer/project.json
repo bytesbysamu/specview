@@ -1,1 +1,4 @@
-{"id":"braindump-saas-data-layer","name":"ubraindump saas data layer","createdAt":"2026-01-01T00:00:00.000Z","files":[{"filename":"README.md","label":"Content"}]}
+{
+  "name": "Braindump Saas Data Layer",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}

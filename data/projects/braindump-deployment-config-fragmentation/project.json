@@ -1,1 +1,4 @@
-{"id":"braindump-deployment-config-fragmentation","name":"ubraindump deployment config fragmentation","createdAt":"2026-01-01T00:00:00.000Z","files":[{"filename":"README.md","label":"Content"}]}
+{
+  "name": "Braindump Deployment Config Fragmentation",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}
