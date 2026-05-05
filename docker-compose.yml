@@ -13,8 +13,8 @@ services:
 
   api:
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: api/Dockerfile
     environment:
       APP_ENV: production
       SPEC_DOC_DIR: /data/spec-doc
@@ -22,8 +22,6 @@ services:
       CHAIN_PROVIDER: cli
       DATABASE_URL: ""
       CORS_ORIGINS: "*"
-    volumes:
-      - specview-data:/data/spec-doc
     restart: unless-stopped
     networks:
       - specview
@@ -31,6 +29,3 @@ services:
 networks:
   specview:
     driver: bridge
-
-volumes:
-  specview-data:
