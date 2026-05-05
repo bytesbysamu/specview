@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Specview</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="shell">
+
+    <nav class="shell-nav">
+      <div class="sidebar">
+        <div class="sidebar-shell">
+          <div class="sidebar-shell__header">
+            <div class="sidebar-brand">
+              <div class="sidebar-brand__copy">
+                <span class="sidebar-brand__eyebrow">Workspace</span>
+                <span class="sidebar-brand__title">Specview</span>
+              </div>
+            </div>
+          </div>
+          <div class="sidebar-shell__body">
+            <nav class="sidebar-nav">
+              <div class="nav-section">
+                <div class="nav-section__label">
+                  <span class="nav-section__label-text">Projects</span>
+                </div>
+                <div class="nav-section__items" id="project-list">
+                  <!-- populated by app.js -->
+                </div>
+              </div>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <span class="topbar-breadcrumb__root">Specview</span>
+        <span class="topbar-breadcrumb__sep" id="breadcrumb-sep" style="display:none">›</span>
+        <span class="topbar-breadcrumb__current" id="breadcrumb-project"></span>
+      </div>
+      <div class="topbar-file-tabs" id="file-tabs"></div>
+    </header>
+
+    <main class="content" id="content">
+      <div class="empty-state">Select a project</div>
+    </main>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
