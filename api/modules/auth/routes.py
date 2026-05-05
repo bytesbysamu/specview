@@ -1,76 +1,43 @@
-"""Flask blueprint for /api/auth/* — login, verify, logout, me.
-
-Routes are thin: parse via DTO, call service, serialize. The @require_auth
-decorator is mounted only on /api/auth/me; the other three routes must remain
-public so unauthenticated users can request and exchange a magic link.
-"""
+"""Flask blueprint for /api/auth/* — login and me."""
 from __future__ import annotations
 
-import requests
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, g, jsonify, request
+from sqlmodel import Session, select
 
-from dtos.models import (
-    MagicLinkRequest,
-    MagicLinkResponse,
-    MeResponse,
-    VerifyRequest,
-    VerifyResponse,
-)
 from modules.auth.decorators import require_auth
-from modules.auth.service import (
-    get_or_create_user_from_claims,
-    send_magic_link,
-    verify_magic_link,
-)
+from modules.auth.models import User
+from modules.auth.service import create_token, verify_password
+from modules.data.db.engine import get_engine
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
 @auth_bp.post("/login")
 def login():
-    req = MagicLinkRequest.model_validate(request.get_json() or {})
-    try:
-        result = send_magic_link(req.email)
-    except requests.HTTPError as exc:
-        return jsonify({"error": f"neon auth rejected request: {exc}"}), 502
-    return jsonify(MagicLinkResponse(request_id=result["request_id"]).model_dump()), 202
+    """POST /api/auth/login — {email, password} → {token, email}."""
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password") or ""
 
+    if not email or not password:
+        return jsonify({"error": "email and password are required"}), 400
 
-@auth_bp.post("/verify")
-def verify():
-    req = VerifyRequest.model_validate(request.get_json() or {})
-    try:
-        exchange = verify_magic_link(req.token)
-    except requests.HTTPError as exc:
-        return jsonify({"error": f"invalid or expired token: {exc}"}), 400
+    with Session(get_engine()) as session:
+        user = session.exec(select(User).where(User.email == email)).first()
 
-    user = get_or_create_user_from_claims(
-        exchange["claims"], _current_app_user_repository()
-    )
-    payload = VerifyResponse(
-        jwt=exchange["jwt"],
-        user=MeResponse(id=user.id, email=user.email, auth_user_id=user.auth_user_id),
-    )
-    return jsonify(payload.model_dump()), 200
+    if user is None or not user.password_hash:
+        return jsonify({"error": "invalid credentials"}), 401
 
+    if not verify_password(password, user.password_hash):
+        return jsonify({"error": "invalid credentials"}), 401
 
-@auth_bp.post("/logout")
-def logout():
-    # Server-side no-op — Neon Auth owns session lifecycle. The client clears
-    # localStorage; we acknowledge with 204.
-    return ("", 204)
+    token = create_token(user.id, user.email)
+    return jsonify({"token": token, "email": user.email}), 200
 
 
 @auth_bp.get("/me")
 @require_auth
 def me():
-    user = g.current_user
-    payload = MeResponse(id=user.id, email=user.email, auth_user_id=user.auth_user_id)
-    return jsonify(payload.model_dump()), 200
-
-
-# ── helper ───────────────────────────────────────────────────────────────────
-
-def _current_app_user_repository():
-    """Indirection so tests can monkeypatch a repo without app context tricks."""
-    return current_app.user_repository
+    """GET /api/auth/me — returns {id, email, plan} for the authenticated user."""
+    user: User = g.current_user
+    return jsonify({"id": user.id, "email": user.email, "plan": user.plan}), 200

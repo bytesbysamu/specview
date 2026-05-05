@@ -7,9 +7,7 @@ interface LoginResponse { token: string; email: string; }
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly TOKEN_KEY = 'specview_jwt';
-  // Start as true — if SKIP_AUTH=1 the API works without a token.
-  // The interceptor will call signOut() on a real 401.
-  readonly isLoggedIn = signal(true);
+  readonly isLoggedIn = signal(!!this.getStoredJwt());
 
   constructor(private http: HttpClient) {}
 

@@ -1,22 +1,21 @@
-"""@require_auth decorator — the only Flask-aware seam in modules/auth/.
-
-Reads Authorization: Bearer <token>, validates via service.verify_jwt, hydrates
-g.current_user via service.get_or_create_user_from_claims, dispatches to the
-wrapped handler. Returns 401 on missing or invalid credentials.
-
-g.current_user is the contract every downstream capability (Mon-T2/T3 usage
-decorator, billing webhook handler) reads from. Do not change the attribute
-name without coordinating with those consumers.
-"""
+"""@require_auth decorator — the only Flask-aware seam in modules/auth/."""
 from __future__ import annotations
 
 import os
 from functools import wraps
 
 import jwt
-from flask import current_app, g, jsonify, request
+from flask import g, jsonify, request
+from sqlmodel import Session, select
 
-from modules.auth.service import get_or_create_user_from_claims, verify_jwt
+from modules.auth.models import User
+from modules.auth.service import verify_token
+from modules.data.db.engine import get_engine
+
+
+def _load_user(user_id: int) -> User | None:
+    with Session(get_engine()) as session:
+        return session.get(User, user_id)
 
 
 def require_auth(fn):
@@ -32,13 +31,15 @@ def require_auth(fn):
 
         token = header[len("Bearer "):]
         try:
-            claims = verify_jwt(token)
+            claims = verify_token(token)
         except jwt.PyJWTError as exc:
             return jsonify({"error": f"invalid token: {exc.__class__.__name__}"}), 401
 
-        g.current_user = get_or_create_user_from_claims(
-            claims, current_app.user_repository
-        )
+        user = _load_user(int(claims["sub"]))
+        if user is None:
+            return jsonify({"error": "user not found"}), 401
+
+        g.current_user = user
         return fn(*args, **kwargs)
 
     return wrapper
