@@ -1,24 +1,25 @@
 services:
   web:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8095:80"
-    volumes:
-      - ./web:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - "80:80"
     depends_on:
       - api
     restart: unless-stopped
 
   api:
-    image: spec-doc-api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
     environment:
-      APP_ENV: development
+      APP_ENV: production
       SPEC_DOC_DIR: /data/spec-doc
       SKIP_AUTH: "1"
       CHAIN_PROVIDER: cli
       DATABASE_URL: ""
-      CORS_ORIGINS: "http://localhost:8090"
+      CORS_ORIGINS: "*"
     volumes:
-      - /Users/sam/Projects/spec-doc-data:/data/spec-doc
+      - ${SPECVIEW_DATA_DIR:-/opt/specview/data}:/data/spec-doc
     restart: unless-stopped

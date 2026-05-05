@@ -1,0 +1,109 @@
+# serializer version: 1
+# name: TestGeneratePromptSnapshot.test_allContextEmbedded_returnsStablePrompt
+  tuple(
+    '''
+      You are a markdown spec writer producing documentation.
+      
+      ## Builder Profile
+      I am a solo founder shipping fast.
+      
+      ## Principles
+      Ship fast, validate first.
+      
+      Use a concise tone.
+    ''',
+    'Write a spec',
+  )
+# ---
+# name: TestGenerateSpecPromptSnapshot.test_braindumpWithContext_returnsStablePrompt
+  tuple(
+    '''
+      You are a specification document generator. Given a product brain dump, produce four specification files.
+      
+      Output EXACTLY in this format — no text before the first marker, no text after the last:
+      
+      ===FILE: analysis.md===
+      [analysis content]
+      
+      ===FILE: epic.md===
+      [epic content]
+      
+      ===FILE: architecture.md===
+      [architecture content]
+      
+      ===FILE: spec-doc-spec.md===
+      [spec-doc-spec content]
+      
+      ## Builder Profile
+      I am a solo founder shipping fast.
+      
+      ## Principles
+      Ship fast, validate first.
+    ''',
+    'A tool that helps solo founders write better product specs.',
+  )
+# ---
+# name: TestIteratePromptSnapshot.test_baseSpecAndCurrent_returnsStablePrompt
+  tuple(
+    '''
+      You are a spec editor. Update the current document to reflect the intended changes while preserving canonical structure and section headings.
+      
+      ## Builder Profile
+      I am a solo founder shipping fast.
+      
+      ## Principles
+      Ship fast, validate first.
+    ''',
+    '''
+      ## Base specification
+      Scope: spec generator MVP.
+      
+      ## Current document
+      ## Current document
+      Draft content.
+    ''',
+  )
+# ---
+# name: TestLintBraindumpPromptSnapshot.test_braindumpInput_returnsStablePrompt
+  tuple(
+    'You are a spec readiness checker. Analyse the brain dump for gaps and contradictions. Return ONLY valid JSON — no commentary, no markdown fences: {"ready":<true|false>,"flags":[{"severity":"error"|"warning"|"info","message":"..."}]}',
+    'A tool that helps solo founders write better product specs.',
+  )
+# ---
+# name: TestReviewPromptSnapshot.test_documentsDict_returnsStablePrompt
+  tuple(
+    'You are a spec reviewer. Score documents on six dimensions: clarity, completeness, actionability, consistency, specificity, feasibility. Return ONLY valid JSON — no commentary, no markdown fences: {"scores":{"clarity":<1-5>,"completeness":<1-5>,"actionability":<1-5>,"consistency":<1-5>,"specificity":<1-5>,"feasibility":<1-5>},"issues":["..."]}',
+    '''
+      ## epic.md
+      # Epic
+      Scope content.
+      
+      ## architecture.md
+      # Architecture
+      Design.
+    ''',
+  )
+# ---
+# name: TestRewritePromptSnapshot.test_textAndInstruction_returnsStablePrompt
+  tuple(
+    'You are a precise text editor. Apply the given instruction to rewrite the provided text. Return only the rewritten text — no preamble, no commentary.',
+    '''
+      Instruction: Expand with more detail.
+      
+      Text:
+      Make this text better.
+    ''',
+  )
+# ---
+# name: TestScanPromptSnapshot.test_treeText_returnsStablePrompt
+  tuple(
+    'You are a codebase analyst. Summarise the provided filesystem tree as structured markdown: directory layout, key files, entry points, module boundaries. Do NOT include write instructions, code modifications, or tool invocations.',
+    '''
+      ## Filesystem tree
+      
+      src/
+        main.py
+        utils.py
+    ''',
+  )
+# ---

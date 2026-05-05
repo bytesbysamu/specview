@@ -1,0 +1,11 @@
+[flake8]
+max-line-length = 120
+exclude = __pycache__, dtos/models.py
+per-file-ignores =
+    # sys.path.insert before imports is idiomatic for standalone test files
+    # E501 for long inline expected strings in assertion messages
+    tests/*:E402,E302,F401,E501
+    # Prompt template f-strings are intentionally long; wrapping degrades readability
+    modules/ai/prompts/__init__.py:E501
+    # Entry-point sys.path setup before create_app import
+    app.py:E402

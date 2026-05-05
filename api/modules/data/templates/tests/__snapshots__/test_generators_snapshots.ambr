@@ -1,0 +1,226 @@
+# serializer version: 1
+# name: TestGenerateReadmeSnapshot.test_withProjectName_returnsStableMarkdown
+  '''
+  # 📖 My Project
+  
+  > Overview and quick start for this capability.
+  
+  ---
+  
+  ## What This Is
+  
+  My Project is a capability defined by the following documents:
+  
+  | Document | Purpose |
+  |----------|---------|
+  | [Spec Index](./spec-index.md) | Entry point for Claude Code |
+  | [Analysis](./analysis.md) | Problems we're solving |
+  | [Epic](./epic.md) | Scope, tasks, success criteria |
+  | [Architecture](./architecture.md) | System design |
+  | [Timeline](./timeline.md) | Status tracking |
+  
+  ---
+  
+  ## Quick Start
+  
+  1. Read [Analysis](./analysis.md) to understand the problems
+  2. Read [Epic](./epic.md) to understand scope and tasks
+  3. Read [Architecture](./architecture.md) before implementing
+  4. Track progress in [Timeline](./timeline.md)
+  
+  ---
+  
+  ## For Claude Code
+  
+  ```
+  Read this capability's docs and implement the next task:
+  
+  @spec-index.md
+  @epic.md
+  @architecture.md
+  
+  Implement Task 1 from the backlog. Follow architecture patterns.
+  ```
+  
+  ---
+  
+  ## Document Guidelines
+  
+  - **Status** belongs ONLY in [Timeline](./timeline.md)
+  - **Reference, don't duplicate** — link to other docs
+  - **Each doc has ONE job** — don't mix concerns
+  
+  ---
+  
+  **Created**: 2026-04-25
+  
+  '''
+# ---
+# name: TestGenerateSpecIndexSnapshot.test_withProjectName_returnsStableMarkdown
+  '''
+  # 📋 Spec Index: My Project
+  
+  > Single source of truth for this capability's specifications.
+  > Claude Code reads this to understand available context.
+  
+  ---
+  
+  ## Active Specs
+  
+  | Document | Purpose | Location |
+  |----------|---------|----------|
+  | Analysis | Problems driving this capability | [analysis.md](./analysis.md) |
+  | Epic | Scope, tasks, success criteria | [epic.md](./epic.md) |
+  | Architecture | System design & decisions | [architecture.md](./architecture.md) |
+  | Timeline | Status tracking | [timeline.md](./timeline.md) |
+  
+  ---
+  
+  ## Document Flow
+  
+  ```
+  Analysis ──→ Epic ──→ Architecture ──→ Implementation
+  (Problems)   (Scope)   (Design)        (How-to)
+  ```
+  
+  ---
+  
+  ## Quick Reference
+  
+  | When you need... | Read this |
+  |------------------|-----------|
+  | Why we're building this | [Analysis](./analysis.md) |
+  | What we're building | [Epic](./epic.md) |
+  | How it's designed | [Architecture](./architecture.md) |
+  | Task status | [Timeline](./timeline.md) |
+  
+  ---
+  
+  ## For Claude Code
+  
+  To work on this capability:
+  
+  ```
+  @my-project/epic.md
+  @my-project/architecture.md
+  
+  Implement the next task from the backlog.
+  Follow patterns in architecture.md.
+  ```
+  
+  ---
+  
+  **Last Updated**: 2026-04-25
+  
+  '''
+# ---
+# name: TestGenerateTimelineSnapshot.test_emptyTasks_returnsStableMarkdown
+  '''
+  # 📅 Timeline: My Project
+  
+  **Last Updated**: 2026-04-25
+  
+  > Status tracking for this capability. This is the ONLY place for status.
+  > Epic and Architecture docs contain Priority, not Status.
+  
+  ---
+  
+  ## Done
+  
+  | # | Task | Completed | Effort | Notes |
+  |---|------|-----------|--------|-------|
+  | — | — | — | — | — |
+  
+  ---
+  
+  ## In Progress
+  
+  | # | Task | Started | Effort | Notes |
+  |---|------|---------|--------|-------|
+  | — | — | — | — | — |
+  
+  ---
+  
+  ## Backlog
+  
+  | # | Task | Due | Effort | Notes |
+  |---|------|-----|--------|-------|
+  | — | — | — | — | — |
+  
+  ---
+  
+  ## Epic Progress
+  
+  | Metric | Count |
+  |--------|-------|
+  | Done | 0 |
+  | In Progress | 0 |
+  | Backlog | 0 |
+  | **Total** | **0** |
+  
+  ---
+  
+  ## Related Documents
+  
+  - [Epic](./epic.md) – Task definitions and scope
+  - [Solution Architecture](./architecture.md) – Design decisions
+  - [Spec Index](./spec-index.md) – Document overview
+  
+  '''
+# ---
+# name: TestGenerateTimelineSnapshot.test_withTasks_returnsStableMarkdown
+  '''
+  # 📅 Timeline: My Project
+  
+  **Last Updated**: 2026-04-25
+  
+  > Status tracking for this capability. This is the ONLY place for status.
+  > Epic and Architecture docs contain Priority, not Status.
+  
+  ---
+  
+  ## Done
+  
+  | # | Task | Completed | Effort | Notes |
+  |---|------|-----------|--------|-------|
+  | — | — | — | — | — |
+  
+  ---
+  
+  ## In Progress
+  
+  | # | Task | Started | Effort | Notes |
+  |---|------|---------|--------|-------|
+  | — | — | — | — | — |
+  
+  ---
+  
+  ## Backlog
+  
+  | # | Task | Due | Effort | Notes |
+  |---|------|-----|--------|-------|
+  | 1 | **Extract context loader** | TBD | 1 day | — |
+  | 2 | **Migrate prompts to Flask** | TBD | 2 days | — |
+  | 3 | **Extract template generators** | TBD | 1 day | — |
+  
+  ---
+  
+  ## Epic Progress
+  
+  | Metric | Count |
+  |--------|-------|
+  | Done | 0 |
+  | In Progress | 0 |
+  | Backlog | 3 |
+  | **Total** | **3** |
+  
+  ---
+  
+  ## Related Documents
+  
+  - [Epic](./epic.md) – Task definitions and scope
+  - [Solution Architecture](./architecture.md) – Design decisions
+  - [Spec Index](./spec-index.md) – Document overview
+  
+  '''
+# ---

@@ -1,0 +1,1970 @@
+openapi: "3.0.3"
+
+info:
+  title: Spec Doc API
+  version: "1.0.0"
+  description: >
+    Phase 1 contract — health check, projects CRUD, and context
+    read/write for four named keys (builder, principles, codebase,
+    references). This file is the build artifact; flask/dtos/ and
+    mock_server.py are derived from it.
+
+servers:
+  - url: http://localhost:3101
+    description: Flask development server
+  - url: http://localhost:3102
+    description: Mock server (Task 3)
+
+paths:
+
+  /api/health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/projects:
+    get:
+      summary: List all projects, newest first
+      operationId: listProjects
+      responses:
+        "200":
+          description: Array of project summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectSummary"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      summary: Create a new project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreateRequest"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectCreateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/projects/{id}:
+    get:
+      summary: Get project detail with full file contents
+      operationId: getProject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      summary: Delete a project
+      operationId: deleteProject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/projects/{id}/coherence:
+    post:
+      summary: Run the multi-doc coherence pass against a project directory
+      operationId: runProjectCoherence
+      tags: [quality]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Coherence flags and summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoherenceResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/projects/{id}/files/{filename}:
+    put:
+      summary: Update a file within a project
+      operationId: updateProjectFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileUpdateRequest"
+      responses:
+        "200":
+          description: File updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/projects/{project_id}/files/{filename}/history:
+    get:
+      summary: Commit history for a project file
+      operationId: getFileHistory
+      tags: [projects]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileHistoryResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/projects/{project_id}/files/{filename}/diff:
+    get:
+      summary: Unified diff between two SHAs for a project file
+      operationId: getFileDiff
+      tags: [projects]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from_sha
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: to_sha
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileDiffResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/projects/{project_id}/files/{filename}/revert:
+    post:
+      summary: Revert a project file to a specific commit SHA (forward commit)
+      operationId: revertFile
+      tags: [projects]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileRevertRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileRevertResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/projects/{id}/repair:
+    post:
+      summary: Write any missing deterministic structural files for a project
+      operationId: repairProject
+      tags: [projects]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >
+            Repair complete. repaired lists filenames written;
+            empty array means no files were missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepairProjectResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/projects/{project_id}/generate-task:
+    post:
+      summary: Spawn a background thread to generate the next missing implementation guide
+      operationId: startGenerateTask
+      tags: [task_gen]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Background generation started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateTaskStartResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: A generation thread is already running for this project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateTaskStartResponse"
+        "429":
+          $ref: "#/components/responses/UsageLimitReached"
+
+  /api/projects/{project_id}/generate-task/status:
+    get:
+      summary: Read the in-process state of the background generate-task thread
+      operationId: getGenerateTaskStatus
+      tags: [task_gen]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current generation state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateTaskStatusResponse"
+        "502":
+          description: Linter blocked the write — one or more error-severity flags present
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateTaskStatusResponse"
+
+  /api/context/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [builder, principles, codebase, references]
+    get:
+      summary: Read a context file by key
+      operationId: getContext
+      responses:
+        "200":
+          description: Context file content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContextResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Write a context file by key
+      operationId: putContext
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContextUpdateRequest"
+      responses:
+        "200":
+          description: Context updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/ai/text/rewrite:
+    post:
+      summary: Rewrite text with optional instructions
+      operationId: rewriteText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewriteRequest'
+      responses:
+        '200':
+          description: Rewritten text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewriteResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Upstream AI provider failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/generate-spec:
+    post:
+      summary: Generate specification documents from a brain dump
+      operationId: generateSpec
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateSpecRequest'
+      responses:
+        '200':
+          description: "Raw multi-file spec text with ===FILE: filename=== markers"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateSpecResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Upstream AI provider failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/iterate:
+    post:
+      summary: Iterate on a document with an instruction
+      operationId: iterateText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IterateRequest'
+      responses:
+        '200':
+          description: Iterated document text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IterateResponse'
+        '400':
+          description: document is empty after whitespace stripping
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: AI provider error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/lint-braindump:
+    post:
+      summary: Analyse a brain dump for spec readiness
+      operationId: lintBraindump
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LintBraindumpRequest'
+      responses:
+        '200':
+          description: Readiness assessment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LintBraindumpResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Upstream AI provider failure or JSON parse failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/generate:
+    post:
+      summary: Generate text from a prompt with optional tone, builder-context-injected
+      operationId: generateText
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+      responses:
+        '200':
+          description: Generated text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateResponse'
+        '400':
+          description: prompt is empty after whitespace stripping
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: AI provider error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/review:
+    post:
+      summary: Review spec documents and return quality scores
+      operationId: reviewDocuments
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        '200':
+          description: Review scores and issues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: AI provider error or JSON parse failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/bootstrap-project:
+    post:
+      summary: >
+        Bootstrap a full capability folder — analysis → epic → architecture chained
+        server-side. Returns 202 with a job_id; poll the status endpoint for the result.
+      operationId: bootstrapProject
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BootstrapProjectRequest'
+      responses:
+        '202':
+          description: Job accepted; poll GET /bootstrap-project/status/{job_id} for the result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapStartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/UsageLimitReached'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/text/bootstrap-project/status/{job_id}:
+    get:
+      summary: Poll the status of a bootstrap job.
+      operationId: getBootstrapProjectStatus
+      tags: [ai]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: >
+            Job identifier returned by POST /api/ai/text/bootstrap-project.
+            The job is evicted from the in-process registry on the first
+            terminal (done=true) read; subsequent polls return 404.
+      responses:
+        '200':
+          description: Current status of the bootstrap job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapJobStatus'
+        '404':
+          description: Job not found or already evicted after first terminal read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/bootstrap-project/{job_id}/cancel:
+    post:
+      summary: Request cooperative cancellation of an in-flight bootstrap job
+      operationId: cancelBootstrap
+      tags: [ai]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Cancellation requested; status flips to CANCELLING.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelAcceptedResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Job is not in a cancellable state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/ai/text/bootstrap-project/{job_id}/retry:
+    post:
+      summary: Retry a single bootstrap step (analysis | epic | architecture)
+      operationId: retryBootstrap
+      tags: [ai]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryBootstrapRequest'
+      responses:
+        '202':
+          description: New job started for the targeted step.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapStartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: The targeted sub-workflow is not registered (Rel-T3 lane).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projects/{project_id}/cancel:
+    post:
+      summary: Request cooperative cancellation of an in-flight task_gen job
+      operationId: cancelTaskGen
+      tags: [task_gen]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Cancellation requested; status flips to CANCELLING.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelAcceptedResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Job is not in a cancellable state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projects/{project_id}/regenerate-task:
+    post:
+      summary: Delete and re-run a previously generated task guide
+      operationId: regenerateTask
+      tags: [task_gen]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegenerateTaskRequest'
+      responses:
+        '202':
+          description: Regeneration started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateTaskStartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A generation thread is already running for this slot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateTaskStartResponse'
+        '429':
+          $ref: '#/components/responses/UsageLimitReached'
+
+  /api/spec-gen/generate:
+    post:
+      operationId: specGenGenerate
+      summary: >
+        Generate analysis, epic, and architecture documents via the
+        spec_gen WorkflowRuntime (three sequential AI steps).
+      tags:
+        - spec-gen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BootstrapProjectRequest'
+      responses:
+        '200':
+          description: >
+            Three generated spec files: analysis.md, epic.md, architecture.md.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapProjectResponse'
+        '400':
+          description: Validation error — missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Named workflow not registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/UsageLimitReached'
+        '502':
+          description: AI provider error during a workflow step.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/templates/spec-index:
+    get:
+      summary: Generate spec-index.md content for a project
+      operationId: getSpecIndexTemplate
+      tags: [templates]
+      parameters:
+        - name: project_name
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Generated spec-index markdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/templates/readme:
+    get:
+      summary: Generate README.md content for a project
+      operationId: getReadmeTemplate
+      tags: [templates]
+      parameters:
+        - name: project_name
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Generated README markdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/templates/timeline:
+    post:
+      summary: Generate timeline.md content for a project given its tasks
+      operationId: postTimelineTemplate
+      tags: [templates]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimelineRequest'
+      responses:
+        '200':
+          description: Generated timeline markdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/billing/create-checkout-session:
+    post:
+      summary: Create a Stripe Checkout session for the Pro plan
+      operationId: createCheckoutSession
+      tags: [billing]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: >
+            Stripe-hosted checkout URL. The Angular client performs a full
+            browser redirect to this URL — no in-page payment form.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/billing/webhook:
+    post:
+      summary: >
+        Receive Stripe webhook events. Signature verified via Stripe-Signature
+        header against STRIPE_WEBHOOK_SECRET. No bearer auth — Stripe is the caller.
+      operationId: stripeWebhook
+      tags: [billing]
+      security: []
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: >
+            HMAC signature set by Stripe on every webhook delivery.
+            Verified by service.py before any handler runs; unsigned payloads
+            return 400. Six event types are dispatched: checkout.session.completed,
+            customer.subscription.updated, customer.subscription.deleted,
+            invoice.payment_failed, invoice.paid, invoice.upcoming.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >
+                Raw Stripe event payload. Structure is Stripe-defined;
+                spec-doc does not validate inner fields beyond signature
+                verification.
+      responses:
+        '200':
+          description: Event received and dispatched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookAckResponse'
+        '400':
+          description: Stripe signature verification failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/health/anthropic:
+    get:
+      summary: Anthropic provider liveness probe
+      operationId: health_anthropic
+      tags: [health]
+      responses:
+        "200":
+          description: >
+            Provider reachable, or check skipped because ANTHROPIC_API_KEY is unset.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Provider unreachable, errored, or timed out.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /api/health/neon:
+    get:
+      summary: Neon DB liveness probe (stub — always skipped)
+      operationId: health_neon
+      tags: [health]
+      responses:
+        "200":
+          description: >
+            Stub; returns {"status": "skipped"} until the Neon SQL connection
+            wiring lands.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /api/health/stripe:
+    get:
+      summary: Stripe liveness probe (stub — always skipped)
+      operationId: health_stripe
+      tags: [health]
+      responses:
+        "200":
+          description: >
+            Stub; returns {"status": "skipped"} until the Stripe SDK is
+            actually configured in production.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /api/billing/status:
+    get:
+      summary: >
+        Return the authenticated user's current subscription plan, status,
+        period end, and a live Customer Portal URL for self-service management.
+      operationId: getBillingStatus
+      tags: [billing]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription snapshot for the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ai/stats:
+    get:
+      summary: Org-wide AI usage and cost snapshot (in-process, resets on restart).
+      operationId: getAiStats
+      tags: [ai]
+      responses:
+        '200':
+          description: Current cumulative usage since process start.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiStatsResponse'
+
+  /api/auth/login:
+    post:
+      summary: Request a magic-link email for the supplied address.
+      operationId: requestMagicLink
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MagicLinkRequest'
+      responses:
+        '202':
+          description: Magic-link dispatch accepted by Neon Auth.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MagicLinkResponse'
+
+  /api/auth/verify:
+    post:
+      summary: Exchange a one-time magic-link token for a session JWT.
+      operationId: verifyMagicLink
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+      responses:
+        '200':
+          description: Token exchanged for JWT plus hydrated user row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+
+  /api/auth/logout:
+    post:
+      summary: Acknowledge client-side session discard.
+      operationId: signOut
+      tags: [auth]
+      responses:
+        '204':
+          description: Client-side discard acknowledged; Neon Auth owns session lifecycle.
+
+  /api/auth/me:
+    get:
+      summary: Return the currently authenticated user row.
+      operationId: getCurrentUser
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+
+components:
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
+    SpecSummary:
+      type: object
+      required: [filename, label]
+      properties:
+        filename:
+          type: string
+        label:
+          type: string
+
+    SpecDetail:
+      type: object
+      required: [filename, label, content]
+      properties:
+        filename:
+          type: string
+        label:
+          type: string
+        content:
+          type: string
+
+    ProjectSummary:
+      type: object
+      required: [id, name, createdAt, specs]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        specs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpecSummary"
+
+    ProjectDetail:
+      type: object
+      required: [id, name, createdAt, specs]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        specs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpecDetail"
+
+    LintBraindumpFlag:
+      type: object
+      required: [severity, message]
+      properties:
+        severity:
+          type: string
+          enum: [error, warning, info]
+        message:
+          type: string
+
+    LintBraindumpRequest:
+      type: object
+      required: [braindump]
+      properties:
+        braindump:
+          type: string
+          minLength: 1
+          description: Brain dump text to analyse for spec readiness.
+
+    LintBraindumpResponse:
+      type: object
+      required: [ready, flags]
+      properties:
+        ready:
+          type: boolean
+        flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/LintBraindumpFlag'
+
+    CoherenceFlag:
+      type: object
+      required: [rule, severity, message]
+      properties:
+        rule:
+          type: string
+          description: Invariant identifier (e.g. symbol_uniqueness, content_routing).
+        severity:
+          type: string
+          enum: [error, warning]
+        message:
+          type: string
+        line:
+          type: integer
+          description: 1-based line number in the source document, when applicable.
+
+    CoherenceResponse:
+      type: object
+      required: [flags, summary]
+      properties:
+        flags:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoherenceFlag"
+        summary:
+          type: string
+          description: 'Human-readable count string, e.g. "3 flags: 1 error, 2 warnings."'
+
+    ProjectCreateRequest:
+      type: object
+      required: [name, files]
+      properties:
+        name:
+          type: string
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileInput"
+
+    FileInput:
+      type: object
+      required: [filename, content]
+      properties:
+        filename:
+          type: string
+        content:
+          type: string
+
+    ProjectCreateResponse:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    FileUpdateRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+
+    CommitEntry:
+      type: object
+      required: [sha, message, author, timestamp]
+      properties:
+        sha:
+          type: string
+        message:
+          type: string
+        author:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    FileHistoryResponse:
+      type: object
+      required: [history]
+      properties:
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommitEntry"
+
+    FileDiffResponse:
+      type: object
+      required: [diff]
+      properties:
+        diff:
+          type: string
+
+    FileRevertRequest:
+      type: object
+      required: [to_sha]
+      properties:
+        to_sha:
+          type: string
+        path:
+          type: string
+          description: Optional alias for filename; the route's path parameter is canonical.
+
+    FileRevertResponse:
+      type: object
+      required: [sha, message]
+      properties:
+        sha:
+          type: string
+        message:
+          type: string
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    ContextResponse:
+      type: object
+      required: [content, exists]
+      properties:
+        content:
+          type: string
+        exists:
+          type: boolean
+
+    ContextUpdateRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    GenerateRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          description: >
+            Prompt text to generate from. Whitespace-only values are
+            rejected by the server.
+        tone:
+          type: string
+          default: 'balanced'
+          description: >
+            Optional tone directive (e.g. "balanced", "formal", "casual").
+            Defaults to "balanced" to match the Angular client default.
+
+    GenerateResponse:
+      type: object
+      required: [text, latencyMs]
+      properties:
+        text:
+          type: string
+        latencyMs:
+          type: integer
+          minimum: 0
+
+    RewriteRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          description: Text to rewrite. Whitespace-only values are rejected by the server.
+        instructions:
+          type: string
+          default: ''
+          description: Optional rewrite instruction. Empty string means clean rewrite.
+
+    RewriteResponse:
+      type: object
+      required: [text, latencyMs]
+      properties:
+        text:
+          type: string
+        latencyMs:
+          type: integer
+          minimum: 0
+
+    GenerateSpecRequest:
+      type: object
+      required: [input]
+      properties:
+        input:
+          type: string
+          minLength: 1
+          description: Brain dump text. Whitespace-only values are rejected by the server.
+
+    GenerateSpecResponse:
+      type: object
+      required: [text, latencyMs]
+      properties:
+        text:
+          type: string
+          description: >
+            Raw multi-file output with ===FILE: filename=== markers. Not JSON-wrapped.
+            The Angular parser splits on this exact string; wrapping breaks the parser.
+        latencyMs:
+          type: integer
+          minimum: 0
+
+    IterateRequest:
+      type: object
+      required:
+        - document
+      properties:
+        document:
+          type: string
+          minLength: 1
+          description: >
+            Document content to iterate on. Whitespace-only values are
+            rejected by the server.
+        instruction:
+          type: string
+          default: ''
+          description: >
+            Optional editing instruction. Empty string means clean/improve
+            with no specific directive.
+
+    IterateResponse:
+      type: object
+      required:
+        - text
+        - latencyMs
+      properties:
+        text:
+          type: string
+        latencyMs:
+          type: integer
+          minimum: 0
+
+    ReviewRequest:
+      type: object
+      required: [documents]
+      properties:
+        documents:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of document name to content.
+
+    ReviewResponse:
+      type: object
+      required: [scores, issues]
+      properties:
+        scores:
+          type: object
+          additionalProperties:
+            type: number
+          description: Quality scores keyed by dimension (clarity, completeness, etc.)
+        issues:
+          type: array
+          items:
+            type: string
+          description: List of issues found in the documents.
+
+    BootstrapProjectRequest:
+      type: object
+      required: [project_name, braindump]
+      properties:
+        project_name:
+          type: string
+          minLength: 1
+        braindump:
+          type: string
+          minLength: 1
+        builder:
+          type: string
+          default: ''
+        principles:
+          type: string
+          default: ''
+        codebase:
+          type: string
+          default: ''
+        references:
+          type: string
+          default: ''
+
+    BootstrapFile:
+      type: object
+      required: [filename, content]
+      properties:
+        filename:
+          type: string
+        content:
+          type: string
+
+    BootstrapProjectResponse:
+      type: object
+      required: [files, latencyMs]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/BootstrapFile'
+        latencyMs:
+          type: integer
+          minimum: 0
+
+    BootstrapStartResponse:
+      type: object
+      description: Immediate 202 acknowledgement from POST /api/ai/text/bootstrap-project.
+      required: [job_id]
+      properties:
+        job_id:
+          type: string
+          description: >
+            Opaque job identifier. Pass to GET /bootstrap-project/status/{job_id} to
+            poll for completion. The job is evicted from the server on the first
+            terminal (done=true) read.
+
+    BootstrapJobStatus:
+      type: object
+      description: >
+        Status snapshot returned by GET /bootstrap-project/status/{job_id}. Mirrors the
+        GenerateTaskStatusResponse shape for Angular polling parity. The 'files',
+        'error', and 'latencyMs' fields are present only when the job has reached a
+        terminal state.
+      required: [running, done]
+      properties:
+        running:
+          type: boolean
+          description: True while the background chain is in progress.
+        done:
+          type: boolean
+          description: True once the job has terminated (successfully or not).
+        current_step:
+          type: string
+          nullable: true
+          description: >
+            Name of the workflow step currently being driven by the runtime,
+            or null between iterations and after the workflow completes.
+        partial:
+          type: string
+          description: >
+            Rolling 500-char tail of the in-flight step's streamed output.
+            Empty string when the current step does not stream or has not
+            yet produced any chunks. Read from
+            execution.outputs["_partials"][current_step].
+        warnings:
+          type: array
+          items:
+            type: string
+          description: >
+            Per-execution warnings accumulated by the truncation heuristic
+            after each successful step. Empty array means clean output.
+            The status route always populates this; consumers may rely on it.
+        status:
+          type: string
+          description: >
+            Terminal status indicator, present only on terminal CANCELLED reads.
+            Successful and errored reads do not populate this field.
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/BootstrapFile'
+          description: Output files produced by the bootstrap run. Present only on success.
+        error:
+          type: string
+          description: Error message captured from the background job. Present only on failure.
+        latencyMs:
+          type: integer
+          minimum: 0
+          description: Wall-clock milliseconds from job start to completion.
+
+    CancelAcceptedResponse:
+      type: object
+      description: >
+        Returned with HTTP 202 by the cancel routes once the
+        WorkflowExecution has been flipped to CANCELLING. Final
+        CANCELLED transition happens between step boundaries on the
+        runtime's next iteration.
+      required: [status]
+      properties:
+        status:
+          type: string
+          description: Current execution status string after the request.
+          example: CANCELLING
+
+    RetryBootstrapRequest:
+      type: object
+      required: [step]
+      properties:
+        step:
+          type: string
+          enum: [analysis, epic, architecture]
+          description: >
+            Bootstrap sub-step to retry. Each maps to a Rel-T3 sub-workflow
+            (spec_gen/bootstrap-{step}-only) that re-uses the prior run's
+            upstream outputs as inputs.
+
+    RegenerateTaskRequest:
+      type: object
+      required: [task_num]
+      properties:
+        task_num:
+          type: string
+          description: >
+            Task number whose generated guide should be deleted and
+            re-generated. Matches the num column in the epic backlog.
+
+    TimelineTask:
+      type: object
+      required: [num, name, effort]
+      properties:
+        num:
+          type: string
+          description: Task number as it appears in the epic backlog row.
+        name:
+          type: string
+          description: Task name (without bold markers).
+        effort:
+          type: string
+          description: Effort estimate column from the epic backlog row.
+
+    TimelineRequest:
+      type: object
+      required: [project_name, tasks]
+      properties:
+        project_name:
+          type: string
+          minLength: 1
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineTask'
+
+    TemplateResponse:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: Generated markdown string.
+
+    GenerateTaskStartResponse:
+      type: object
+      required: [started]
+      properties:
+        started:
+          type: boolean
+          description: True if a new background thread was spawned, false if one was already running.
+        alreadyRunning:
+          type: boolean
+          description: Present and true when a generation thread for this project was already running.
+
+    GenerateTaskStatusResponse:
+      type: object
+      required: [running, done]
+      properties:
+        running:
+          type: boolean
+          description: True while the background thread is in progress.
+        done:
+          type: boolean
+          description: True once the thread has terminated (successfully or not).
+        allDone:
+          type: boolean
+          description: Present and true when every task in the epic already has a matching guide on disk.
+        filename:
+          type: string
+          description: Name of the task-N-*.md file that was written (only when done and not allDone).
+        taskNum:
+          type: string
+          description: Task number from the epic table (e.g., "2").
+        taskName:
+          type: string
+          description: Task name from the epic table.
+        error:
+          type: string
+          description: Error message captured from the background thread.
+        lintErrors:
+          type: array
+          description: >
+            Present when error-severity lint flags blocked the file write.
+            The polling route returns 502 when this field is present.
+          items:
+            $ref: "#/components/schemas/LintFlag"
+        warnings:
+          type: array
+          description: >
+            Present when warning-severity lint flags were raised but the
+            file was still written successfully.
+          items:
+            $ref: "#/components/schemas/LintFlag"
+
+    LintFlag:
+      type: object
+      required: [rule, severity, message]
+      properties:
+        rule:
+          type: string
+          description: Lint rule identifier (e.g. "personal-path", "preamble-leak").
+        severity:
+          type: string
+          enum: [error, warning]
+          description: '"error" blocks the write; "warning" allows it with the flag surfaced.'
+        message:
+          type: string
+          description: Human-readable violation description.
+        line:
+          type: integer
+          nullable: true
+          description: 1-based line number of the first violation site, if known.
+
+    RepairProjectResponse:
+      type: object
+      required: [repaired]
+      properties:
+        repaired:
+          type: array
+          items:
+            type: string
+          description: >
+            Filenames written during this repair run.
+            Empty array means all structural files were already present.
+
+    UsageLimitError:
+      type: object
+      description: >
+        Returned with HTTP 429 by any AI route gated by check_usage_limit
+        when a free-tier user has exhausted their daily quota for that
+        feature. The Angular usage-limit interceptor catches this body
+        globally and routes the user to upgrade_url.
+      required:
+        - error
+        - feature
+        - limit
+        - reset_at
+        - upgrade_url
+      properties:
+        error:
+          type: string
+          description: Stable error code for client dispatch.
+          example: free_tier_limit_reached
+        feature:
+          type: string
+          enum: [bootstrap, task_gen, spec_gen]
+          description: >
+            Feature key that hit the daily cap. Matches keys in
+            DAILY_FREE_TIER_LIMITS in modules/usage/service.py.
+          example: task_gen
+        limit:
+          type: integer
+          minimum: 0
+          description: >
+            Daily cap for this feature on the free tier. Free-tier caps are
+            bootstrap=3 / task_gen=20 / spec_gen=10 per UTC day.
+          example: 20
+        reset_at:
+          type: string
+          format: date-time
+          description: UTC midnight at which the daily counter resets.
+          example: "2026-04-27T00:00:00Z"
+        upgrade_url:
+          type: string
+          description: >
+            App-relative path to the upgrade page. Angular's 429 interceptor
+            navigates to this URL when a UsageLimitError is received.
+          example: /upgrade
+
+    CheckoutSessionResponse:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: >
+            Stripe-hosted checkout URL. Redirect the browser to this value.
+            Valid for a single checkout attempt; do not cache.
+          example: https://checkout.stripe.com/pay/cs_test_xxx
+
+    WebhookAckResponse:
+      type: object
+      required:
+        - received
+      properties:
+        received:
+          type: boolean
+          description: >
+            Always true on a 200 response. Signals Stripe that the payload
+            was accepted; Stripe will not retry.
+          example: true
+
+    BillingStatusResponse:
+      type: object
+      description: >
+        Subscription snapshot for the authenticated user. plan is always
+        present; the other fields are null for free users who have never
+        completed a checkout.
+      required:
+        - plan
+      properties:
+        plan:
+          type: string
+          enum: [free, pro]
+          description: >
+            Current plan. Written exclusively by Stripe webhook handlers;
+            no in-app code path may set this to 'pro'.
+          example: free
+        status:
+          type: string
+          nullable: true
+          enum: [active, past_due, canceled]
+          description: >
+            Stripe subscription status. Null for free users who have never
+            subscribed. Note: per the past-due policy, status=past_due on
+            invoice.payment_failed reverts plan to 'free' immediately.
+          example: active
+        current_period_end:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            End of the current billing period. Null for free users.
+          example: "2026-05-26T00:00:00Z"
+        manage_url:
+          type: string
+          nullable: true
+          description: >
+            Live Stripe Customer Portal URL. Generated per-request (Stripe
+            session tokens expire). Null until the user completes their first
+            checkout session; the customer ID is created lazily.
+          example: https://billing.stripe.com/p/session/xxx
+
+    HealthStatus:
+      type: object
+      description: >
+        Per-dependency health probe response returned by the
+        /api/health/{anthropic,neon,stripe} routes. status=ok means the
+        dependency is reachable; status=skipped means the probe is
+        intentionally not run (env var unset, or a permanently stubbed
+        dep); status=degraded means the probe failed and an error string
+        is included.
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, skipped]
+        error:
+          type: string
+          description: >
+            Truncated upstream error message (max 100 chars). Present
+            only when status=degraded.
+
+    AiStatsResponse:
+      type: object
+      description: >
+        Org-wide cumulative AI usage and cost since process start. Resets
+        on restart; sourced from the in-process accumulator in
+        runtime/chain/adapter.py.
+      required: [calls, input_tokens, output_tokens, cost_usd, provider]
+      properties:
+        calls:
+          type: integer
+          minimum: 0
+        input_tokens:
+          type: integer
+          minimum: 0
+        output_tokens:
+          type: integer
+          minimum: 0
+        cost_usd:
+          type: number
+          minimum: 0
+        provider:
+          type: string
+          description: Resolved provider name at request time.
+
+    MagicLinkRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Address that will receive the magic-link email.
+
+    MagicLinkResponse:
+      type: object
+      required: [request_id]
+      properties:
+        request_id:
+          type: string
+          description: >
+            Opaque identifier returned by Neon Auth for the dispatched
+            magic-link request. Useful for support diagnostics.
+
+    VerifyRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: One-time token extracted from the magic-link URL fragment.
+
+    VerifyResponse:
+      type: object
+      required: [jwt, user]
+      properties:
+        jwt:
+          type: string
+          description: Session JWT issued by Neon Auth. Pass as Authorization Bearer.
+        user:
+          $ref: '#/components/schemas/MeResponse'
+
+    MeResponse:
+      type: object
+      required: [id, email, auth_user_id]
+      properties:
+        id:
+          type: integer
+          description: Spec-doc internal user row id.
+        email:
+          type: string
+          description: User email (mirrors the Neon Auth claim).
+        auth_user_id:
+          type: string
+          description: >
+            Stable identity from Neon Auth (sub claim). FK anchor for every
+            tenant-scoped table in saas-persistence.
+
+  responses:
+
+    BadRequest:
+      description: Missing or invalid request fields
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    UsageLimitReached:
+      description: >
+        Daily free-tier limit reached for the gated feature. Free-tier caps are
+        bootstrap=3 / task_gen=20 / spec_gen=10 per UTC day. Pro users never
+        receive this response.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UsageLimitError"
+          example:
+            error: free_tier_limit_reached
+            feature: task_gen
+            limit: 20
+            reset_at: "2026-04-27T00:00:00Z"
+            upgrade_url: /upgrade
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        Neon Auth JWT issued at login. Pass as Authorization: Bearer <token>.
+        Verified by the require_auth decorator (implemented in Task 2).

@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+testpaths   = ["tests", "modules"]
+pythonpath  = ["."]
+addopts     = "-v"
+python_functions = ["test_*", "*_*"]
+markers = [
+    "unit: fast, in-process tests; no I/O beyond in-memory SQLite or mock provider",
+    "integration: crosses a real HTTP boundary or a real DB engine",
+    "e2e: browser-driven; requires the dev server to be running",
+    "snapshot: syrupy golden-file assertions; regenerate with --snapshot-update",
+    "real_claude: exercises CHAIN_PROVIDER=claude; requires ANTHROPIC_API_KEY set",
+]
