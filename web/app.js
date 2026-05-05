@@ -242,7 +242,7 @@ function renderProjectGrid(projects) {
         return `
           <div class="file-item${isFeatured ? ' featured' : ''}" data-id="${p.id}">
             <div class="file-item-title">${p.name}</div>
-            ${firstSpec ? `<div class="file-item-teaser">${teaser(firstSpec.content || '')}</div>` : ''}
+            ${firstSpec ? `<div class="file-item-teaser">${teaser(firstSpec.teaser || firstSpec.content || '')}</div>` : ''}
             <div class="file-item-meta">
               <span>${fileCount} file${fileCount !== 1 ? 's' : ''}</span>
               <span class="file-item-meta-sep"></span>

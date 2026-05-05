@@ -55,7 +55,7 @@ def _safe_path(projects_dir: Path, project_id: str) -> Path:
     return resolved
 
 
-def _read_specs(project_path: Path, *, include_content: bool) -> list[dict]:
+def _read_specs(project_path: Path, *, include_content: bool, teaser_chars: int = 0) -> list[dict]:
     """Read .md files from a project directory and build specs list."""
     specs = []
     for f in sorted(project_path.glob("*.md")):
@@ -63,8 +63,12 @@ def _read_specs(project_path: Path, *, include_content: bool) -> list[dict]:
             "filename": f.name,
             "label": _filename_to_label(f.name),
         }
-        if include_content:
-            spec["content"] = f.read_text(encoding="utf-8")
+        if include_content or teaser_chars > 0:
+            content = f.read_text(encoding="utf-8")
+            if include_content:
+                spec["content"] = content
+            if teaser_chars > 0 and not include_content:
+                spec["teaser"] = content[:teaser_chars]
         specs.append(spec)
     return specs
 
@@ -90,7 +94,7 @@ def list_projects(projects_dir: Path) -> list[dict]:
             "id": d.name,
             "name": meta["name"],
             "createdAt": meta["createdAt"],
-            "specs": _read_specs(d, include_content=False),
+            "specs": _read_specs(d, include_content=False, teaser_chars=300),
         })
     # Sort newest first — port of server.js:497
     results.sort(key=lambda p: p["createdAt"], reverse=True)
