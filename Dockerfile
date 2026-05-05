@@ -1,3 +1,12 @@
+# ── Stage 1: Build Angular app ────────────────
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY web-ng/package*.json ./
+RUN npm ci --quiet
+COPY web-ng/ .
+RUN npm run build
+
+# ── Stage 2: Serve with nginx ─────────────────
 FROM nginx:alpine
-COPY web/ /usr/share/nginx/html/
+COPY --from=build /app/dist/web-ng/browser /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf

@@ -1,0 +1,181 @@
+@if (!auth.isLoggedIn()) {
+  <app-login />
+} @else {
+<div class="page">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="edition">Spec Doc</span>
+      <div class="masthead-center">
+        <div class="masthead-date">{{ today }}</div>
+        <h1 class="masthead-title">Specview</h1>
+        <div class="masthead-tagline">All the Specs Fit to Read</div>
+      </div>
+      <div class="masthead-actions">
+        <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
+          {{ isDark() ? '🌙' : '☀️' }}
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Project Nav -->
+  <nav class="section-nav">
+    @for (s of sections; track s.id) {
+      <button
+        class="section-link"
+        [class.active]="activeSection() === s.id"
+        (click)="selectSection(s.id)">
+        {{ s.icon }} {{ s.label }}
+        @if (s.id === 'context') {
+          <span class="section-count">{{ contextFiles.length }}</span>
+        } @else if (sectionCounts()[s.id] != null) {
+          <span class="section-count">{{ sectionCounts()[s.id] }}</span>
+        }
+      </button>
+    }
+  </nav>
+
+  <!-- Update banner -->
+  @if (updateBanner()) {
+    <div class="update-banner">
+      {{ updateBanner() }} · <button (click)="updateBanner.set('')">dismiss</button>
+    </div>
+  }
+
+  <!-- Search bar (hidden when viewing project or context section) -->
+  @if (activeSection() !== 'context' && showGrid()) {
+    <div class="search-bar">
+      <input
+        type="search"
+        placeholder="Filter projects…"
+        autocomplete="off"
+        [value]="searchQuery()"
+        (input)="onSearch($any($event.target).value)" />
+      @if (searchQuery()) {
+        <span class="search-count">
+          {{ filteredProjects().length }} match{{ filteredProjects().length !== 1 ? 'es' : '' }}
+        </span>
+      }
+    </div>
+  }
+
+  <div class="divider thick" [style.display]="showGrid() ? '' : 'none'"></div>
+
+  <!-- File grid -->
+  @if (showGrid()) {
+    <section class="file-grid">
+      @if (activeSection() === 'context') {
+        <!-- Context cards -->
+        <div class="context-grid">
+          @for (f of contextFiles; track f.key) {
+            <div class="context-card" (click)="openContext(f.key)">
+              <div class="context-card__label">{{ f.label }}</div>
+              <div class="context-card__desc">{{ f.desc }}</div>
+            </div>
+          }
+        </div>
+      } @else if (filteredProjects().length === 0) {
+        <div class="empty-state">No projects in this section.</div>
+      } @else {
+        @for (col of columns(); track $index; let ci = $index) {
+          <div class="file-column">
+            <div class="file-header">
+              <span class="col-title">{{ sectionLabel() }}</span>
+              @if (ci === 0) {
+                <span class="col-badge">{{ filteredProjects().length }}</span>
+              }
+            </div>
+            @for (p of col; track p.id; let pi = $index) {
+              <div
+                class="file-item"
+                [class.featured]="pi === 0"
+                (click)="selectProject(p.id)">
+                <div class="file-item-title">{{ p.name }}</div>
+                @if (p.specs[0]) {
+                  <div class="file-item-teaser">{{ teaser(p.specs[0].teaser || p.specs[0].content || '') }}</div>
+                }
+                <div class="file-item-meta">
+                  <span>{{ p.specs.length }} file{{ p.specs.length !== 1 ? 's' : '' }}</span>
+                  <span class="file-item-meta-sep"></span>
+                  <span>{{ categorise(p.id) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </section>
+  }
+
+  <!-- Expanded panel (project reader or context viewer) -->
+  @if (showExpanded()) {
+    <div class="expanded-panel active">
+      <div class="expanded-header">
+        <div class="expanded-meta">
+          <button class="expanded-close" (click)="closeExpanded()">← All projects</button>
+          <span class="expanded-project">{{ expandedProject() }}</span>
+        </div>
+        <!-- File tabs (project mode only) -->
+        @if (activeProject()) {
+          <div class="expanded-tabs">
+            @for (s of activeProject()!.specs; track s.filename) {
+              <button
+                class="tab-btn"
+                [class.active]="activeFile() === s.filename"
+                (click)="selectFile(s.filename)">
+                {{ s.label }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <h2 class="expanded-title">{{ expandedTitle() }}</h2>
+
+      <!-- AI result indicator -->
+      @if (aiResult()) {
+        <div class="ai-result-bar">
+          <span>AI result</span>
+          <button (click)="clearAiResult()">← Original</button>
+        </div>
+      }
+
+      <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
+
+      <!-- AI text operations (project mode only) -->
+      @if (activeProject() && currentSpec()) {
+        <div class="text-ops">
+          @if (aiLoading()) {
+            <div class="text-ops-loading">Running…</div>
+          } @else {
+            <div class="text-ops-actions">
+              <button (click)="runOp('expand')">Expand</button>
+              <button (click)="runOp('compress')">Compress</button>
+              <button (click)="runOp('clarify')">Clarify</button>
+              <button (click)="showRewritePanel.set(!showRewritePanel())">Rewrite…</button>
+            </div>
+            @if (showRewritePanel()) {
+              <div class="text-ops-rewrite">
+                <input
+                  #instructionsEl
+                  type="text"
+                  placeholder="Instructions for rewrite…"
+                  (keydown.enter)="runRewrite(instructionsEl.value)" />
+                <button (click)="runRewrite(instructionsEl.value)">Apply</button>
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <footer class="footer">
+    <div class="divider thick"></div>
+    <p>Specview · powered by spec-doc</p>
+  </footer>
+
+</div>
+}
