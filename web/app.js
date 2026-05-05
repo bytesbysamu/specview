@@ -260,14 +260,14 @@ function renderProjectGrid(projects) {
 
 // ── Project & file open ───────────────────────
 async function selectProject(id) {
-  document.querySelectorAll('.file-item').forEach(el =>
-    el.classList.toggle('active', el.dataset.id === id)
-  );
-
-  const cached = allProjects.find(p => p.id === id);
   const res = await fetch(`${API}/projects/${id}`);
   activeProject = await res.json();
   activeFile = activeProject.specs?.[0]?.filename ?? null;
+
+  // Hide grid + search, show reader mode
+  document.getElementById('file-grid').style.display = 'none';
+  document.getElementById('search-bar').style.display = 'none';
+  document.getElementById('grid-divider').style.display = 'none';
 
   openFileInExpanded(activeFile);
 }
@@ -308,7 +308,9 @@ function openFileInExpanded(filename) {
 
 function closeExpanded() {
   document.getElementById('expanded-panel').classList.remove('active');
-  document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('file-grid').style.display = '';
+  document.getElementById('search-bar').style.display = '';
+  document.getElementById('grid-divider').style.display = '';
   activeProject = null;
   activeFile = null;
 }
