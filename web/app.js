@@ -1,22 +1,45 @@
 const API = '/api';
 let activeProject = null;
+let activeFile = null;
 let projects = [];
 
 // ── Theme ──────────────────────────────────────
 const savedTheme = localStorage.getItem('theme') || 'light';
 if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
 
 document.getElementById('theme-toggle').addEventListener('click', () => {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  localStorage.setItem('theme', isDark ? 'light' : 'dark');
-  document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+  const next = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
 });
-if (savedTheme === 'dark') document.getElementById('theme-toggle').textContent = '🌙';
 
 // ── Date ───────────────────────────────────────
 document.getElementById('masthead-date').textContent =
   new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+// ── Helpers ────────────────────────────────────
+function stripMarkdown(md = '') {
+  return md
+    .replace(/```[\s\S]*?```/g, '')   // code blocks
+    .replace(/`[^`]*`/g, '')           // inline code
+    .replace(/#{1,6}\s+/g, '')         // headings
+    .replace(/\*\*([^*]*)\*\*/g, '$1') // bold
+    .replace(/\*([^*]*)\*/g, '$1')     // italic
+    .replace(/!\[.*?\]\(.*?\)/g, '')   // images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // links
+    .replace(/[-*+]\s+/g, '')          // list bullets
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function teaser(content, maxLen = 120) {
+  const plain = stripMarkdown(content);
+  return plain.length > maxLen ? plain.slice(0, maxLen).trimEnd() + '…' : plain;
+}
 
 // ── Init ───────────────────────────────────────
 async function init() {
@@ -37,17 +60,14 @@ function renderNav() {
 }
 
 async function selectProject(id) {
-  // Update nav active state
-  document.querySelectorAll('.section-link').forEach(b =>
+  document.querySelectorAll('#project-nav .section-link').forEach(b =>
     b.classList.toggle('active', b.dataset.id === id)
   );
-
-  // Close any expanded panel
   closeExpanded();
+  activeFile = null;
 
-  // Show skeleton
-  document.getElementById('file-grid').innerHTML = `
-    <div class="empty-state">Loading…</div>`;
+  document.getElementById('file-grid').innerHTML =
+    '<div class="empty-state">Loading…</div>';
 
   const res = await fetch(`${API}/projects/${id}`);
   activeProject = await res.json();
@@ -58,18 +78,27 @@ function renderFileGrid() {
   const grid = document.getElementById('file-grid');
   const specs = activeProject.specs ?? [];
 
-  // Distribute files across 3 columns newspaper-style
-  const cols = [[], [], []];
-  specs.forEach((s, i) => cols[i % 3].push(s));
+  if (specs.length === 0) {
+    grid.innerHTML = '<div class="empty-state">No files in this project.</div>';
+    return;
+  }
+
+  // Distribute top-down across columns so columns are even, not left-heavy
+  const numCols = Math.min(3, specs.length);
+  const cols = Array.from({ length: numCols }, () => []);
+  specs.forEach((s, i) => cols[i % numCols].push(s));
 
   grid.innerHTML = cols.map((col, ci) => `
     <div class="file-column">
-      ${ci === 0 ? `<div class="file-header">
-        <span style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">${activeProject.name}</span>
-      </div>` : '<div class="file-header"></div>'}
+      <div class="file-header">
+        ${ci === 0
+          ? `<span style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">${activeProject.name}</span>`
+          : ''}
+      </div>
       ${col.map(s => `
         <div class="file-item" data-file="${s.filename}">
           <div class="file-item-title">${s.label}</div>
+          ${s.content ? `<div class="file-item-teaser">${teaser(s.content)}</div>` : ''}
           <div class="file-item-meta">${s.filename}</div>
         </div>
       `).join('')}
@@ -85,6 +114,12 @@ function openFile(filename) {
   const spec = activeProject.specs.find(s => s.filename === filename);
   if (!spec) return;
 
+  // Mark active file in grid
+  activeFile = filename;
+  document.querySelectorAll('.file-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.file === filename)
+  );
+
   document.getElementById('expanded-project').textContent = activeProject.name;
   document.getElementById('expanded-file').textContent = filename;
   document.getElementById('expanded-title').textContent = spec.label;
@@ -94,15 +129,19 @@ function openFile(filename) {
 
   const panel = document.getElementById('expanded-panel');
   panel.classList.add('active');
-
-  // Scroll panel into view
   setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
 function closeExpanded() {
   document.getElementById('expanded-panel').classList.remove('active');
+  document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+  activeFile = null;
 }
 
-document.getElementById('expanded-close').addEventListener('click', closeExpanded);
+document.getElementById('expanded-close').addEventListener('click', () => {
+  closeExpanded();
+  // Scroll back up to the file grid
+  document.getElementById('file-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 init();
