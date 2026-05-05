@@ -280,13 +280,12 @@ function openFileInExpanded(filename) {
   activeFile = filename;
 
   document.getElementById('expanded-project').textContent = activeProject.name;
-  document.getElementById('expanded-file').textContent = filename;
   document.getElementById('expanded-title').textContent = spec.label;
   document.getElementById('expanded-body').innerHTML = spec.content
     ? marked.parse(spec.content)
     : '<p style="color:var(--ink-muted);font-style:italic">No content.</p>';
 
-  // Render file tabs in sidebar
+  // Render file tabs
   const tabsEl = document.getElementById('expanded-tabs');
   if (tabsEl) {
     tabsEl.innerHTML = activeProject.specs.map(s => `
