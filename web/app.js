@@ -227,18 +227,27 @@ function renderProjectGrid(projects) {
   const cols = Array.from({ length: numCols }, () => []);
   projects.forEach((p, i) => cols[i % numCols].push(p));
 
+  const sectionLabel = activeSection === 'all' ? 'Projects' : sectionFor(activeSection).label;
   grid.innerHTML = cols.map((col, ci) => `
     <div class="file-column">
       <div class="file-header">
-        ${ci === 0 ? `<span class="col-label">${projects.length} ${activeSection === 'all' ? 'projects' : sectionFor(activeSection).label.toLowerCase()}</span>` : ''}
+        <span class="col-title">${sectionLabel}</span>
+        ${ci === 0 ? `<span class="col-badge">${projects.length}</span>` : ''}
       </div>
-      ${col.map(p => {
+      ${col.map((p, pi) => {
         const firstSpec = p.specs?.[0];
+        const isFeatured = pi === 0;
+        const fileCount = p.specs?.length ?? 0;
+        const cat = categorise(p.id);
         return `
-          <div class="file-item" data-id="${p.id}">
+          <div class="file-item${isFeatured ? ' featured' : ''}" data-id="${p.id}">
             <div class="file-item-title">${p.name}</div>
             ${firstSpec ? `<div class="file-item-teaser">${teaser(firstSpec.content || '')}</div>` : ''}
-            <div class="file-item-meta">${p.specs?.length ?? 0} files · ${categorise(p.id)}</div>
+            <div class="file-item-meta">
+              <span>${fileCount} file${fileCount !== 1 ? 's' : ''}</span>
+              <span class="file-item-meta-sep"></span>
+              <span>${cat}</span>
+            </div>
           </div>`;
       }).join('')}
     </div>
@@ -277,9 +286,9 @@ function openFileInExpanded(filename) {
     ? marked.parse(spec.content)
     : '<p style="color:var(--ink-muted);font-style:italic">No content.</p>';
 
-  // Render file tabs inside expanded header
+  // Render file tabs in sidebar
   const tabsEl = document.getElementById('expanded-tabs');
-  if (tabsEl && activeProject.specs.length > 1) {
+  if (tabsEl) {
     tabsEl.innerHTML = activeProject.specs.map(s => `
       <button class="tab-btn${s.filename === filename ? ' active' : ''}" data-file="${s.filename}">${s.label}</button>
     `).join('');
@@ -289,9 +298,6 @@ function openFileInExpanded(filename) {
         openFileInExpanded(btn.dataset.file);
       });
     });
-    tabsEl.style.display = '';
-  } else if (tabsEl) {
-    tabsEl.style.display = 'none';
   }
 
   const panel = document.getElementById('expanded-panel');
