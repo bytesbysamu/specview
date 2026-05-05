@@ -1,76 +1,108 @@
 const API = '/api';
 let activeProject = null;
-let activeFile = null;
+let projects = [];
 
-const folderIcon = `<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
-const fileIcon   = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+// ── Theme ──────────────────────────────────────
+const savedTheme = localStorage.getItem('theme') || 'light';
+if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+});
+if (savedTheme === 'dark') document.getElementById('theme-toggle').textContent = '🌙';
+
+// ── Date ───────────────────────────────────────
+document.getElementById('masthead-date').textContent =
+  new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+// ── Init ───────────────────────────────────────
 async function init() {
   const res = await fetch(`${API}/projects`);
-  const projects = await res.json();
-  renderSidebar(projects);
+  projects = await res.json();
+  renderNav();
+  if (projects.length > 0) selectProject(projects[0].id);
 }
 
-function renderSidebar(projects) {
-  const list = document.getElementById('project-list');
-  list.innerHTML = projects.map(p => `
-    <button class="nav-item" data-id="${p.id}">
-      <span class="nav-item__icon">${folderIcon}</span>
-      <span class="nav-item__text">${p.name}</span>
-    </button>
+function renderNav() {
+  const nav = document.getElementById('project-nav');
+  nav.innerHTML = projects.map(p => `
+    <button class="section-link" data-id="${p.id}">${p.name}</button>
   `).join('');
-  list.querySelectorAll('.nav-item').forEach(btn => {
-    btn.addEventListener('click', () => selectProject(btn.dataset.id, btn));
+  nav.querySelectorAll('.section-link').forEach(btn => {
+    btn.addEventListener('click', () => selectProject(btn.dataset.id));
   });
 }
 
-async function selectProject(id, btn) {
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+async function selectProject(id) {
+  // Update nav active state
+  document.querySelectorAll('.section-link').forEach(b =>
+    b.classList.toggle('active', b.dataset.id === id)
+  );
 
-  // breadcrumb
-  document.getElementById('breadcrumb-sep').style.display = '';
-  document.getElementById('breadcrumb-project').textContent = btn.querySelector('.nav-item__text').textContent;
+  // Close any expanded panel
+  closeExpanded();
 
-  // loading state
-  document.getElementById('content').innerHTML = `
-    <div style="display:grid;gap:12px;max-width:780px">
-      ${[80,60,90,50,70].map(w => `<div class="skeleton" style="height:14px;width:${w}%"></div>`).join('')}
-    </div>`;
+  // Show skeleton
+  document.getElementById('file-grid').innerHTML = `
+    <div class="empty-state">Loading…</div>`;
 
   const res = await fetch(`${API}/projects/${id}`);
   activeProject = await res.json();
-  activeFile = activeProject.specs?.[0]?.filename ?? null;
-
-  renderTabs();
-  renderContent();
+  renderFileGrid();
 }
 
-function renderTabs() {
-  const tabs = document.getElementById('file-tabs');
-  tabs.innerHTML = activeProject.specs.map(s => `
-    <button class="tab-btn${s.filename === activeFile ? ' active' : ''}" data-file="${s.filename}">
-      ${s.label}
-    </button>
+function renderFileGrid() {
+  const grid = document.getElementById('file-grid');
+  const specs = activeProject.specs ?? [];
+
+  // Distribute files across 3 columns newspaper-style
+  const cols = [[], [], []];
+  specs.forEach((s, i) => cols[i % 3].push(s));
+
+  grid.innerHTML = cols.map((col, ci) => `
+    <div class="file-column">
+      ${ci === 0 ? `<div class="file-header">
+        <span style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">${activeProject.name}</span>
+      </div>` : '<div class="file-header"></div>'}
+      ${col.map(s => `
+        <div class="file-item" data-file="${s.filename}">
+          <div class="file-item-title">${s.label}</div>
+          <div class="file-item-meta">${s.filename}</div>
+        </div>
+      `).join('')}
+    </div>
   `).join('');
-  tabs.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeFile = btn.dataset.file;
-      tabs.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.file === activeFile));
-      renderContent();
-    });
+
+  grid.querySelectorAll('.file-item').forEach(item => {
+    item.addEventListener('click', () => openFile(item.dataset.file));
   });
 }
 
-function renderContent() {
-  const content = document.getElementById('content');
-  const spec = activeProject.specs.find(s => s.filename === activeFile);
-  if (!spec?.content?.trim()) {
-    content.innerHTML = '<div class="empty-state">No content</div>';
-    return;
-  }
-  content.innerHTML = `<div class="md">${marked.parse(spec.content)}</div>`;
-  content.scrollTop = 0;
+function openFile(filename) {
+  const spec = activeProject.specs.find(s => s.filename === filename);
+  if (!spec) return;
+
+  document.getElementById('expanded-project').textContent = activeProject.name;
+  document.getElementById('expanded-file').textContent = filename;
+  document.getElementById('expanded-title').textContent = spec.label;
+  document.getElementById('expanded-body').innerHTML = spec.content
+    ? marked.parse(spec.content)
+    : '<p style="color:var(--ink-muted);font-style:italic">No content.</p>';
+
+  const panel = document.getElementById('expanded-panel');
+  panel.classList.add('active');
+
+  // Scroll panel into view
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
+
+function closeExpanded() {
+  document.getElementById('expanded-panel').classList.remove('active');
+}
+
+document.getElementById('expanded-close').addEventListener('click', closeExpanded);
 
 init();
