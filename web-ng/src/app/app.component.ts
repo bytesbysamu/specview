@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 
@@ -148,18 +148,31 @@ export class AppComponent implements OnInit, OnDestroy {
   expandedTitle = computed(() => this.contextContent() !== null ? this.contextTitle() : (this.currentSpec()?.label ?? ''));
   expandedProject = computed(() => this.contextContent() !== null ? 'Context' : (this.activeProject()?.name ?? ''));
 
+  constructor() {
+    // Reload projects immediately whenever the user becomes logged in
+    // (covers both: app start with stored JWT and post-login transition).
+    effect(() => {
+      if (this.auth.isLoggedIn()) {
+        this.loadProjects().then(() => {
+          if (!this.pollTimer) {
+            this.pollTimer = setInterval(() => this.checkForUpdates(), REFRESH_INTERVAL);
+          }
+        });
+      } else {
+        if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+      }
+    });
+  }
+
   // ── Lifecycle ─────────────────────────────────────
-  async ngOnInit() {
+  ngOnInit() {
     const saved = localStorage.getItem('theme') || 'light';
     this.isDark.set(saved === 'dark');
     if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-
-    await this.loadProjects();
-    this.pollTimer = setInterval(() => this.checkForUpdates(), REFRESH_INTERVAL);
   }
 
   ngOnDestroy() {
-    if (this.pollTimer) clearInterval(this.pollTimer);
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
   }
 
   // ── Theme ─────────────────────────────────────────
