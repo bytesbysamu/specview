@@ -147,6 +147,27 @@
               }
             </button>
           }
+
+          <!-- Sidebar status: only visible when something is running or error -->
+          @if (specGenLoading() || aiLoading() || polling() || !pollOk()) {
+            <div class="sidebar-status"
+                 [class.sidebar-status--active]="specGenLoading() || aiLoading()"
+                 [class.sidebar-status--err]="!pollOk()">
+              <div class="sidebar-status-dot"
+                   [class.sidebar-status-dot--polling]="polling()"></div>
+              <span class="sidebar-status-text">
+                @if (specGenLoading()) {
+                  {{ specGenStep() ?? 'starting…' }} · {{ specGenProjectName() }}
+                } @else if (aiLoading()) {
+                  {{ aiOpLabel() }}…
+                } @else if (!pollOk()) {
+                  API unreachable
+                } @else if (polling()) {
+                  syncing…
+                }
+              </span>
+            </div>
+          }
         }
       </aside>
 
@@ -155,7 +176,6 @@
 
         <!-- Sticky editor toolbar (project files only) -->
         @if (activeProject() && currentSpec()) {
-          <div class="editor-toolbar-sentinel"></div>
           <div class="editor-toolbar" [class.editor-toolbar--floating]="toolbarFloating()"
                [style.bottom]="toolbarFloating() && (specGenLoading() || aiLoading()) ? '42px' : null">
             <div class="editor-toolbar-chips">
@@ -282,34 +302,22 @@
 </div>
 
 <!-- Fixed status bar — always visible when logged in -->
-@if (auth.isLoggedIn() && !toolbarFloating()) {
-  <div class="gen-status-bar"
-       [class.gen-status-bar--ai]="aiLoading() && !specGenLoading()"
-       [class.gen-status-bar--idle]="!specGenLoading() && !aiLoading()"
-       [class.gen-status-bar--poll]="polling() && !specGenLoading() && !aiLoading()"
-       [class.gen-status-bar--err]="!pollOk() && !specGenLoading() && !aiLoading()">
-    @if (specGenLoading() || aiLoading()) {
-      <div class="gen-status-track"></div>
-    }
+<!-- Fixed bottom bar: only when something is actively running -->
+@if (auth.isLoggedIn() && (specGenLoading() || aiLoading())) {
+  <div class="gen-status-bar" [class.gen-status-bar--ai]="aiLoading() && !specGenLoading()">
+    <div class="gen-status-track"></div>
     <div class="gen-status-content">
+      <span class="thinking-dot gen-dot"></span>
+      <span class="thinking-dot gen-dot"></span>
+      <span class="thinking-dot gen-dot"></span>
       @if (specGenLoading()) {
-        <span class="thinking-dot gen-dot"></span>
-        <span class="thinking-dot gen-dot"></span>
-        <span class="thinking-dot gen-dot"></span>
         <span class="gen-status-project">{{ specGenProjectName() }}</span>
         <span class="gen-status-sep">·</span>
         <span class="gen-status-step">{{ specGenStep() ?? 'starting…' }}</span>
-      } @else if (aiLoading()) {
-        <span class="thinking-dot gen-dot"></span>
-        <span class="thinking-dot gen-dot"></span>
-        <span class="thinking-dot gen-dot"></span>
+      } @else {
         <span class="gen-status-project">{{ currentSpec()?.label }}</span>
         <span class="gen-status-sep">·</span>
         <span class="gen-status-step">{{ aiOpLabel() }}…</span>
-      } @else if (!pollOk()) {
-        <span class="gen-status-step">API unreachable</span>
-      } @else {
-        <span class="gen-status-step gen-status-idle">● live</span>
       }
     </div>
   </div>

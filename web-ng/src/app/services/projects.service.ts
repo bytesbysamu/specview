@@ -50,6 +50,7 @@ export class ProjectsService {
     running: boolean;
     done: boolean;
     current_step: string | null;
+    partial_files?: GeneratedFile[];
     files?: GeneratedFile[];
     error?: string;
   }> {

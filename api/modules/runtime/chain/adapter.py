@@ -82,9 +82,10 @@ _USAGE: dict = {
 # changes prices. Keep in sync with the model ids referenced in
 # modules/ai/workflows/* AICall steps.
 _PRICING: dict = {
+    "claude-sonnet-4-6": (3.00, 15.00),
     "claude-sonnet-4-5": (3.00, 15.00),
     "claude-haiku-4-5":  (0.80, 4.00),
-    "claude-opus-4-7":   (15.00, 75.00),
+    "claude-opus-4-6":   (15.00, 75.00),
 }
 
 # Used when a model id has no entry in _PRICING — usage is still recorded,

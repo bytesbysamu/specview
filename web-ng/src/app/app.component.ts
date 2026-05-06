@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, effect, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 
@@ -144,12 +144,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
 
   toolbarFloating = signal(false);
-  polling = signal(false);   // true briefly each time a poll fires
-  pollOk = signal(true);     // false if last poll returned an error
-  private _toolbarObserver: IntersectionObserver | null = null;
+  polling = signal(false);
+  pollOk = signal(true);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private genPollTimer: ReturnType<typeof setInterval> | null = null;
-  private ngZone = inject(NgZone);
 
   // ── Computed ──────────────────────────────────────
   sectionCounts = computed(() => {
@@ -277,15 +275,9 @@ export class AppComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Set up/tear down toolbar scroll observer whenever a project file is active
+    // Toolbar is always fixed at bottom when a project file is open
     effect(() => {
-      const hasToolbar = !!(this.activeProject() && this.currentSpec());
-      if (hasToolbar) {
-        setTimeout(() => this._setupToolbarSentinel(), 0);
-      } else {
-        this._teardownToolbarSentinel();
-        this.toolbarFloating.set(false);
-      }
+      this.toolbarFloating.set(!!(this.activeProject() && this.currentSpec()));
     });
   }
 
@@ -299,23 +291,6 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
     this._stopGenPoll();
-    this._teardownToolbarSentinel();
-  }
-
-  private _setupToolbarSentinel() {
-    this._teardownToolbarSentinel();
-    const el = document.querySelector('.editor-toolbar-sentinel');
-    if (!el) return;
-    this._toolbarObserver = new IntersectionObserver(
-      ([entry]) => this.ngZone.run(() => this.toolbarFloating.set(!entry.isIntersecting)),
-      { threshold: 0 }
-    );
-    this._toolbarObserver.observe(el);
-  }
-
-  private _teardownToolbarSentinel() {
-    this._toolbarObserver?.disconnect();
-    this._toolbarObserver = null;
   }
 
   private _startGenPoll() {
@@ -493,15 +468,19 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenProjectName.set(proj.name);
     this._startGenPoll();
     try {
-      const files = await this._runBootstrap(proj.name, enrichedBraindump);
-      for (const file of files) {
+      const remainingFiles = await this._runBootstrap(proj.name, enrichedBraindump, async (file) => {
+        await this.projectsSvc.saveFile(proj.id, file.filename, file.content);
+        const refreshed = await this.projectsSvc.getProject(proj.id);
+        this.activeProject.set(refreshed);
+      });
+      for (const file of remainingFiles) {
         await this.projectsSvc.saveFile(proj.id, file.filename, file.content);
       }
-      const refreshed = await this.projectsSvc.getProject(proj.id);
-      this.activeProject.set(refreshed);
-      this.activeFile.set(refreshed.specs.find(s => s.filename === 'analysis.md')?.filename ?? refreshed.specs[0]?.filename ?? null);
-    } catch {
-      this.specGenError.set('Generation failed — check connection and try again.');
+      const final = await this.projectsSvc.getProject(proj.id);
+      this.activeProject.set(final);
+      this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
+    } catch (err: any) {
+      this.specGenError.set(err?.message || 'Generation failed — check connection and try again.');
     } finally {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
@@ -613,15 +592,47 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   // ── New project / spec-gen ────────────────────────
-  private async _runBootstrap(projectName: string, braindump: string): Promise<GeneratedFile[]> {
+  private async _runBootstrap(
+    projectName: string,
+    braindump: string,
+    onFile?: (file: GeneratedFile) => Promise<void>,
+  ): Promise<GeneratedFile[]> {
     const { job_id } = await this.projectsSvc.startBootstrap(projectName, braindump);
+    const saved = new Set<string>();
+    let pollFailures = 0;
+    const MAX_POLL_FAILURES = 5;
+
     while (true) {
       await new Promise(r => setTimeout(r, 2500));
-      const status = await this.projectsSvc.pollBootstrap(job_id);
+
+      let status: Awaited<ReturnType<typeof this.projectsSvc.pollBootstrap>>;
+      try {
+        status = await this.projectsSvc.pollBootstrap(job_id);
+        pollFailures = 0; // reset on success
+      } catch {
+        pollFailures++;
+        if (pollFailures >= MAX_POLL_FAILURES) {
+          throw new Error('Lost connection to server after multiple retries.');
+        }
+        continue; // retry poll
+      }
+
       if (status.current_step) this.specGenStep.set(status.current_step);
+
+      // Save incremental files as each AI step completes
+      if (onFile && status.partial_files) {
+        for (const file of status.partial_files) {
+          if (!saved.has(file.filename)) {
+            saved.add(file.filename);
+            await onFile(file);
+          }
+        }
+      }
+
       if (status.done) {
         if (status.error) throw new Error(status.error);
-        return status.files ?? [];
+        // Return only files not already saved incrementally
+        return (status.files ?? []).filter(f => !saved.has(f.filename));
       }
     }
   }
@@ -652,16 +663,31 @@ export class AppComponent implements OnInit, OnDestroy {
     this._startGenPoll();
 
     try {
-      const files = await this._runBootstrap(name, braindump);
-      const allFiles: GeneratedFile[] = [
+      // Create project immediately with just the braindump — navigate to it right away
+      const project = await this.projectsSvc.createProject(name, [
         { filename: 'braindump.md', content: braindump },
-        ...files,
-      ];
-      const project = await this.projectsSvc.createProject(name, allFiles);
+      ]);
       await this.loadProjects();
       await this.selectProject(project.id);
-    } catch {
-      this.specGenError.set('Generation failed — check connection and try again.');
+
+      // Generate specs, saving each file to disk as soon as its AI step completes
+      const remainingFiles = await this._runBootstrap(name, braindump, async (file) => {
+        await this.projectsSvc.saveFile(project.id, file.filename, file.content);
+        const refreshed = await this.projectsSvc.getProject(project.id);
+        this.activeProject.set(refreshed);
+      });
+
+      // Save remaining files (spec-index, timeline, README — generated at completion)
+      for (const file of remainingFiles) {
+        await this.projectsSvc.saveFile(project.id, file.filename, file.content);
+      }
+
+      // Final refresh and navigate to analysis.md
+      const final = await this.projectsSvc.getProject(project.id);
+      this.activeProject.set(final);
+      this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
+    } catch (err: any) {
+      this.specGenError.set(err?.message || 'Generation failed — check connection and try again.');
     } finally {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
@@ -673,7 +699,11 @@ export class AppComponent implements OnInit, OnDestroy {
   async generateFromBraindump() {
     const proj = this.activeProject();
     if (!proj || this.specGenLoading()) return;
-    const braindumpSpec = proj.specs.find(s => s.filename === 'braindump.md');
+    // Use braindump.md if present, otherwise active file, otherwise first spec
+    const braindumpSpec =
+      proj.specs.find(s => s.filename === 'braindump.md') ??
+      this.currentSpec() ??
+      proj.specs[0];
     if (!braindumpSpec?.content) return;
 
     this.specGenLoading.set(true);
@@ -682,15 +712,19 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenProjectName.set(proj.name);
     this._startGenPoll();
     try {
-      const files = await this._runBootstrap(proj.name, braindumpSpec.content);
-      for (const file of files) {
+      const remainingFiles = await this._runBootstrap(proj.name, braindumpSpec.content, async (file) => {
+        await this.projectsSvc.saveFile(proj.id, file.filename, file.content);
+        const refreshed = await this.projectsSvc.getProject(proj.id);
+        this.activeProject.set(refreshed);
+      });
+      for (const file of remainingFiles) {
         await this.projectsSvc.saveFile(proj.id, file.filename, file.content);
       }
-      const refreshed = await this.projectsSvc.getProject(proj.id);
-      this.activeProject.set(refreshed);
-      this.activeFile.set(refreshed.specs.find(s => s.filename === 'analysis.md')?.filename ?? refreshed.specs[0]?.filename ?? null);
-    } catch {
-      this.specGenError.set('Generation failed — check connection and try again.');
+      const final = await this.projectsSvc.getProject(proj.id);
+      this.activeProject.set(final);
+      this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
+    } catch (err: any) {
+      this.specGenError.set(err?.message || 'Generation failed — check connection and try again.');
     } finally {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
