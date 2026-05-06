@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/sam/Projects/specview/plugin/hooks/session-start.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}
