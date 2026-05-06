@@ -6,24 +6,57 @@
 
 ---
 
-## Primary Use Case: Backend AI Provider
+## How the Backend Uses the Plugin
 
-The `cli.py` provider in `modules/runtime/chain/providers/` spawns a `claude -p` subprocess to make AI calls. This is dev-only, fragile (subprocess exit codes, credential file mounts, no streaming support), and not production-safe.
+`providers/cli.py` already calls `claude -p "<prompt>"` as a subprocess. The plugin does NOT replace this mechanism — it enhances it. With the plugin installed and loaded, the backend's CLI calls gain:
 
-The plugin replaces this with a proper Claude Code plugin interface that the backend chain adapter calls directly. The adapter gains a new `"plugin"` provider option — no subprocess, no credential file juggling, just a clean Python call through the plugin API. This makes Claude Code a first-class production-viable provider for any Flask backend that uses the chain adapter pattern, not just spec-doc.
+- **Agents**: instead of passing a raw system prompt, call a named agent that already has the right conventions loaded. `claude --agent chain-agent -p "<task>"` — the agent reads `chain-conventions.md` before acting.
+- **Skills**: the backend can invoke a named skill (`/dev-build`, `/dev-test`) via CLI, the same way a human would, and the skill executes with proper abort conditions.
+- **References**: convention files loaded automatically into agent context — the backend never re-sends the full system prompt; the plugin handles it.
 
-**The interface the backend needs:**
+**Today** (raw CLI call):
 ```python
-# providers/plugin.py (new)
-def create_message(system, prompt, *, model, max_tokens) -> tuple[str, int, int]: ...
-def stream_message(system, prompt, *, model, max_tokens) -> Iterator[str]: ...
+# providers/cli.py
+result = subprocess.run(["claude", "-p", system + "\n\n" + prompt], ...)
 ```
 
-The plugin exposes these as tool calls the backend can register and invoke — same shape as `providers/claude.py`, zero subprocess overhead.
+**With the plugin** (agent-routed CLI call):
+```python
+# providers/cli.py (enhanced)
+result = subprocess.run(["claude", "--agent", "chain-agent", "-p", prompt], ...)
+```
+
+The `chain-agent` picks up `chain-conventions.md` and `flask-conventions.md` from the plugin's `references/` directory. The system prompt shrinks to just the task; the conventions come from the plugin.
+
+**Plugin structure mirrors financing-plugin exactly:**
+```
+claude-code-provider-plugin/
+  .claude-plugin/
+    plugin.json
+  agents/
+    chain-agent.md       ← handles all backend AI call requests
+    spec-backend.md      ← Flask/Python expert (for dev sessions)
+    spec-frontend.md     ← Angular 19 expert (for dev sessions)
+  skills/
+    dev-build/SKILL.md
+    dev-test/SKILL.md
+    dev-migrate/SKILL.md
+    dev-review/SKILL.md
+    SKILL_MAP.md
+  references/
+    chain-conventions.md
+    flask-conventions.md
+    angular-conventions.md
+  hooks/
+    hooks.json
+    session-start.mjs
+```
+
+The `chain-agent` is the primary consumer from the backend. The other agents and skills are for human dev sessions — same plugin, two consumers.
 
 ---
 
-## Secondary Use Case: Convention Encoding
+## Convention Encoding (Secondary — Dev Sessions)
 
 Every session I start on spec-doc or specview, I spend 10–15 minutes re-establishing context:
 - What the module structure looks like
