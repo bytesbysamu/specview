@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spec Doc — Engineering Specs from Braindumps</title>
+
+  <meta name="description" content="Turn your raw ideas into structured engineering specs. Analysis, Epic, Architecture, Implementation Guide — generated in minutes by AI.">
+  <meta property="og:title" content="Spec Doc — Engineering Specs from Braindumps">
+  <meta property="og:description" content="Turn your raw ideas into structured engineering specs. Analysis, Epic, Architecture, Implementation Guide — generated in minutes.">
+  <meta property="og:type" content="website">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="masthead-edition">Builder Tools</span>
+      <div class="masthead-center">
+        <div class="masthead-date" id="date-label"></div>
+        <h1 class="masthead-title">Spec Doc</h1>
+        <div class="masthead-tagline">All the Specs Fit to Build</div>
+      </div>
+      <div class="masthead-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" id="theme-btn">☀️</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section nav -->
+  <nav class="section-bar">
+    <a href="#what" class="active">What</a>
+    <a href="#how">How it works</a>
+    <a href="#output">Output</a>
+    <a href="#self-host">Self-host</a>
+  </nav>
+
+  <!-- Lede / Hero -->
+  <section class="lede" id="what">
+    <div class="lede-main">
+      <span class="overline">Introducing Spec Doc</span>
+      <h2 class="headline">Your braindump becomes an engineering spec in minutes.</h2>
+      <p class="deck">
+        Write everything you know about a feature — raw and unfiltered.
+        Spec Doc generates the structured documents your team needs to build it:
+        analysis, epic, architecture, and an executor-ready implementation guide.
+        No more blank-page paralysis. No more re-briefing the AI every session.
+      </p>
+      <div class="cta-row">
+        <a href="#self-host" class="btn-primary">Self-host free</a>
+        <a href="#how" class="btn-secondary">See how it works</a>
+      </div>
+    </div>
+
+    <div class="lede-divider"></div>
+
+    <aside class="lede-aside">
+      <div class="aside-label">What gets generated</div>
+      <ul class="aside-list">
+        <li>
+          <strong>🔍 Analysis</strong>
+          <span>problem · constraints · scope</span>
+        </li>
+        <li>
+          <strong>🎯 Epic</strong>
+          <span>tasks · effort · dependencies</span>
+        </li>
+        <li>
+          <strong>🏗 Architecture</strong>
+          <span>design · decisions · flow</span>
+        </li>
+        <li>
+          <strong>📅 Timeline</strong>
+          <span>status · progress · done</span>
+        </li>
+        <li>
+          <strong>📋 Implementation Guide</strong>
+          <span>steps · files · tests · commit</span>
+        </li>
+      </ul>
+    </aside>
+  </section>
+
+  <hr class="divider thick">
+
+  <!-- Output docs -->
+  <div class="section-heading" id="output">What Spec Doc generates</div>
+
+  <section class="output-grid">
+    <div class="output-card">
+      <span class="output-card__icon">🔍</span>
+      <h3 class="output-card__title">Analysis</h3>
+      <div class="output-card__filename">analysis.md</div>
+      <p class="output-card__body">
+        The problem, distilled. Hard constraints, open questions, scope boundaries,
+        and sequencing decisions — extracted from your raw notes.
+        No fluff. No assumptions invented.
+      </p>
+    </div>
+    <div class="output-card">
+      <span class="output-card__icon">🎯</span>
+      <h3 class="output-card__title">Epic</h3>
+      <div class="output-card__filename">epic.md</div>
+      <p class="output-card__body">
+        Business value, task breakdown, effort estimates, dependencies, success criteria,
+        and explicit non-goals. The contract between what you want and what gets built.
+      </p>
+    </div>
+    <div class="output-card">
+      <span class="output-card__icon">🏗</span>
+      <h3 class="output-card__title">Architecture</h3>
+      <div class="output-card__filename">architecture.md</div>
+      <p class="output-card__body">
+        System boundaries, component design, design decisions with rationale,
+        technology stack, and execution flow. The long-lived document that
+        outlives the sprint.
+      </p>
+    </div>
+    <div class="output-card">
+      <span class="output-card__icon">📋</span>
+      <h3 class="output-card__title">Implementation Guide</h3>
+      <div class="output-card__filename">implementation-guide.md</div>
+      <p class="output-card__body">
+        Executor-ready instructions for every task: context, files to create or modify,
+        implementation steps, test cases, commit plan, verification, and rollback.
+        Hand directly to Claude Code.
+      </p>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <div class="section-heading" id="how">How it works</div>
+
+  <section class="steps">
+    <div class="step">
+      <span class="step-num">1</span>
+      <h3 class="step-title">Braindump</h3>
+      <p class="step-body">
+        Write everything you know about the feature — raw, unfiltered, unstructured.
+        Problems, constraints, prior art, open questions. The messier the better.
+        Spec Doc handles the structure.
+      </p>
+      <div class="step-code">Every session I start on spec-doc, I spend
+10–15 minutes re-establishing context.
+The chain adapter pattern. The SQLModel
+conventions. The Alembic rules.
+
+We need a Claude Code plugin that fixes
+this — bakes the conventions in, like
+financing-plugin did for Java.</div>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <h3 class="step-title">Generate</h3>
+      <p class="step-body">
+        One click. Spec Doc runs a three-step AI chain:
+        analysis → epic → architecture.
+        Each file appears on disk as it completes.
+        You can read the analysis while the architecture is still generating.
+      </p>
+      <div class="step-code">✦ analysis      ████████████ done
+✦ epic          ████████████ done
+✦ architecture  ████░░░░░░░░ generating…
+
+3 files · claude-sonnet · 47s</div>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <h3 class="step-title">Build</h3>
+      <p class="step-body">
+        Open the implementation guide in Claude Code.
+        Every task has concrete steps, real file paths, full test bodies, and a commit plan.
+        No re-briefing. No context rebuilding. Just execute.
+      </p>
+      <div class="step-code">@claude-code-provider-plugin/chain-agent
+
+Implement Task 1: Reference Files
+
+Follow architecture.md §Component Design.
+Write flask-conventions.md first.</div>
+    </div>
+  </section>
+
+  <!-- App demo -->
+  <div class="section-heading">The tool</div>
+
+  <div class="demo-strip">
+    <div class="demo-strip-inner">
+      <div class="demo-masthead">
+        <div>
+          <div class="demo-title">Specview</div>
+          <div class="demo-tagline">All the Specs Fit to Read</div>
+        </div>
+      </div>
+      <div class="demo-body">
+        <div class="demo-sidebar">
+          <div class="demo-sidebar-label">Claude Code Provider Plugin</div>
+          <div class="demo-sidebar-item">braindump.md</div>
+          <div class="demo-sidebar-item active">analysis.md</div>
+          <div class="demo-sidebar-item">epic.md</div>
+          <div class="demo-sidebar-item">architecture.md</div>
+          <div class="demo-sidebar-item">timeline.md</div>
+          <div class="demo-sidebar-item">implementation-guide.md</div>
+        </div>
+        <div class="demo-sidebar-divider" style="width:1px"></div>
+        <div class="demo-content">
+          <div class="demo-tag">🔍 Analysis</div>
+          <h3>Claude Code Provider Plugin — Analysis</h3>
+          <p><strong>Problem 1 — Raw CLI calls:</strong> providers/cli.py calls <code>claude -p "&lt;full system prompt + task&gt;"</code> as a subprocess. The full convention context is re-sent on every call — chain rules, Flask patterns, Angular idioms — as a raw string.</p>
+          <p><strong>Problem 2 — Session context:</strong> Every spec-doc/specview session wastes 10–15 minutes re-establishing Flask/Angular conventions that a Claude agent should already know.</p>
+          <p><strong>Backend Provider Interface (Primary Scope):</strong> The plugin installs as a proper Claude Code plugin (financing-plugin layout: agents/, skills/, references/, hooks/). The backend's providers/cli.py gains a structured call mode: <code>claude --agent chain-agent -p "&lt;task&gt;"</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Pullquotes -->
+  <section class="pullquote-row">
+    <div class="pullquote">
+      <div class="pullquote-mark">"</div>
+      <p class="pullquote-text">
+        The agent that loads chain-conventions.md before writing a workflow step
+        cannot bypass the adapter boundary, because the rule is in its context —
+        not its memory.
+      </p>
+      <div class="pullquote-attr">From the Claude Code Provider Plugin epic</div>
+    </div>
+    <div class="pullquote-divider"></div>
+    <div class="pullquote">
+      <div class="pullquote-mark">"</div>
+      <p class="pullquote-text">
+        Encode conventions once into reference files so Claude never re-establishes
+        context and never generates a pattern violation.
+      </p>
+      <div class="pullquote-attr">Spec Doc value proposition</div>
+    </div>
+  </section>
+
+  <!-- Self-host -->
+  <div class="section-heading" id="self-host">Self-host in minutes</div>
+
+  <section class="steps" style="border-bottom: 1px solid var(--border);">
+    <div class="step">
+      <span class="step-num">1</span>
+      <h3 class="step-title">Clone</h3>
+      <p class="step-body">Clone the repo and copy the override template.</p>
+      <div class="step-code">git clone https://github.com/bytesbysamu/specview
+cd specview
+cp docker-compose.override.example.yml \
+   docker-compose.override.yml</div>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <h3 class="step-title">Configure</h3>
+      <p class="step-body">Mount your Claude credentials. Set your database URL and JWT secret.</p>
+      <div class="step-code">api:
+  environment:
+    CHAIN_PROVIDER: cli
+  volumes:
+    - ~/.claude:/home/appuser/.claude
+    - ~/.claude-openclaw:/home/appuser/.claude-openclaw</div>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <h3 class="step-title">Run</h3>
+      <p class="step-body">Build and start. Open the app at localhost:8095.</p>
+      <div class="step-code">docker compose build
+docker compose up -d
+
+# Open http://localhost:8095</div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-brand">Spec Doc</div>
+    <div class="footer-copy">Built by Sam · Powered by Claude</div>
+    <nav class="footer-links">
+      <a href="https://github.com/bytesbysamu/specview">GitHub</a>
+      <a href="http://localhost:8095">Open App</a>
+    </nav>
+  </footer>
+
+  <script>
+    // Set date
+    document.getElementById('date-label').textContent =
+      new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      document.getElementById('theme-btn').textContent = next === 'dark' ? '🌙' : '☀️';
+    }
+
+    // Restore theme
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      document.getElementById('theme-btn').textContent = saved === 'dark' ? '🌙' : '☀️';
+    }
+  </script>
+</body>
+</html>

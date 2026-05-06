@@ -26,6 +26,14 @@ services:
     networks:
       - specview
 
+  landing:
+    image: nginx:alpine
+    volumes:
+      - ./landing:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    networks:
+      - specview
+
 networks:
   specview:
     driver: bridge
