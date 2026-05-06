@@ -1,12 +1,29 @@
-# Brain Dump: Flask/Angular Plugin
+# Brain Dump: Claude Code Provider Plugin
 
 > **Date**: 2026-05-05
 > **Status**: raw — everything I know, unfiltered
-> **Purpose**: encode the full Flask/Angular (spec-doc/specview) stack conventions into a Claude Code plugin so AI can implement features without being re-briefed every session
+> **Purpose**: a general-purpose Claude Code plugin with two jobs: (1) expose a provider interface the backend chain adapter can call directly — replacing the `cli.py` subprocess — so any Flask backend can use Claude Code as its AI engine; (2) encode the Flask/Angular stack conventions so the AI never needs re-briefing between sessions
 
 ---
 
-## The Problem
+## Primary Use Case: Backend AI Provider
+
+The `cli.py` provider in `modules/runtime/chain/providers/` spawns a `claude -p` subprocess to make AI calls. This is dev-only, fragile (subprocess exit codes, credential file mounts, no streaming support), and not production-safe.
+
+The plugin replaces this with a proper Claude Code plugin interface that the backend chain adapter calls directly. The adapter gains a new `"plugin"` provider option — no subprocess, no credential file juggling, just a clean Python call through the plugin API. This makes Claude Code a first-class production-viable provider for any Flask backend that uses the chain adapter pattern, not just spec-doc.
+
+**The interface the backend needs:**
+```python
+# providers/plugin.py (new)
+def create_message(system, prompt, *, model, max_tokens) -> tuple[str, int, int]: ...
+def stream_message(system, prompt, *, model, max_tokens) -> Iterator[str]: ...
+```
+
+The plugin exposes these as tool calls the backend can register and invoke — same shape as `providers/claude.py`, zero subprocess overhead.
+
+---
+
+## Secondary Use Case: Convention Encoding
 
 Every session I start on spec-doc or specview, I spend 10–15 minutes re-establishing context:
 - What the module structure looks like
@@ -294,7 +311,7 @@ The txs-plugin (transactions plugin for Bubls) encoded:
 - Ionic component conventions (ion-list, ion-item, ion-refresher)
 - Capacitor plugin wrappers for native features
 
-Key takeaway: plugins are **domain-aware convention encoders**, not generic tools. The flask-angular plugin must be specific to spec-doc/specview conventions, not generic Flask or generic Angular.
+Key takeaway: plugins are **domain-aware convention encoders**. But unlike txs-plugin, this plugin has a second job — it must also work as a general-purpose backend provider, not just a convention store for one project.
 
 ---
 
