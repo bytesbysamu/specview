@@ -30,6 +30,8 @@ services:
     image: nginx:alpine
     volumes:
       - ./landing:/usr/share/nginx/html:ro
+    ports:
+      - "8096:80"
     restart: unless-stopped
     networks:
       - specview

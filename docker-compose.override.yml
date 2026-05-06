@@ -3,10 +3,6 @@ services:
     ports:
       - "8095:80"
 
-  landing:
-    ports:
-      - "8096:80"
-
   api:
     environment:
       CHAIN_PROVIDER: cli
