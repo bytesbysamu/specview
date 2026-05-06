@@ -22,6 +22,7 @@ from modules.data.projects.errors import ProjectNotFoundError
 from modules.data.projects.service import get_project
 
 from modules.ai.services import task_gen as service
+from modules.ai.services import epic_guide as epic_guide_service
 from modules.runtime.workflows.execution import ExecutionStatus
 from modules.auth.decorators import require_auth
 from modules.usage.decorators import check_usage_limit
@@ -142,6 +143,34 @@ def regenerate_task(project_id: str):
     if not started:
         return jsonify({"started": False, "alreadyRunning": True}), 409
     return jsonify({"started": True}), 202
+
+
+@task_gen_bp.post("/<project_id>/generate-epic-guide")
+@require_auth
+@check_usage_limit("task_gen")
+def start_generate_epic_guide(project_id: str):
+    """Spawn background thread to generate implementation-guide.md for the full epic.
+
+    Returns 202 on success, 409 if already running.
+    """
+    try:
+        project = get_project(_PROJECTS_PATH, project_id)
+    except ValueError:
+        return jsonify({"error": "Project not found"}), 404
+    if project is None:
+        raise ProjectNotFoundError(project_id)
+
+    started = epic_guide_service.start(project_id, _PROJECTS_PATH)
+    if not started:
+        return jsonify({"started": False, "alreadyRunning": True}), 409
+    return jsonify({"started": True}), 202
+
+
+@task_gen_bp.get("/<project_id>/generate-epic-guide/status")
+@require_auth
+def get_epic_guide_status(project_id: str):
+    """Poll status for the epic guide generation."""
+    return jsonify(epic_guide_service.snapshot(project_id))
 
 
 @task_gen_bp.errorhandler(ProjectNotFoundError)
