@@ -1,7 +1,16 @@
 FROM python:3.11-slim
 
-RUN addgroup --system appgroup \
- && adduser --system --ingroup appgroup appuser
+# Install Node.js 20 (for claude CLI) + curl
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code CLI (Linux-compatible npm package)
+RUN npm install -g @anthropic-ai/claude-code
+
+RUN groupadd --system appgroup \
+ && useradd --system --gid appgroup --create-home --home-dir /home/appuser appuser
 
 WORKDIR /app
 
@@ -12,6 +21,7 @@ COPY api/ ./
 COPY data/ /data/spec-doc/
 
 USER appuser
+ENV HOME=/home/appuser
 
 EXPOSE 3101
 

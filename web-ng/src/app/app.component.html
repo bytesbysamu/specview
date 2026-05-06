@@ -134,40 +134,81 @@
 
       <h2 class="expanded-title">{{ expandedTitle() }}</h2>
 
-      <!-- AI result indicator -->
-      @if (aiResult()) {
-        <div class="ai-result-bar">
-          <span>AI result</span>
-          <button (click)="clearAiResult()">← Original</button>
-        </div>
+      <!-- Original spec content -->
+      @if (!aiResult()) {
+        <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
       }
-
-      <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
 
       <!-- AI text operations (project mode only) -->
       @if (activeProject() && currentSpec()) {
         <div class="text-ops">
-          @if (aiLoading()) {
-            <div class="text-ops-loading">Running…</div>
-          } @else {
-            <div class="text-ops-actions">
-              <button (click)="runOp('expand')">Expand</button>
-              <button (click)="runOp('compress')">Compress</button>
-              <button (click)="runOp('clarify')">Clarify</button>
-              <button (click)="showRewritePanel.set(!showRewritePanel())">Rewrite…</button>
+
+          <!-- Chip bar -->
+          <div class="text-ops-bar">
+            <span class="text-ops-label">AI</span>
+            <button class="op-chip" [class.active]="activeOp() === 'expand'"   (click)="toggleOp('expand')">Expand</button>
+            <button class="op-chip" [class.active]="activeOp() === 'compress'" (click)="toggleOp('compress')">Compress</button>
+            <button class="op-chip" [class.active]="activeOp() === 'clarify'"  (click)="toggleOp('clarify')">Clarify</button>
+            <button class="op-chip" [class.active]="activeOp() === 'rewrite'"  (click)="toggleOp('rewrite')">Rewrite…</button>
+          </div>
+
+          <!-- Rewrite instructions input -->
+          @if (activeOp() === 'rewrite' && !aiLoading() && !aiResult()) {
+            <div class="text-ops-rewrite">
+              <input
+                #instructionsEl
+                type="text"
+                placeholder="Instructions… (e.g. make it more concise and action-oriented)"
+                (keydown.enter)="runRewrite(instructionsEl.value)" />
+              <button (click)="runRewrite(instructionsEl.value)">Run</button>
             </div>
-            @if (showRewritePanel()) {
-              <div class="text-ops-rewrite">
-                <input
-                  #instructionsEl
-                  type="text"
-                  placeholder="Instructions for rewrite…"
-                  (keydown.enter)="runRewrite(instructionsEl.value)" />
-                <button (click)="runRewrite(instructionsEl.value)">Apply</button>
-              </div>
-            }
           }
+
+          <!-- Loading -->
+          @if (aiLoading()) {
+            <div class="text-ops-thinking">
+              <span class="thinking-dot"></span>
+              <span class="thinking-dot"></span>
+              <span class="thinking-dot"></span>
+              Thinking…
+            </div>
+          }
+
+          <!-- Error -->
+          @if (aiError()) {
+            <div class="text-ops-error">Could not reach AI — check connection.</div>
+          }
+
+          <!-- Result -->
+          @if (aiResult()) {
+            <div class="text-ops-result">
+              <div class="text-ops-result-header">
+                @if (aiLatencyMs()) {
+                  <span class="latency-badge">⚡ {{ (aiLatencyMs()! / 1000).toFixed(1) }}s</span>
+                }
+                <div class="text-ops-result-actions">
+                  <button (click)="copyResult()">{{ copied() ? '✓ Copied' : 'Copy' }}</button>
+                  <button (click)="dismissResult()">✕ Dismiss</button>
+                </div>
+              </div>
+              <div class="text-ops-result-body markdown-content" [innerHTML]="parsedContent()"></div>
+            </div>
+          }
+
         </div>
+
+        <!-- Original content shown below result for comparison -->
+        @if (aiResult()) {
+          <div class="text-ops-original">
+            <div class="text-ops-original-label">Original</div>
+            <div class="markdown-content" [innerHTML]="parsedOriginal()"></div>
+          </div>
+        }
+      }
+
+      <!-- Non-project expanded content (context files) -->
+      @if (!activeProject()) {
+        <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
       }
     </div>
   }

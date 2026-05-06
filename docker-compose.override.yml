@@ -2,3 +2,7 @@ services:
   web:
     ports:
       - "8095:80"
+
+  api:
+    environment:
+      ANTHROPIC_CLI_KEY: ""   # set to your OAuth token: security find-generic-password -s "Claude Code-credentials" -w | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['claudeAiOauth']['accessToken'])"

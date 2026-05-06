@@ -1,30 +1,54 @@
-"""CLI provider — ported verbatim from references.md:178–225."""
+"""CLI provider — subprocess call to claude CLI.
+
+In Docker, set ANTHROPIC_CLI_KEY to the OAuth access token extracted from the
+macOS keychain. The provider passes it as ANTHROPIC_API_KEY to the subprocess
+and adds --bare so the CLI skips keychain reads.
+
+On the host (mac), leave ANTHROPIC_CLI_KEY unset — the CLI uses the keychain
+automatically.
+"""
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 
 from ..errors import ProviderError
 
 logger = logging.getLogger(__name__)
 
+_CLI_KEY = os.environ.get("ANTHROPIC_CLI_KEY", "")
+
+
+def _build_cmd(system: str) -> list[str]:
+    cmd = ["claude", "-p", "--output-format", "text"]
+    if _CLI_KEY:
+        cmd.append("--bare")  # skip keychain reads; auth via ANTHROPIC_API_KEY env
+    if system:
+        cmd.extend(["--system-prompt", system])
+    return cmd
+
+
+def _build_env() -> dict | None:
+    if not _CLI_KEY:
+        return None
+    env = os.environ.copy()
+    env["ANTHROPIC_API_KEY"] = _CLI_KEY
+    return env
+
 
 def create_message(
     system: str, prompt: str, *, model: str = "claude-sonnet-4-5", max_tokens: int = 4096
 ) -> tuple[str, None, None]:
-    """Subprocess-driven CLI call. Returns ``(text, None, None)``.
-
-    The ``claude`` CLI does not expose token usage to its callers, so the
-    second and third tuple positions are always ``None``. The cost
-    accumulator treats ``None`` as zero-cost (developer-laptop fallback).
-    """
-    cmd = ["claude", "-p", "--output-format", "text"]
-    if system:
-        cmd.extend(["--system-prompt", system])
+    """Subprocess-driven CLI call. Returns ``(text, None, None)``."""
+    cmd = _build_cmd(system)
+    env = _build_env()
     try:
-        result = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=3600)
+        result = subprocess.run(
+            cmd, input=prompt, capture_output=True, text=True, timeout=3600, env=env
+        )
         if result.returncode != 0:
-            logger.error("cli non_zero_exit model=%s code=%d", model, result.returncode)
+            logger.error("cli non_zero_exit model=%s code=%d stderr=%s", model, result.returncode, result.stderr[:200])
             raise ProviderError(
                 f"claude CLI exited with code {result.returncode}: {result.stderr[:200]}", 502
             )
@@ -38,6 +62,5 @@ def create_message(
 
 
 def stream_message(system: str, prompt: str, *, model: str = "claude-sonnet-4-5", max_tokens: int = 4096):
-    # CLI does not stream; run single-shot and yield the full result as one chunk
     text, _, _ = create_message(system, prompt, model=model, max_tokens=max_tokens)
     yield text

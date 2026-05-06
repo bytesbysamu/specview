@@ -574,25 +574,32 @@ body {
 
 /* ── Text Operations ─────────────────────────── */
 .text-ops {
-  margin-top: 40px;
+  margin-top: 48px;
   padding-top: 20px;
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--ink);
 }
 
-.text-ops-loading {
-  font-family: 'Source Sans 3', sans-serif;
-  font-size: 12px;
-  color: var(--ink-muted);
-  font-style: italic;
-}
-
-.text-ops-actions {
+/* Chip bar */
+.text-ops-bar {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.text-ops-actions button {
+.text-ops-label {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+  padding-right: 6px;
+  border-right: 1px solid var(--border);
+  margin-right: 2px;
+}
+
+.op-chip {
   font-family: 'Source Sans 3', sans-serif;
   font-size: 11px;
   text-transform: uppercase;
@@ -600,22 +607,29 @@ body {
   background: none;
   border: 1px solid var(--border);
   color: var(--ink-muted);
-  padding: 5px 14px;
+  padding: 4px 14px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  border-radius: 2px;
 }
-.text-ops-actions button:hover { color: var(--ink); border-color: var(--ink); }
+.op-chip:hover { color: var(--ink); border-color: var(--ink); }
+.op-chip.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
 
+/* Rewrite input */
 .text-ops-rewrite {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 14px;
   align-items: center;
 }
 
 .text-ops-rewrite input {
   flex: 1;
-  max-width: 480px;
+  max-width: 560px;
   font-family: 'Source Sans 3', sans-serif;
   font-size: 13px;
   background: none;
@@ -639,8 +653,109 @@ body {
   border: none;
   padding: 7px 16px;
   cursor: pointer;
-  transition: opacity 0.15s;
 }
+
+/* Thinking animation */
+.text-ops-thinking {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 16px;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.thinking-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes thinking-pulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Error */
+.text-ops-error {
+  margin-top: 14px;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 12px;
+  color: var(--red);
+  padding: 8px 12px;
+  border: 1px solid var(--red);
+}
+
+/* Result panel */
+.text-ops-result {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  animation: rise 0.2s ease;
+}
+
+.text-ops-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.02);
+}
+[data-theme="dark"] .text-ops-result-header { background: rgba(255,255,255,0.03); }
+
+.latency-badge {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+}
+
+.text-ops-result-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.text-ops-result-actions button {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  padding: 3px 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.text-ops-result-actions button:first-child { color: var(--ink); border-color: var(--ink); }
+.text-ops-result-actions button:hover { color: var(--ink); border-color: var(--ink); }
+
+.text-ops-result-body {
+  padding: 24px;
+  column-count: 1;
+}
+
+/* Original content below result */
+.text-ops-original {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  opacity: 0.5;
+}
+.text-ops-original-label {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+  margin-bottom: 16px;
+}
+.text-ops-original .markdown-content { column-count: 1; font-size: 13px; }
 
 /* ── Footer ──────────────────────────────────── */
 .footer { text-align: center; padding: 28px 0; }

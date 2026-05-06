@@ -90,7 +90,10 @@ export class AppComponent implements OnInit, OnDestroy {
   // AI text ops state
   aiLoading = signal(false);
   aiResult = signal<string | null>(null);
-  showRewritePanel = signal(false);
+  aiLatencyMs = signal<number | null>(null);
+  aiError = signal(false);
+  activeOp = signal<string | null>(null); // which chip is open/active
+  copied = signal(false);
 
   // Context viewer
   contextContent = signal<string | null>(null);
@@ -137,6 +140,12 @@ export class AppComponent implements OnInit, OnDestroy {
     const spec = this.currentSpec();
     const ctx = this.contextContent();
     const content = result ?? spec?.content ?? ctx ?? '';
+    if (!content) return '';
+    return this.sanitizer.bypassSecurityTrustHtml(marked.parse(content) as string);
+  });
+
+  parsedOriginal = computed((): SafeHtml => {
+    const content = this.currentSpec()?.content ?? '';
     if (!content) return '';
     return this.sanitizer.bypassSecurityTrustHtml(marked.parse(content) as string);
   });
@@ -224,7 +233,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeFile.set(proj.specs?.[0]?.filename ?? null);
     this.contextContent.set(null);
     this.aiResult.set(null);
-    this.showRewritePanel.set(false);
+    
   }
 
   closeExpanded() {
@@ -232,13 +241,14 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeFile.set(null);
     this.contextContent.set(null);
     this.aiResult.set(null);
-    this.showRewritePanel.set(false);
+    
   }
 
   selectFile(filename: string) {
     this.activeFile.set(filename);
     this.aiResult.set(null);
-    this.showRewritePanel.set(false);
+    this.activeOp.set(null);
+    this.aiError.set(false);
   }
 
   // ── Context files ─────────────────────────────────
@@ -250,43 +260,67 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeProject.set(null);
     this.activeFile.set(null);
     this.aiResult.set(null);
-    this.showRewritePanel.set(false);
+    
   }
 
   // ── AI text ops ───────────────────────────────────
-  async runOp(op: 'expand' | 'compress' | 'clarify') {
-    const spec = this.currentSpec();
-    if (!spec?.content || this.aiLoading()) return;
+  toggleOp(op: string) {
+    if (this.activeOp() === op) {
+      this.activeOp.set(null);
+      this.aiResult.set(null);
+      this.aiError.set(false);
+      return;
+    }
+    this.activeOp.set(op);
+    this.aiResult.set(null);
+    this.aiError.set(false);
+    if (op !== 'rewrite') {
+      this.runOp(op as 'expand' | 'compress' | 'clarify');
+    }
+  }
+
+  private async _runAi(fn: () => Promise<{ text: string; latencyMs: number }>) {
+    if (this.aiLoading()) return;
     this.aiLoading.set(true);
     this.aiResult.set(null);
+    this.aiLatencyMs.set(null);
+    this.aiError.set(false);
     try {
-      const res = await this.aiSvc[op](spec.content);
+      const res = await fn();
       this.aiResult.set(res.text);
+      this.aiLatencyMs.set(res.latencyMs);
     } catch {
-      this.aiResult.set('_Error running operation. Check API connection._');
+      this.aiError.set(true);
     } finally {
       this.aiLoading.set(false);
     }
   }
 
-  async runRewrite(instructions: string) {
+  runOp(op: 'expand' | 'compress' | 'clarify') {
     const spec = this.currentSpec();
-    if (!spec?.content || !instructions.trim() || this.aiLoading()) return;
-    this.aiLoading.set(true);
-    this.aiResult.set(null);
-    try {
-      const res = await this.aiSvc.rewrite(spec.content, instructions);
-      this.aiResult.set(res.text);
-      this.showRewritePanel.set(false);
-    } catch {
-      this.aiResult.set('_Error running rewrite. Check API connection._');
-    } finally {
-      this.aiLoading.set(false);
-    }
+    if (!spec?.content) return;
+    this._runAi(() => this.aiSvc[op](spec.content!));
   }
 
-  clearAiResult() {
+  runRewrite(instructions: string) {
+    const spec = this.currentSpec();
+    if (!spec?.content || !instructions.trim()) return;
+    this._runAi(() => this.aiSvc.rewrite(spec.content!, instructions));
+  }
+
+  dismissResult() {
     this.aiResult.set(null);
+    this.aiLatencyMs.set(null);
+    this.aiError.set(false);
+    this.activeOp.set(null);
+  }
+
+  async copyResult() {
+    const result = this.aiResult();
+    if (!result) return;
+    await navigator.clipboard.writeText(result);
+    this.copied.set(true);
+    setTimeout(() => this.copied.set(false), 2000);
   }
 
   // ── Helpers (used in template) ────────────────────
