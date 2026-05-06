@@ -18,14 +18,20 @@ from ..errors import ProviderError
 logger = logging.getLogger(__name__)
 
 _CLI_KEY = os.environ.get("ANTHROPIC_CLI_KEY", "")
+_CHAIN_AGENT = os.environ.get("CHAIN_AGENT", "")  # e.g. "chain-agent"
 
 
 def _build_cmd(system: str) -> list[str]:
-    cmd = ["claude", "-p", "--output-format", "text"]
-    if _CLI_KEY:
-        cmd.append("--bare")  # skip keychain reads; auth via ANTHROPIC_API_KEY env
-    if system:
-        cmd.extend(["--system-prompt", system])
+    if _CHAIN_AGENT:
+        # Route through the named Claude Code agent — conventions are in the
+        # agent definition, so we omit the raw system-prompt.
+        cmd = ["claude", "--agent", _CHAIN_AGENT, "-p", "--output-format", "text"]
+    else:
+        cmd = ["claude", "-p", "--output-format", "text"]
+        if _CLI_KEY:
+            cmd.append("--bare")  # skip keychain reads; auth via ANTHROPIC_API_KEY env
+        if system:
+            cmd.extend(["--system-prompt", system])
     return cmd
 
 

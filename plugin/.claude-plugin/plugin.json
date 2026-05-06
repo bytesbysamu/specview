@@ -1,0 +1,8 @@
+{
+  "name": "chain-agent-plugin",
+  "description": "Spec-doc / specview plugin: encodes Flask/Angular/chain conventions, dev-tools skills, and a spec-pipeline skill. Routes backend CLI calls through the chain-agent instead of raw system prompts.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sam"
+  }
+}
