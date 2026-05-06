@@ -148,6 +148,27 @@
             </button>
           }
 
+          @if (canGenerateEpicGuide()) {
+            <button
+              class="sidebar-generate"
+              [disabled]="epicGuideLoading()"
+              (click)="generateEpicGuide()"
+              title="Generate a single implementation guide covering all epic tasks">
+              @if (epicGuideLoading()) {
+                <span class="thinking-dot"></span>
+                <span class="thinking-dot"></span>
+                <span class="thinking-dot"></span>
+              } @else {
+                ✦ Generate Guide
+              }
+            </button>
+            @if (epicGuideError()) {
+              <div class="sidebar-status sidebar-status--err">
+                <span class="sidebar-status-text">{{ epicGuideError() }}</span>
+              </div>
+            }
+          }
+
           <!-- Sidebar status: only visible when something is running or error -->
           @if (specGenLoading() || aiLoading() || polling() || !pollOk()) {
             <div class="sidebar-status"

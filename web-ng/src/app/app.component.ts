@@ -142,6 +142,10 @@ export class AppComponent implements OnInit, OnDestroy {
   specGenStep = signal<string | null>(null);
   specGenProjectName = signal<string | null>(null);
 
+  // Epic guide generation
+  epicGuideLoading = signal(false);
+  epicGuideError = signal<string | null>(null);
+
 
   toolbarFloating = signal(false);
   polling = signal(false);
@@ -253,6 +257,13 @@ export class AppComponent implements OnInit, OnDestroy {
     const proj = this.activeProject();
     if (!proj) return false;
     return !proj.specs.some(s => s.filename === 'analysis.md');
+  });
+
+  // True when project has an epic but no implementation-guide yet
+  canGenerateEpicGuide = computed(() => {
+    const proj = this.activeProject();
+    if (!proj) return false;
+    return proj.specs.some(s => s.filename === 'epic.md');
   });
 
 
@@ -730,6 +741,32 @@ export class AppComponent implements OnInit, OnDestroy {
       this.specGenStep.set(null);
       this.specGenProjectName.set(null);
       this._stopGenPoll();
+    }
+  }
+
+  async generateEpicGuide() {
+    const proj = this.activeProject();
+    if (!proj || this.epicGuideLoading()) return;
+
+    this.epicGuideLoading.set(true);
+    this.epicGuideError.set(null);
+    try {
+      await this.projectsSvc.startEpicGuide(proj.id);
+      while (true) {
+        await new Promise(r => setTimeout(r, 3000));
+        const status = await this.projectsSvc.pollEpicGuide(proj.id);
+        if (status.done) {
+          if (status.error) throw new Error(status.error);
+          const refreshed = await this.projectsSvc.getProject(proj.id);
+          this.activeProject.set(refreshed);
+          if (status.filename) this.activeFile.set(status.filename);
+          break;
+        }
+      }
+    } catch (err: any) {
+      this.epicGuideError.set(err?.message || 'Guide generation failed.');
+    } finally {
+      this.epicGuideLoading.set(false);
     }
   }
 

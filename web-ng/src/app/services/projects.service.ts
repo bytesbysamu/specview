@@ -70,4 +70,18 @@ export class ProjectsService {
       this.http.put<void>(`/api/projects/${projectId}/files/${filename}`, { content })
     );
   }
+
+  startEpicGuide(projectId: string): Promise<{ started: boolean; alreadyRunning?: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ started: boolean; alreadyRunning?: boolean }>(
+        `/api/projects/${projectId}/generate-epic-guide`, {}
+      )
+    );
+  }
+
+  pollEpicGuide(projectId: string): Promise<{ running: boolean; done: boolean; filename?: string; error?: string }> {
+    return firstValueFrom(
+      this.http.get<any>(`/api/projects/${projectId}/generate-epic-guide/status`)
+    );
+  }
 }
