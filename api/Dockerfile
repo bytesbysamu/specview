@@ -20,6 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY api/ ./
 COPY data/ /data/spec-doc/
 
+RUN chown -R appuser:appgroup /data/spec-doc/
+
 USER appuser
 ENV HOME=/home/appuser
 
@@ -28,7 +30,7 @@ EXPOSE 3101
 CMD ["gunicorn", \
      "--bind", "0.0.0.0:3101", \
      "--worker-class", "gthread", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--threads", "4", \
      "--timeout", "900", \
      "--preload", \

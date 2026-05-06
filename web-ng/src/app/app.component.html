@@ -13,9 +13,11 @@
         <div class="masthead-tagline">All the Specs Fit to Read</div>
       </div>
       <div class="masthead-actions">
+        <button class="new-project-btn" (click)="openCreateModal()" title="New project">＋ New</button>
         <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
           {{ isDark() ? '🌙' : '☀️' }}
         </button>
+        <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
       </div>
     </div>
   </header>
@@ -43,6 +45,7 @@
       {{ updateBanner() }} · <button (click)="updateBanner.set('')">dismiss</button>
     </div>
   }
+
 
   <!-- Search bar (hidden when viewing project or context section) -->
   @if (activeSection() !== 'context' && showGrid()) {
@@ -112,59 +115,90 @@
   <!-- Expanded panel (project reader or context viewer) -->
   @if (showExpanded()) {
     <div class="expanded-panel active">
-      <div class="expanded-header">
-        <div class="expanded-meta">
-          <button class="expanded-close" (click)="closeExpanded()">← All projects</button>
-          <span class="expanded-project">{{ expandedProject() }}</span>
-        </div>
-        <!-- File tabs (project mode only) -->
+
+      <!-- Sticky sidebar -->
+      <aside class="expanded-sidebar">
+        <button class="sidebar-back" (click)="closeExpanded()">← All</button>
+        <div class="sidebar-project">{{ expandedProject() }}</div>
+
         @if (activeProject()) {
-          <div class="expanded-tabs">
+          <nav class="sidebar-nav">
             @for (s of activeProject()!.specs; track s.filename) {
               <button
-                class="tab-btn"
+                class="sidebar-file"
                 [class.active]="activeFile() === s.filename"
                 (click)="selectFile(s.filename)">
                 {{ s.label }}
               </button>
             }
-          </div>
+          </nav>
+
+          @if (canGenerateSpecs()) {
+            <button
+              class="sidebar-generate"
+              [disabled]="specGenLoading()"
+              (click)="generateFromBraindump()">
+              @if (specGenLoading()) {
+                <span class="thinking-dot"></span>
+                <span class="thinking-dot"></span>
+                <span class="thinking-dot"></span>
+              } @else {
+                ✦ Generate Specs
+              }
+            </button>
+          }
         }
-      </div>
+      </aside>
 
-      <h2 class="expanded-title">{{ expandedTitle() }}</h2>
+      <!-- Main content -->
+      <div class="expanded-main">
 
-      <!-- Original spec content -->
-      @if (!aiResult()) {
-        <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
-      }
-
-      <!-- AI text operations (project mode only) -->
-      @if (activeProject() && currentSpec()) {
-        <div class="text-ops">
-
-          <!-- Chip bar -->
-          <div class="text-ops-bar">
-            <span class="text-ops-label">AI</span>
-            <button class="op-chip" [class.active]="activeOp() === 'expand'"   (click)="toggleOp('expand')">Expand</button>
-            <button class="op-chip" [class.active]="activeOp() === 'compress'" (click)="toggleOp('compress')">Compress</button>
-            <button class="op-chip" [class.active]="activeOp() === 'clarify'"  (click)="toggleOp('clarify')">Clarify</button>
-            <button class="op-chip" [class.active]="activeOp() === 'rewrite'"  (click)="toggleOp('rewrite')">Rewrite…</button>
+        <!-- Sticky editor toolbar (project files only) -->
+        @if (activeProject() && currentSpec()) {
+          <div class="editor-toolbar-sentinel"></div>
+          <div class="editor-toolbar" [class.editor-toolbar--floating]="toolbarFloating()"
+               [style.bottom]="toolbarFloating() && (specGenLoading() || aiLoading()) ? '42px' : null">
+            <div class="editor-toolbar-chips">
+              <span class="text-ops-label">AI</span>
+              @if (isBraindump()) {
+                <button class="op-chip op-chip--accent" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')">✦ Brainstorm</button>
+              }
+              <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')">Expand</button>
+              <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')">Compress</button>
+              <button class="op-chip" [class.active]="activeOp() === 'clarify'"   (click)="toggleOp('clarify')">Clarify</button>
+              <button class="op-chip" [class.active]="activeOp() === 'simplify'"  (click)="toggleOp('simplify')">Simplify</button>
+              <button class="op-chip" [class.active]="activeOp() === 'tldr'"      (click)="toggleOp('tldr')">TL;DR</button>
+              <button class="op-chip" [class.active]="activeOp() === 'bullets'"   (click)="toggleOp('bullets')">Bullets</button>
+              <button class="op-chip" [class.active]="activeOp() === 'style'"     (click)="toggleOp('style')">Style…</button>
+              @if (canRevert()) {
+                <button class="op-chip editor-hist-btn" (click)="undoVersion()">↩ Undo</button>
+              }
+              @if (canRedo()) {
+                <button class="op-chip editor-hist-btn" (click)="redoVersion()">↻ Redo</button>
+              }
+            </div>
+            @if (aiResult()) {
+              <div class="editor-toolbar-actions">
+                @if (aiLatencyMs()) {
+                  <span class="latency-badge">⚡ {{ (aiLatencyMs()! / 1000).toFixed(1) }}s</span>
+                }
+                <button class="editor-apply-btn" (click)="applyResult()">✓ Apply</button>
+                <button (click)="copyResult()">{{ copied() ? '✓ Copied' : 'Copy' }}</button>
+                <button (click)="dismissResult()">✕</button>
+              </div>
+            }
           </div>
 
-          <!-- Rewrite instructions input -->
-          @if (activeOp() === 'rewrite' && !aiLoading() && !aiResult()) {
-            <div class="text-ops-rewrite">
-              <input
-                #instructionsEl
-                type="text"
-                placeholder="Instructions… (e.g. make it more concise and action-oriented)"
-                (keydown.enter)="runRewrite(instructionsEl.value)" />
-              <button (click)="runRewrite(instructionsEl.value)">Run</button>
+          <!-- Style preset chips (no typing needed) -->
+          @if (activeOp() === 'style' && !aiLoading() && !aiResult()) {
+            <div class="style-presets">
+              <span class="style-presets-label">Style as</span>
+              @for (s of STYLE_PRESETS; track s) {
+                <button class="style-chip" (click)="runStyle(s)">{{ s }}</button>
+              }
             </div>
           }
 
-          <!-- Loading -->
           @if (aiLoading()) {
             <div class="text-ops-thinking">
               <span class="thinking-dot"></span>
@@ -174,42 +208,69 @@
             </div>
           }
 
-          <!-- Error -->
           @if (aiError()) {
             <div class="text-ops-error">Could not reach AI — check connection.</div>
           }
+        }
 
-          <!-- Result -->
-          @if (aiResult()) {
-            <div class="text-ops-result">
-              <div class="text-ops-result-header">
-                @if (aiLatencyMs()) {
-                  <span class="latency-badge">⚡ {{ (aiLatencyMs()! / 1000).toFixed(1) }}s</span>
-                }
-                <div class="text-ops-result-actions">
-                  <button (click)="copyResult()">{{ copied() ? '✓ Copied' : 'Copy' }}</button>
-                  <button (click)="dismissResult()">✕ Dismiss</button>
-                </div>
-              </div>
-              <div class="text-ops-result-body markdown-content" [innerHTML]="parsedContent()"></div>
+        <!-- Inline generation status for this project -->
+        @if (specGenLoading() && activeProject()) {
+          <div class="inline-gen-status">
+            <div class="gen-status-track"></div>
+            <div class="gen-status-content">
+              <span class="thinking-dot gen-dot"></span>
+              <span class="thinking-dot gen-dot"></span>
+              <span class="thinking-dot gen-dot"></span>
+              <span class="gen-status-project">{{ specGenProjectName() }}</span>
+              @if (specGenStep()) {
+                <span class="gen-status-sep">·</span>
+                <span class="gen-status-step">{{ specGenStep() }}</span>
+              }
             </div>
-          }
-
-        </div>
-
-        <!-- Original content shown below result for comparison -->
-        @if (aiResult()) {
-          <div class="text-ops-original">
-            <div class="text-ops-original-label">Original</div>
-            <div class="markdown-content" [innerHTML]="parsedOriginal()"></div>
           </div>
         }
-      }
 
-      <!-- Non-project expanded content (context files) -->
-      @if (!activeProject()) {
-        <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
-      }
+        @if (specGenError() && activeProject()) {
+          <div class="text-ops-error">{{ specGenError() }}</div>
+        }
+
+        <h2 class="expanded-title">{{ expandedTitle() }}</h2>
+
+        <!-- AI result / diff view -->
+        @if (activeProject() && aiResult()) {
+          @if (isAdditivOp()) {
+            <!-- Brainstorm / TL;DR: render result as rich markdown, no diff -->
+            <div class="brainstorm-result markdown-content" [innerHTML]="parsedAiResult()"></div>
+            @if (activeOp() === 'brainstorm') {
+              <div class="brainstorm-followup">
+                <input
+                  #followupEl
+                  type="text"
+                  class="brainstorm-followup-input"
+                  placeholder="Ask a follow-up or drill into an open question…"
+                  [value]="brainstormQuestion()"
+                  (input)="brainstormQuestion.set($any($event.target).value)"
+                  (keydown.enter)="followupBrainstorm(followupEl.value)" />
+                <button class="brainstorm-followup-btn" (click)="followupBrainstorm(followupEl.value)">↵</button>
+              </div>
+              @if (canGenerateSpecs()) {
+                <div class="brainstorm-generate-row">
+                  <button class="brainstorm-generate-btn" [disabled]="specGenLoading()" (click)="generateFromBrainstormResult()">
+                    ✦ Generate Specs from this brainstorm
+                  </button>
+                </div>
+              }
+            }
+          } @else {
+            <!-- Other ops: paragraph-level diff rendered as markdown sections -->
+            <div class="diff-unified markdown-content" [innerHTML]="diffHtmlUnified()"></div>
+          }
+        } @else {
+          <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
+        }
+
+      </div>
+
     </div>
   }
 
@@ -219,4 +280,98 @@
   </footer>
 
 </div>
+
+<!-- Fixed status bar — always visible when logged in -->
+@if (auth.isLoggedIn() && !toolbarFloating()) {
+  <div class="gen-status-bar"
+       [class.gen-status-bar--ai]="aiLoading() && !specGenLoading()"
+       [class.gen-status-bar--idle]="!specGenLoading() && !aiLoading()"
+       [class.gen-status-bar--poll]="polling() && !specGenLoading() && !aiLoading()"
+       [class.gen-status-bar--err]="!pollOk() && !specGenLoading() && !aiLoading()">
+    @if (specGenLoading() || aiLoading()) {
+      <div class="gen-status-track"></div>
+    }
+    <div class="gen-status-content">
+      @if (specGenLoading()) {
+        <span class="thinking-dot gen-dot"></span>
+        <span class="thinking-dot gen-dot"></span>
+        <span class="thinking-dot gen-dot"></span>
+        <span class="gen-status-project">{{ specGenProjectName() }}</span>
+        <span class="gen-status-sep">·</span>
+        <span class="gen-status-step">{{ specGenStep() ?? 'starting…' }}</span>
+      } @else if (aiLoading()) {
+        <span class="thinking-dot gen-dot"></span>
+        <span class="thinking-dot gen-dot"></span>
+        <span class="thinking-dot gen-dot"></span>
+        <span class="gen-status-project">{{ currentSpec()?.label }}</span>
+        <span class="gen-status-sep">·</span>
+        <span class="gen-status-step">{{ aiOpLabel() }}…</span>
+      } @else if (!pollOk()) {
+        <span class="gen-status-step">API unreachable</span>
+      } @else {
+        <span class="gen-status-step gen-status-idle">● live</span>
+      }
+    </div>
+  </div>
+}
+@if (specGenError()) {
+  <div class="gen-status-bar gen-status-bar--error">
+    <div class="gen-status-content">
+      {{ specGenError() }}
+      <button (click)="specGenError.set(null)">✕</button>
+    </div>
+  </div>
+}
+
+<!-- New Project Modal -->
+@if (showCreateModal()) {
+  <div class="modal-backdrop" (click)="closeCreateModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">New Project</h2>
+        <button class="modal-close" (click)="closeCreateModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <label class="modal-label" for="projectName">Project name</label>
+        <input
+          #projectNameEl
+          id="projectName"
+          class="modal-input"
+          type="text"
+          placeholder="e.g. Flask / Angular Plugin"
+          (keydown.enter)="projectNameEl.value && braindumpEl.value && createProject(projectNameEl, braindumpEl)" />
+
+        <label class="modal-label" for="braindump">Brain dump</label>
+        <textarea
+          #braindumpEl
+          id="braindump"
+          class="modal-textarea"
+          placeholder="Paste your brain dump here — everything you know about this project, unfiltered. The AI will generate analysis, epic, and architecture docs from it."
+          rows="14"></textarea>
+
+        @if (specGenError()) {
+          <div class="text-ops-error">{{ specGenError() }}</div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="modal-cancel" (click)="closeCreateModal()">Cancel</button>
+        <button
+          class="modal-generate"
+          [disabled]="specGenLoading()"
+          (click)="createProject(projectNameEl, braindumpEl)">
+          @if (specGenLoading()) {
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            Generating…
+          } @else {
+            ✦ Generate Specs
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
 }

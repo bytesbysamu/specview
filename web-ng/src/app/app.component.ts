@@ -1,11 +1,46 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect, NgZone } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 
 import { AuthService } from './services/auth.service';
-import { ProjectsService, Project, Spec } from './services/projects.service';
+import { ProjectsService, Project, Spec, GeneratedFile } from './services/projects.service';
 import { AiService } from './services/ai.service';
 import { LoginComponent } from './components/login/login.component';
+
+interface ParagraphDiff {
+  type: 'keep' | 'add' | 'remove';
+  text: string;
+}
+
+function computeParagraphDiff(original: string, result: string): ParagraphDiff[] {
+  const a = original.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+  const b = result.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+  const m = a.length, n = b.length;
+
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? 1 + dp[i+1][j+1] : Math.max(dp[i+1][j], dp[i][j+1]);
+    }
+  }
+
+  const diffs: ParagraphDiff[] = [];
+  let i = 0, j = 0;
+  while (i < m || j < n) {
+    if (i < m && j < n && a[i] === b[j]) {
+      diffs.push({ type: 'keep', text: a[i++] }); j++;
+    } else if (i < m && (j >= n || dp[i+1][j] >= dp[i][j+1])) {
+      diffs.push({ type: 'remove', text: a[i++] });
+    } else {
+      diffs.push({ type: 'add', text: b[j++] });
+    }
+  }
+  return diffs;
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 const SECTIONS = [
   { id: 'context',      label: 'Context',       icon: '📐' },
@@ -30,6 +65,7 @@ const CONTEXT_FILES = [
 ];
 
 const REFRESH_INTERVAL = 30_000;
+const GEN_POLL_INTERVAL = 10_000;
 
 function categorise(id: string): string {
   const s = id.toLowerCase();
@@ -99,7 +135,21 @@ export class AppComponent implements OnInit, OnDestroy {
   contextContent = signal<string | null>(null);
   contextTitle = signal('');
 
+  // New project / spec-gen
+  showCreateModal = signal(false);
+  specGenLoading = signal(false);
+  specGenError = signal<string | null>(null);
+  specGenStep = signal<string | null>(null);
+  specGenProjectName = signal<string | null>(null);
+
+
+  toolbarFloating = signal(false);
+  polling = signal(false);   // true briefly each time a poll fires
+  pollOk = signal(true);     // false if last poll returned an error
+  private _toolbarObserver: IntersectionObserver | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private genPollTimer: ReturnType<typeof setInterval> | null = null;
+  private ngZone = inject(NgZone);
 
   // ── Computed ──────────────────────────────────────
   sectionCounts = computed(() => {
@@ -136,21 +186,77 @@ export class AppComponent implements OnInit, OnDestroy {
   });
 
   parsedContent = computed((): SafeHtml => {
-    const result = this.aiResult();
     const spec = this.currentSpec();
     const ctx = this.contextContent();
-    const content = result ?? spec?.content ?? ctx ?? '';
+    const content = spec?.content ?? ctx ?? '';
     if (!content) return '';
     return this.sanitizer.bypassSecurityTrustHtml(marked.parse(content) as string);
   });
 
-  parsedOriginal = computed((): SafeHtml => {
-    const content = this.currentSpec()?.content ?? '';
-    if (!content) return '';
-    return this.sanitizer.bypassSecurityTrustHtml(marked.parse(content) as string);
+  // Undo / redo stacks keyed by "projectId/filename"
+  undoStack = signal<Record<string, string[]>>({});
+  redoStack = signal<Record<string, string[]>>({});
+
+  // Brainstorm follow-up
+  brainstormQuestion = signal('');
+
+  // Paragraph-level diff rendered as markdown HTML (single unified column)
+  diffHtmlUnified = computed((): SafeHtml => {
+    const result = this.aiResult();
+    const original = this.currentSpec()?.content ?? '';
+    if (!result) return '';
+    const diffs = computeParagraphDiff(original, result);
+    const parts = diffs.map(d => {
+      const rendered = marked.parse(d.text) as string;
+      if (d.type === 'remove') return `<div class="diff-block-remove">${rendered}</div>`;
+      if (d.type === 'add')    return `<div class="diff-block-add">${rendered}</div>`;
+      return rendered;
+    });
+    return this.sanitizer.bypassSecurityTrustHtml(parts.join(''));
+  });
+
+  // For brainstorm and TL;DR — render result as plain markdown (no diff)
+  parsedAiResult = computed((): SafeHtml => {
+    const result = this.aiResult();
+    if (!result) return '';
+    return this.sanitizer.bypassSecurityTrustHtml(marked.parse(result) as string);
+  });
+
+  // True for ops where diff view doesn't make sense (brainstorm is additive)
+  isAdditivOp = computed(() => ['brainstorm', 'tldr'].includes(this.activeOp() ?? ''));
+
+  aiOpLabel = computed(() => {
+    const labels: Record<string, string> = {
+      expand: 'Expanding', compress: 'Compressing', clarify: 'Clarifying',
+      simplify: 'Simplifying', tldr: 'Generating TL;DR', bullets: 'Converting to bullets',
+      brainstorm: 'Brainstorming', style: 'Restyling',
+    };
+    return labels[this.activeOp() ?? ''] ?? 'Processing';
+  });
+
+  canRevert = computed(() => {
+    const proj = this.activeProject();
+    const file = this.activeFile();
+    if (!proj || !file) return false;
+    return (this.undoStack()[`${proj.id}/${file}`]?.length ?? 0) > 0;
+  });
+
+  canRedo = computed(() => {
+    const proj = this.activeProject();
+    const file = this.activeFile();
+    if (!proj || !file) return false;
+    return (this.redoStack()[`${proj.id}/${file}`]?.length ?? 0) > 0;
   });
 
   sectionLabel = computed(() => SECTIONS.find(s => s.id === this.activeSection())?.label ?? 'Projects');
+
+  // True when project has no generated analysis yet (braindump.md not required)
+  canGenerateSpecs = computed(() => {
+    const proj = this.activeProject();
+    if (!proj) return false;
+    return !proj.specs.some(s => s.filename === 'analysis.md');
+  });
+
 
   showGrid = computed(() => !this.activeProject() && this.contextContent() === null);
   showExpanded = computed(() => !!this.activeProject() || this.contextContent() !== null);
@@ -159,7 +265,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor() {
     // Reload projects immediately whenever the user becomes logged in
-    // (covers both: app start with stored JWT and post-login transition).
     effect(() => {
       if (this.auth.isLoggedIn()) {
         this.loadProjects().then(() => {
@@ -169,6 +274,17 @@ export class AppComponent implements OnInit, OnDestroy {
         });
       } else {
         if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+      }
+    });
+
+    // Set up/tear down toolbar scroll observer whenever a project file is active
+    effect(() => {
+      const hasToolbar = !!(this.activeProject() && this.currentSpec());
+      if (hasToolbar) {
+        setTimeout(() => this._setupToolbarSentinel(), 0);
+      } else {
+        this._teardownToolbarSentinel();
+        this.toolbarFloating.set(false);
       }
     });
   }
@@ -182,6 +298,33 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    this._stopGenPoll();
+    this._teardownToolbarSentinel();
+  }
+
+  private _setupToolbarSentinel() {
+    this._teardownToolbarSentinel();
+    const el = document.querySelector('.editor-toolbar-sentinel');
+    if (!el) return;
+    this._toolbarObserver = new IntersectionObserver(
+      ([entry]) => this.ngZone.run(() => this.toolbarFloating.set(!entry.isIntersecting)),
+      { threshold: 0 }
+    );
+    this._toolbarObserver.observe(el);
+  }
+
+  private _teardownToolbarSentinel() {
+    this._toolbarObserver?.disconnect();
+    this._toolbarObserver = null;
+  }
+
+  private _startGenPoll() {
+    if (this.genPollTimer) return;
+    this.genPollTimer = setInterval(() => this.checkForUpdates(), GEN_POLL_INTERVAL);
+  }
+
+  private _stopGenPoll() {
+    if (this.genPollTimer) { clearInterval(this.genPollTimer); this.genPollTimer = null; }
   }
 
   // ── Theme ─────────────────────────────────────────
@@ -202,8 +345,10 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async checkForUpdates() {
+    this.polling.set(true);
     try {
       const fresh = await this.projectsSvc.listProjects();
+      this.pollOk.set(true);
       if (fresh.length !== this.knownCount) {
         const diff = fresh.length - this.knownCount;
         this.projects.set(fresh);
@@ -211,7 +356,11 @@ export class AppComponent implements OnInit, OnDestroy {
         this.updateBanner.set(diff > 0 ? `+${diff} new` : 'Projects updated');
         setTimeout(() => this.updateBanner.set(''), 5000);
       }
-    } catch { /* ignore */ }
+    } catch {
+      this.pollOk.set(false);
+    } finally {
+      setTimeout(() => this.polling.set(false), 700);
+    }
   }
 
   // ── Search ────────────────────────────────────────
@@ -263,6 +412,11 @@ export class AppComponent implements OnInit, OnDestroy {
     
   }
 
+  // Brainstorm available on any file
+  isBraindump = computed(() => !!this.currentSpec());
+
+  readonly STYLE_PRESETS = ['Concise', 'Technical', 'Executive', 'Narrative', 'Punchy'];
+
   // ── AI text ops ───────────────────────────────────
   toggleOp(op: string) {
     if (this.activeOp() === op) {
@@ -274,8 +428,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeOp.set(op);
     this.aiResult.set(null);
     this.aiError.set(false);
-    if (op !== 'rewrite') {
-      this.runOp(op as 'expand' | 'compress' | 'clarify');
+    // 'style' shows preset chips (no immediate call); 'rewrite' kept as alias for style
+    const immediateOps = ['expand', 'compress', 'clarify', 'simplify', 'tldr', 'bullets', 'brainstorm'];
+    if (immediateOps.includes(op)) {
+      this.runOp(op as any);
     }
   }
 
@@ -296,16 +452,62 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  runOp(op: 'expand' | 'compress' | 'clarify') {
+  runOp(op: 'expand' | 'compress' | 'clarify' | 'simplify' | 'tldr' | 'bullets' | 'brainstorm') {
     const spec = this.currentSpec();
     if (!spec?.content) return;
     this._runAi(() => this.aiSvc[op](spec.content!));
   }
 
-  runRewrite(instructions: string) {
+  runStyle(style: string) {
     const spec = this.currentSpec();
-    if (!spec?.content || !instructions.trim()) return;
-    this._runAi(() => this.aiSvc.rewrite(spec.content!, instructions));
+    if (!spec?.content) return;
+    this._runAi(() => this.aiSvc.styleAs(spec.content!, style));
+  }
+
+  followupBrainstorm(question: string) {
+    const spec = this.currentSpec();
+    const currentResult = this.aiResult();
+    if (!question.trim()) return;
+    const context = currentResult
+      ? `${spec?.content ?? ''}\n\n---\nPrevious brainstorm:\n${currentResult}`
+      : (spec?.content ?? '');
+    this.brainstormQuestion.set('');
+    this._runAi(() => this.aiSvc.rewrite(context,
+      `You are a brainstorming partner. The user wants to explore: "${question}"\n` +
+      `Go deep on this specific thread — concrete ideas, examples, and connections. Be direct and generative.`
+    ));
+  }
+
+  async generateFromBrainstormResult() {
+    const proj = this.activeProject();
+    const result = this.aiResult();
+    const spec = this.currentSpec();
+    if (!proj || !result || !spec) return;
+
+    // Use brainstorm result + original braindump as the combined context for spec gen
+    const enrichedBraindump = `${spec.content ?? ''}\n\n---\n## Brainstorm Output\n\n${result}`;
+    this.aiResult.set(null);
+    this.specGenLoading.set(true);
+    this.specGenError.set(null);
+    this.specGenStep.set(null);
+    this.specGenProjectName.set(proj.name);
+    this._startGenPoll();
+    try {
+      const files = await this._runBootstrap(proj.name, enrichedBraindump);
+      for (const file of files) {
+        await this.projectsSvc.saveFile(proj.id, file.filename, file.content);
+      }
+      const refreshed = await this.projectsSvc.getProject(proj.id);
+      this.activeProject.set(refreshed);
+      this.activeFile.set(refreshed.specs.find(s => s.filename === 'analysis.md')?.filename ?? refreshed.specs[0]?.filename ?? null);
+    } catch {
+      this.specGenError.set('Generation failed — check connection and try again.');
+    } finally {
+      this.specGenLoading.set(false);
+      this.specGenStep.set(null);
+      this.specGenProjectName.set(null);
+      this._stopGenPoll();
+    }
   }
 
   dismissResult() {
@@ -315,12 +517,190 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeOp.set(null);
   }
 
+  applyResult() {
+    const proj = this.activeProject();
+    const file = this.activeFile();
+    const result = this.aiResult();
+    if (!proj || !file || !result) return;
+    const spec = proj.specs.find(s => s.filename === file);
+    if (!spec) return;
+
+    const key = `${proj.id}/${file}`;
+
+    // Push current to undo stack
+    const undo = { ...this.undoStack() };
+    undo[key] = [...(undo[key] ?? []), spec.content ?? ''];
+    this.undoStack.set(undo);
+
+    // Applying a new result always clears redo (new branch)
+    const redo = { ...this.redoStack() };
+    redo[key] = [];
+    this.redoStack.set(redo);
+
+    // Update spec in the project signal
+    const updatedSpecs = proj.specs.map(s =>
+      s.filename === file ? { ...s, content: result } : s
+    );
+    this.activeProject.set({ ...proj, specs: updatedSpecs });
+
+    this.aiResult.set(null);
+    this.activeOp.set(null);
+    this.aiLatencyMs.set(null);
+
+    this.projectsSvc.saveFile(proj.id, file, result).catch(() => {});
+  }
+
+  undoVersion() {
+    const proj = this.activeProject();
+    const file = this.activeFile();
+    if (!proj || !file) return;
+    const key = `${proj.id}/${file}`;
+
+    const undoCurrent = { ...this.undoStack() };
+    const undoEntries = undoCurrent[key] ?? [];
+    if (!undoEntries.length) return;
+
+    const previous = undoEntries[undoEntries.length - 1];
+    undoCurrent[key] = undoEntries.slice(0, -1);
+    this.undoStack.set(undoCurrent);
+
+    // Save current content onto redo stack
+    const currentContent = proj.specs.find(s => s.filename === file)?.content ?? '';
+    const redoCurrent = { ...this.redoStack() };
+    redoCurrent[key] = [...(redoCurrent[key] ?? []), currentContent];
+    this.redoStack.set(redoCurrent);
+
+    const updatedSpecs = proj.specs.map(s =>
+      s.filename === file ? { ...s, content: previous } : s
+    );
+    this.activeProject.set({ ...proj, specs: updatedSpecs });
+    this.projectsSvc.saveFile(proj.id, file, previous).catch(() => {});
+  }
+
+  redoVersion() {
+    const proj = this.activeProject();
+    const file = this.activeFile();
+    if (!proj || !file) return;
+    const key = `${proj.id}/${file}`;
+
+    const redoCurrent = { ...this.redoStack() };
+    const redoEntries = redoCurrent[key] ?? [];
+    if (!redoEntries.length) return;
+
+    const next = redoEntries[redoEntries.length - 1];
+    redoCurrent[key] = redoEntries.slice(0, -1);
+    this.redoStack.set(redoCurrent);
+
+    // Save current content onto undo stack
+    const currentContent = proj.specs.find(s => s.filename === file)?.content ?? '';
+    const undoCurrent = { ...this.undoStack() };
+    undoCurrent[key] = [...(undoCurrent[key] ?? []), currentContent];
+    this.undoStack.set(undoCurrent);
+
+    const updatedSpecs = proj.specs.map(s =>
+      s.filename === file ? { ...s, content: next } : s
+    );
+    this.activeProject.set({ ...proj, specs: updatedSpecs });
+    this.projectsSvc.saveFile(proj.id, file, next).catch(() => {});
+  }
+
   async copyResult() {
     const result = this.aiResult();
     if (!result) return;
     await navigator.clipboard.writeText(result);
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 2000);
+  }
+
+  // ── New project / spec-gen ────────────────────────
+  private async _runBootstrap(projectName: string, braindump: string): Promise<GeneratedFile[]> {
+    const { job_id } = await this.projectsSvc.startBootstrap(projectName, braindump);
+    while (true) {
+      await new Promise(r => setTimeout(r, 2500));
+      const status = await this.projectsSvc.pollBootstrap(job_id);
+      if (status.current_step) this.specGenStep.set(status.current_step);
+      if (status.done) {
+        if (status.error) throw new Error(status.error);
+        return status.files ?? [];
+      }
+    }
+  }
+
+  openCreateModal() {
+    this.showCreateModal.set(true);
+    this.specGenError.set(null);
+  }
+
+  closeCreateModal() {
+    this.showCreateModal.set(false);
+    this.specGenError.set(null);
+  }
+
+  async createProject(nameEl: HTMLInputElement, braindumpEl: HTMLTextAreaElement) {
+    const name = nameEl.value.trim();
+    const braindump = braindumpEl.value.trim();
+    if (!name || !braindump || this.specGenLoading()) return;
+
+    // Close modal immediately — show fixed status bar
+    this.showCreateModal.set(false);
+    this.specGenLoading.set(true);
+    this.specGenError.set(null);
+    this.specGenStep.set(null);
+    this.specGenProjectName.set(name);
+    nameEl.value = '';
+    braindumpEl.value = '';
+    this._startGenPoll();
+
+    try {
+      const files = await this._runBootstrap(name, braindump);
+      const allFiles: GeneratedFile[] = [
+        { filename: 'braindump.md', content: braindump },
+        ...files,
+      ];
+      const project = await this.projectsSvc.createProject(name, allFiles);
+      await this.loadProjects();
+      await this.selectProject(project.id);
+    } catch {
+      this.specGenError.set('Generation failed — check connection and try again.');
+    } finally {
+      this.specGenLoading.set(false);
+      this.specGenStep.set(null);
+      this.specGenProjectName.set(null);
+      this._stopGenPoll();
+    }
+  }
+
+  async generateFromBraindump() {
+    const proj = this.activeProject();
+    if (!proj || this.specGenLoading()) return;
+    const braindumpSpec = proj.specs.find(s => s.filename === 'braindump.md');
+    if (!braindumpSpec?.content) return;
+
+    this.specGenLoading.set(true);
+    this.specGenError.set(null);
+    this.specGenStep.set(null);
+    this.specGenProjectName.set(proj.name);
+    this._startGenPoll();
+    try {
+      const files = await this._runBootstrap(proj.name, braindumpSpec.content);
+      for (const file of files) {
+        await this.projectsSvc.saveFile(proj.id, file.filename, file.content);
+      }
+      const refreshed = await this.projectsSvc.getProject(proj.id);
+      this.activeProject.set(refreshed);
+      this.activeFile.set(refreshed.specs.find(s => s.filename === 'analysis.md')?.filename ?? refreshed.specs[0]?.filename ?? null);
+    } catch {
+      this.specGenError.set('Generation failed — check connection and try again.');
+    } finally {
+      this.specGenLoading.set(false);
+      this.specGenStep.set(null);
+      this.specGenProjectName.set(null);
+      this._stopGenPoll();
+    }
+  }
+
+  logout() {
+    this.auth.signOut();
   }
 
   // ── Helpers (used in template) ────────────────────
