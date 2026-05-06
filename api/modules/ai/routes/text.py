@@ -189,30 +189,31 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
     t0 = time.monotonic()
     inputs = execution.inputs
     try:
+        execution.current_step_name = "analysis"
         system, prompt = bootstrap_analysis_prompt(
             inputs["braindump"], inputs["project_name"], inputs["builder"]
         )
         analysis = chain_adapter.generate(system, prompt).text
+        execution.outputs["analysis"] = analysis
 
+        execution.current_step_name = "epic"
         system, prompt = bootstrap_epic_prompt(
             inputs["braindump"], inputs["project_name"], analysis,
             inputs["builder"], inputs["principles"],
         )
         epic = chain_adapter.generate(system, prompt).text
+        execution.outputs["epic"] = epic
 
+        execution.current_step_name = "architecture"
         system, prompt = bootstrap_architecture_prompt(
             inputs["braindump"], inputs["project_name"], epic,
             inputs["builder"], inputs["principles"],
             inputs["codebase"], inputs["references"],
         )
         architecture = chain_adapter.generate(system, prompt, max_tokens=16384).text
+        execution.outputs["architecture"] = architecture
 
-        execution.outputs.update({
-            "analysis": analysis,
-            "epic": epic,
-            "architecture": architecture,
-            "latency_ms": int((time.monotonic() - t0) * 1000),
-        })
+        execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
         execution.complete()
     except Exception as exc:
         execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
@@ -248,7 +249,7 @@ def bootstrap_project():
         "references": req.references or read_context("references"),
     }
     execution = WorkflowExecution(workflow_ref="ai/bootstrap-project", inputs=inputs)
-    execution.start()  # NEW → IN_PROGRESS before thread dispatch
+    execution.start()
     _BOOTSTRAP_JOBS[job_id] = execution
     threading.Thread(
         target=_run_bootstrap_thread,
@@ -283,6 +284,21 @@ def bootstrap_status(job_id: str):
         "partial": partials.get(execution.current_step_name, "") if execution.current_step_name else "",
         "warnings": list(execution.warnings),
     }
+
+    # Expose completed steps as partial_files even before done=true so the
+    # frontend can write each file to disk as soon as its step finishes.
+    _PARTIAL_STEP_FILES = [
+        ("analysis", "analysis.md"),
+        ("epic", "epic.md"),
+        ("architecture", "architecture.md"),
+    ]
+    partial_files = [
+        {"filename": fname, "content": _text_of(execution.outputs[key])}
+        for key, fname in _PARTIAL_STEP_FILES
+        if key in execution.outputs and _text_of(execution.outputs[key])
+    ]
+    if partial_files:
+        body["partial_files"] = partial_files
 
     if done:
         _BOOTSTRAP_JOBS.pop(job_id, None)  # purge-on-first-terminal-read

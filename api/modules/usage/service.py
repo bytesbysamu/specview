@@ -29,12 +29,12 @@ from sqlmodel import Session, select
 
 from modules.usage.models import UsageCounter
 
-# Daily free-tier caps. Locked decision: bootstrap=3 / task_gen=20 / spec_gen=10.
+# Daily free-tier caps.
 # Pro plan is unmetered — see `decorators.check_usage_limit`.
 LIMITS: Dict[str, int] = {
-    "bootstrap": 3,
-    "task_gen": 20,
-    "spec_gen": 10,
+    "bootstrap": 30,
+    "task_gen": 100,
+    "spec_gen": 50,
 }
 
 

@@ -763,6 +763,93 @@ Focus on WHY. Explain trade-offs. No code blocks."""
     return "You are a markdown spec writer.", user
 
 
+def bootstrap_combined_prompt(
+    braindump: str,
+    project_name: str,
+    builder: str,
+    principles: str,
+    codebase: str,
+    references: str,
+) -> tuple[str, str]:
+    """Single-call prompt that generates analysis + epic + architecture in one response.
+
+    Output uses ===FILE: filename=== markers so the caller can split them.
+    Generating all three docs in one call avoids consecutive per-minute token
+    limit hits that occur when they are issued as three separate requests.
+    """
+    builder_block = f"\n## BUILDER CONTEXT\n{builder}\n" if builder else ""
+    principles_block = f"\n## ARCHITECTURE PRINCIPLES\n{principles}\n" if principles else ""
+    codebase_block = f"\n## CODEBASE CONTEXT\n{codebase}\n" if codebase else ""
+    references_block = f"\n## REFERENCE CODE\n{references}\n" if references else ""
+
+    user = f"""\
+Generate three spec documents for **{project_name}** from the brain dump below.
+Output ONLY the three files, each preceded by its marker. No preamble, no summary.
+{builder_block}{principles_block}{codebase_block}{references_block}
+{_BOOTSTRAP_CONTENT_ROUTING}
+
+## Output format (exact)
+
+===FILE: analysis.md===
+[full analysis document]
+
+===FILE: epic.md===
+[full epic document — informed by the analysis you just wrote]
+
+===FILE: architecture.md===
+[full architecture document — informed by the epic you just wrote]
+
+---
+
+## Document specs
+
+### analysis.md
+30-40 lines. Sections: The Problem · Hard Constraints · Open Questions · Dependencies & Sequencing · Explicitly Out of Scope.
+Start with: # 🔍 {project_name} — Analysis
+
+### epic.md
+Sections: Business Value · Scope (covers / does not cover) · Tasks (table + per-task detail) · Success Criteria · Non-Goals · Related Documents.
+Task table columns: | # | Task | Dependencies | Parallel | Effort | Priority |
+3-5 tasks. Priority = High/Low only.
+Start with: # 🎯 Epic: {project_name}
+
+### architecture.md
+≤250 lines. Sections: Architecture Overview · Design Principles · System Boundaries · Component Design · Technology Stack · Design Decisions · Execution Flow · Open Questions · Related Documents.
+No code blocks. Explain WHY, not just WHAT.
+Start with: # 🏗️ Solution Architecture: {project_name}
+
+---
+
+INPUT:
+{braindump}"""
+    return "You are a markdown spec writer. Output only the requested file markers and their content.", user
+
+
+def bootstrap_parse_combined(output: str) -> dict[str, str]:
+    """Parse ===FILE: filename=== markers from a combined bootstrap response.
+
+    Returns a dict mapping filename → content (stripped).
+    Unknown or missing files return empty string.
+    """
+    files: dict[str, str] = {}
+    current_file: str | None = None
+    current_lines: list[str] = []
+
+    for line in output.splitlines():
+        if line.startswith("===FILE:") and line.endswith("==="):
+            if current_file is not None:
+                files[current_file] = "\n".join(current_lines).strip()
+            current_file = line[len("===FILE:"):-len("===")].strip()
+            current_lines = []
+        elif current_file is not None:
+            current_lines.append(line)
+
+    if current_file is not None:
+        files[current_file] = "\n".join(current_lines).strip()
+
+    return files
+
+
 def bootstrap_extract_tasks(epic_content: str) -> list[dict]:
     """Port of ImplementationGuideService.extractTasksFromEpic.
 
