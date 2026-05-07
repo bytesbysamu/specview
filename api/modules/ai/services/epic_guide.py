@@ -55,6 +55,9 @@ def run_generation(
     try:
         project_dir = projects_dir / project_id
 
+        # Empty system prompt is intentional: the CLI provider routes through
+        # chain-agent (via CHAIN_AGENT env var) which supplies its own system
+        # prompt from its agent definition.
         result = chain_adapter.generate(
             "",
             f"Generate implementation-guide.md for the project at {project_dir}. Read epic.md and architecture.md from that directory.",

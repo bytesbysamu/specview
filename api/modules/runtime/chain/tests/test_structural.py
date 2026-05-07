@@ -7,7 +7,7 @@ import pathlib
 from modules.runtime.chain import adapter as _adapter
 
 
-def featureModules_mustNotImportProvidersDirectly():
+def test_feature_modules_must_not_import_providers_directly():
     """Greps the chain module tree for direct provider imports.
 
     Any file outside adapter.py / providers/ / tests/ that imports from
