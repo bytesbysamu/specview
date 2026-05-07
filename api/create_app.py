@@ -24,6 +24,7 @@ ENABLED_MODULES = [
     ('modules.billing.routes',      'billing_bp'),    # SaaS Foundation Wave 2 (Mon-T2)
     ('modules.ai.routes.stats',     'stats_bp'),      # SaaS Anthropic SDK Provider (SDK-T3)
     ('modules.auth.routes',         'auth_bp'),       # SaaS Auth Magic Link (Auth-T2)
+    ('modules.ai.routes.generic_skill_route', 'skill_bp'),  # Thin API Phase 2 — generic skill route
 ]
 
 

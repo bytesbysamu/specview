@@ -13,7 +13,9 @@ services:
       CHAIN_AGENT: chain-agent
       ANTHROPIC_CLI_KEY: "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"
       SPEC_DOC_DIR: /data/spec-doc
+      PLUGIN_DIR: /app/plugin
     volumes:
       - /Users/sam/Projects/specview/.claude-docker:/home/appuser/.claude:ro
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw
       - /Users/sam/Projects/specview/data:/data/spec-doc
+      - /Users/sam/Projects/specview/plugin:/app/plugin:ro

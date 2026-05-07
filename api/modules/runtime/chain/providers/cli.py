@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 _CLI_KEY = os.environ.get("ANTHROPIC_CLI_KEY", "")
 _CHAIN_AGENT = os.environ.get("CHAIN_AGENT", "")  # e.g. "chain-agent"
+_SPEC_DOC_DIR = os.environ.get("SPEC_DOC_DIR", "")  # e.g. "/data/spec-doc"
 
 
 def _build_cmd(system: str) -> list[str]:
@@ -34,6 +35,9 @@ def _build_cmd(system: str) -> list[str]:
             cmd.append("--bare")  # skip keychain reads; auth via ANTHROPIC_API_KEY env
         if system:
             cmd.extend(["--system-prompt", system])
+    # Grant the agent read access to the spec-doc data directory
+    if _SPEC_DOC_DIR:
+        cmd.extend(["--add-dir", _SPEC_DOC_DIR])
     return cmd
 
 

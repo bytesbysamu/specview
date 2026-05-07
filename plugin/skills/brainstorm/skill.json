@@ -1,0 +1,16 @@
+{
+  "name": "brainstorm",
+  "version": "1.0.0",
+  "description": "Enhance a raw braindump: ask clarifying questions, offer options with tradeoffs, rewrite into a spec-ready document",
+  "execution_model": "async",
+  "output_schema": {
+    "type": "object",
+    "required": ["questions", "recommendations", "rewritten_braindump"],
+    "properties": {
+      "questions": {"type": "array"},
+      "recommendations": {"type": "array"},
+      "rewritten_braindump": {"type": "string"},
+      "suggested_action": {"type": "string"}
+    }
+  }
+}

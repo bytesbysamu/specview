@@ -116,7 +116,8 @@ def lint_braindump():
         except ProviderError as exc:
             raise AIProviderError(exc.message) from exc
         try:
-            parsed = json.loads(result.text)
+            raw = re.sub(r'```(?:json)?\n?|\n?```', '', result.text).strip()
+            parsed = json.loads(raw)
         except (ValueError, KeyError) as exc:
             raise AIProviderError("lint_braindump_parse_failed") from exc
         response = LintBraindumpResponse(

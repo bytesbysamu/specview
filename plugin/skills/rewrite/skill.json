@@ -1,0 +1,13 @@
+{
+  "name": "rewrite",
+  "version": "1.0.0",
+  "description": "Apply instructions to rewrite text. Returns the rewritten text inline.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {"type": "string"}
+    }
+  }
+}

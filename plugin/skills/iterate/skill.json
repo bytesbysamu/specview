@@ -1,0 +1,13 @@
+{
+  "name": "iterate",
+  "version": "1.0.0",
+  "description": "Update a spec document to reflect an instruction while preserving structure.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {"type": "string"}
+    }
+  }
+}

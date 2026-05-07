@@ -1,0 +1,14 @@
+{
+  "name": "review",
+  "version": "1.0.0",
+  "description": "Score spec documents on six quality dimensions and surface specific issues.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["scores", "issues"],
+    "properties": {
+      "scores": {"type": "object"},
+      "issues": {"type": "array"}
+    }
+  }
+}
