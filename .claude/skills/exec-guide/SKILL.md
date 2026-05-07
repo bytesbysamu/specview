@@ -74,14 +74,44 @@ Task N: <name>
   Verify: <summary of verify output>
 ```
 
-### 5. After all tasks
+### 5. Run tests (automatic — do not skip)
+
+After all tasks complete, invoke the `/dev-test` skill scoped to the nearest relevant module:
+
+Use the Agent tool with `subagent_type: "general-purpose"` and this prompt:
+```
+Follow the /dev-test skill instructions exactly.
+Skill file: /Users/sam/Projects/specview/.claude/skills/dev-test/SKILL.md
+Scope: <module path, e.g. modules/ai/routes>
+Working directory: /Users/sam/Projects/specview/api
+```
+
+If tests fail, stop and report failures. Do not proceed to step 6 until tests pass.
+
+### 6. Run code review (automatic — do not skip)
+
+After tests pass, invoke the `/dev-review` skill on the changed files:
+
+Use the Agent tool with `subagent_type: "general-purpose"` and this prompt:
+```
+Follow the /dev-review skill instructions exactly.
+Skill file: /Users/sam/Projects/specview/.claude/skills/dev-review/SKILL.md
+Scope: all files changed in this exec-guide run
+Working directory: /Users/sam/Projects/specview
+```
+
+Collect the review output and include it in the final summary.
+
+### 7. Final summary
 
 ```
 exec-guide: complete
   Tasks run: N
   Tasks passed: N
   Tasks failed: 0
-  Run /dev-test to confirm the full test suite.
+  Tests: passed (backend: <module> — N passed)
+  Review: <critical count> critical, <warning count> warnings
+  Next: run /commit to commit the changes
 ```
 
 ## Abort Conditions
@@ -89,14 +119,14 @@ exec-guide: complete
 - `implementation-guide.md` not found → stop, tell user to run `/impl-guide <project>` first.
 - Agent reports a blocking error on a task → stop, report the error, do not proceed to the next task.
 - A Verify check fails → treat as a blocking error; report and stop.
+- Tests fail after implementation → stop, report failures, do not run review.
 
 ## Notes
 
 - Always run tasks in order — later tasks depend on earlier ones.
 - The agent has full tool access and will read, edit, and run tests itself.
-- If a task says "Delete `path/to/file`", the agent will delete it.
-- If a task says "run `pytest`", the agent will run it and check results.
-- This skill does not commit — run `/commit` after reviewing the changes.
+- dev-test and dev-review are always invoked automatically — never skip them.
+- This skill does not commit — run `/commit` after reviewing the output.
 
 ## Allowed Tools
 
