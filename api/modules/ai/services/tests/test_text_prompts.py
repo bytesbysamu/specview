@@ -2,6 +2,10 @@
 
 All functions are pure (no I/O, no Flask, no chain calls), so tests run
 with no fixtures and no patches.
+
+NOTE: rewrite_prompt, iterate_prompt, lint_braindump_prompt were removed in
+Thin API Phase 2 — those prompts now live in plugin/skills/*/SKILL.md.
+Only bootstrap_* and generate_* functions remain.
 """
 from __future__ import annotations
 
@@ -11,26 +15,36 @@ import modules.ai.services.text_prompts as _prompts
 
 
 # ---------------------------------------------------------------------------
-# Type contract: every public function returns a (str, str) tuple
+# Deleted functions must NOT exist (invariant: zero AI strings in Python)
 # ---------------------------------------------------------------------------
 
-def test_rewrite_prompt_returns_str_str_tuple():
-    result = _prompts.rewrite_prompt("some text", "make it shorter")
-    assert isinstance(result, tuple) and len(result) == 2
-    assert all(isinstance(s, str) for s in result)
+def test_rewrite_prompt_does_not_exist():
+    assert not hasattr(_prompts, "rewrite_prompt"), (
+        "rewrite_prompt was removed — AI instructions live in plugin/skills/rewrite/SKILL.md"
+    )
 
 
-def test_iterate_prompt_returns_str_str_tuple():
-    result = _prompts.iterate_prompt("base spec", "current doc", "builder", "principles")
-    assert isinstance(result, tuple) and len(result) == 2
-    assert all(isinstance(s, str) for s in result)
+def test_iterate_prompt_does_not_exist():
+    assert not hasattr(_prompts, "iterate_prompt"), (
+        "iterate_prompt was removed — AI instructions live in plugin/skills/iterate/SKILL.md"
+    )
 
 
-def test_lint_braindump_prompt_returns_str_str_tuple():
-    result = _prompts.lint_braindump_prompt("here is my braindump")
-    assert isinstance(result, tuple) and len(result) == 2
-    assert all(isinstance(s, str) for s in result)
+def test_lint_braindump_prompt_does_not_exist():
+    assert not hasattr(_prompts, "lint_braindump_prompt"), (
+        "lint_braindump_prompt was removed — AI instructions live in plugin/skills/brainstorm/SKILL.md"
+    )
 
+
+def test_review_prompt_does_not_exist():
+    assert not hasattr(_prompts, "review_prompt"), (
+        "review_prompt was removed — AI instructions live in plugin/skills/review/SKILL.md"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Type contract: every remaining public function returns a (str, str) tuple
+# ---------------------------------------------------------------------------
 
 def test_generate_prompt_returns_str_str_tuple():
     result = _prompts.generate_prompt("write something", "builder ctx", "principles ctx", "formal")
@@ -60,24 +74,6 @@ def test_bootstrap_architecture_prompt_returns_str_str_tuple():
 # Non-empty contract: both strings must have content
 # ---------------------------------------------------------------------------
 
-def test_rewrite_prompt_returns_non_empty_strings():
-    system, user = _prompts.rewrite_prompt("hello world", "rewrite it")
-    assert len(system.strip()) > 0
-    assert len(user.strip()) > 0
-
-
-def test_iterate_prompt_returns_non_empty_strings():
-    system, user = _prompts.iterate_prompt("base", "current", "builder", "principles")
-    assert len(system.strip()) > 0
-    assert len(user.strip()) > 0
-
-
-def test_lint_braindump_prompt_returns_non_empty_strings():
-    system, user = _prompts.lint_braindump_prompt("my braindump content")
-    assert len(system.strip()) > 0
-    assert len(user.strip()) > 0
-
-
 def test_generate_prompt_returns_non_empty_strings():
     system, user = _prompts.generate_prompt("write a spec", "", "", "")
     assert len(system.strip()) > 0
@@ -105,12 +101,6 @@ def test_bootstrap_architecture_prompt_returns_non_empty_strings():
 # ---------------------------------------------------------------------------
 # Content inclusion
 # ---------------------------------------------------------------------------
-
-def test_lint_braindump_prompt_includes_braindump_in_user_string():
-    braindump = "unique-braindump-marker-xyzzy-42"
-    _system, user = _prompts.lint_braindump_prompt(braindump)
-    assert braindump in user, f"Braindump text must appear in user string; got: {user!r}"
-
 
 def test_generate_prompt_includes_spec_content_in_user_string():
     prompt_text = "unique-generate-prompt-xyzzy-99"
@@ -149,24 +139,6 @@ def test_bootstrap_architecture_prompt_includes_braindump_epic_and_project_name(
 # ---------------------------------------------------------------------------
 # No absolute personal paths in prompt output
 # ---------------------------------------------------------------------------
-
-def test_rewrite_prompt_no_absolute_personal_paths():
-    system, user = _prompts.rewrite_prompt("text", "instruction")
-    assert "/Users/" not in system + user
-    assert "/home/" not in system + user
-
-
-def test_iterate_prompt_no_absolute_personal_paths():
-    system, user = _prompts.iterate_prompt("base", "current", "builder", "principles")
-    assert "/Users/" not in system + user
-    assert "/home/" not in system + user
-
-
-def test_lint_braindump_prompt_no_absolute_personal_paths():
-    system, user = _prompts.lint_braindump_prompt("braindump")
-    assert "/Users/" not in system + user
-    assert "/home/" not in system + user
-
 
 def test_generate_prompt_no_absolute_personal_paths():
     system, user = _prompts.generate_prompt("write", "builder", "principles", "formal")

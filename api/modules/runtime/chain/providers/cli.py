@@ -23,9 +23,11 @@ _SPEC_DOC_DIR = os.environ.get("SPEC_DOC_DIR", "")  # e.g. "/data/spec-doc"
 
 
 def _build_cmd(system: str) -> list[str]:
-    if _CHAIN_AGENT:
-        # Route through the named Claude Code agent — conventions are in the
-        # agent definition, so we omit the raw system-prompt.
+    if _CHAIN_AGENT and not system:
+        # Route through the named Claude Code agent only when the caller
+        # provides no explicit system prompt (general generation calls).
+        # Skill execution passes SKILL.md as the system prompt, which must
+        # take precedence — so we fall through to the --system-prompt path.
         cmd = ["claude", "--agent", _CHAIN_AGENT, "-p", "--output-format", "text"]
         if _CLI_KEY:
             cmd.append("--bare")  # skip keychain reads in Docker; auth via ANTHROPIC_API_KEY env

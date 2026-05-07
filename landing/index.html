@@ -42,7 +42,7 @@
     <a href="#what" class="active">What</a>
     <a href="#how">How it works</a>
     <a href="#output">Output</a>
-    <a href="#self-host">Self-host</a>
+    <a href="#pricing">Pricing</a>
   </nav>
 
   <!-- Lede / Hero -->
@@ -57,8 +57,9 @@
         No more blank-page paralysis. No more re-briefing the AI every session.
       </p>
       <div class="cta-row">
-        <a href="#self-host" class="btn-primary">Self-host free</a>
-        <a href="#how" class="btn-secondary">See how it works</a>
+        <a href="https://app.specview.io/signup" class="btn-primary">Try it free</a>
+        <!-- AUTH_URL -->
+        <a href="#pricing" class="btn-secondary">Pricing ↓</a>
       </div>
     </div>
 
@@ -222,6 +223,71 @@ Write flask-conventions.md first.</div>
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════
+       PRICING SECTION
+       ══════════════════════════════════════ -->
+  <div class="section-heading" id="pricing">Pricing</div>
+
+  <section class="pricing">
+    <div class="pricing-grid">
+
+      <!-- Free tier -->
+      <div class="pricing-tier">
+        <p class="pricing-tier-name">Free</p>
+        <p class="pricing-price">
+          <span class="pricing-amount">$0</span>
+          <span class="pricing-period">/ month</span>
+        </p>
+        <p class="pricing-desc">
+          For developers exploring AI-structured spec docs. Three projects a month
+          gives you room to evaluate the workflow before committing.
+        </p>
+        <ul class="pricing-features">
+          <li>3 projects / month</li>
+          <li>Full spec generation pipeline</li>
+          <li>Analysis, epic, architecture &amp; timeline</li>
+          <li>No credit card required</li>
+        </ul>
+        <div class="pricing-cta">
+          <a href="https://app.specview.io/signup" class="btn-primary">Try it free</a>
+          <!-- AUTH_URL -->
+        </div>
+      </div>
+
+      <!-- 1px column divider -->
+      <div class="pricing-divider" aria-hidden="true"></div>
+
+      <!-- Pro tier -->
+      <div class="pricing-tier">
+        <p class="pricing-tier-name">Pro</p>
+        <p class="pricing-price">
+          <span class="pricing-amount">$29</span>
+          <span class="pricing-period">/ month</span>
+        </p>
+        <p class="pricing-desc">
+          For solo developers and small-team PMs who want unlimited spec generation
+          without managing infrastructure. One seat, one decision.
+        </p>
+        <ul class="pricing-features">
+          <li>Unlimited projects</li>
+          <li>Full spec generation pipeline</li>
+          <li>Analysis, epic, architecture &amp; timeline</li>
+          <li>Priority support</li>
+        </ul>
+        <div class="pricing-cta">
+          <a
+            href="https://buy.stripe.com/test_6oUeVdaA1aVF27s1JVao800"
+            class="btn-primary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Get Pro — $29/mo</a>
+          <!-- STRIPE_URL -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <hr class="divider">
 
   <!-- Pullquotes -->
@@ -246,48 +312,12 @@ Write flask-conventions.md first.</div>
     </div>
   </section>
 
-  <!-- Self-host -->
-  <div class="section-heading" id="self-host">Self-host in minutes</div>
-
-  <section class="steps" style="border-bottom: 1px solid var(--border);">
-    <div class="step">
-      <span class="step-num">1</span>
-      <h3 class="step-title">Clone</h3>
-      <p class="step-body">Clone the repo and copy the override template.</p>
-      <div class="step-code">git clone https://github.com/bytesbysamu/specview
-cd specview
-cp docker-compose.override.example.yml \
-   docker-compose.override.yml</div>
-    </div>
-    <div class="step">
-      <span class="step-num">2</span>
-      <h3 class="step-title">Configure</h3>
-      <p class="step-body">Mount your Claude credentials. Set your database URL and JWT secret.</p>
-      <div class="step-code">api:
-  environment:
-    CHAIN_PROVIDER: cli
-  volumes:
-    - ~/.claude:/home/appuser/.claude
-    - ~/.claude-openclaw:/home/appuser/.claude-openclaw</div>
-    </div>
-    <div class="step">
-      <span class="step-num">3</span>
-      <h3 class="step-title">Run</h3>
-      <p class="step-body">Build and start. Open the app at localhost:8095.</p>
-      <div class="step-code">docker compose build
-docker compose up -d
-
-# Open http://localhost:8095</div>
-    </div>
-  </section>
-
   <!-- Footer -->
   <footer class="footer">
     <div class="footer-brand">Spec Doc</div>
     <div class="footer-copy">Built by Sam · Powered by Claude</div>
     <nav class="footer-links">
       <a href="https://github.com/bytesbysamu/specview">GitHub</a>
-      <a href="http://localhost:8095">Open App</a>
     </nav>
   </footer>
 
