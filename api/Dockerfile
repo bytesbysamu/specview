@@ -18,6 +18,7 @@ COPY api/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY api/ ./
+COPY plugin/ ./plugin/
 COPY data/ /data/spec-doc/
 
 RUN chown -R appuser:appgroup /data/spec-doc/

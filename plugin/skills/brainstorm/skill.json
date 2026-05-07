@@ -1,16 +1,13 @@
 {
   "name": "brainstorm",
-  "version": "1.0.0",
-  "description": "Enhance a raw braindump: ask clarifying questions, offer options with tradeoffs, rewrite into a spec-ready document",
-  "execution_model": "async",
+  "version": "2.0.0",
+  "description": "Product thinking partner — generate structured brainstorm with themes, connections, questions, and ideas. Supports optional followup mode with question/context fields.",
+  "execution_model": "sync",
   "output_schema": {
     "type": "object",
-    "required": ["questions", "recommendations", "rewritten_braindump"],
+    "required": ["text"],
     "properties": {
-      "questions": {"type": "array"},
-      "recommendations": {"type": "array"},
-      "rewritten_braindump": {"type": "string"},
-      "suggested_action": {"type": "string"}
+      "text": {"type": "string"}
     }
   }
 }
