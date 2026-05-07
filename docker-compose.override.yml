@@ -14,5 +14,6 @@ services:
       SPEC_DOC_DIR: /data/spec-doc
     volumes:
       - /Users/sam/.claude:/home/appuser/.claude
+      - /Users/sam/.claude.json:/home/appuser/.claude.json:ro
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw
       - /Users/sam/Projects/specview/data:/data/spec-doc
