@@ -31,6 +31,7 @@ Before acting on any request, check whether a skill or agent applies:
 - Any database schema change, new column, new table → use `/dev-migrate <desc>`
 - Any code review, pre-PR check, diff review → use `/dev-review`
 - Any spec generation, braindump processing → use `/spec-pipeline <project>`
+- Any implementation guide, task guide, how-to-build document → use `/impl-guide <project>`
 - Any Flask route, SQLModel model, migration, service → delegate to `spec-backend` agent
 - Any Angular component, signal, service, template → delegate to `spec-frontend` agent
 - Any chain adapter, prompt, workflow step, provider → delegate to `chain-agent`
@@ -55,6 +56,7 @@ Do not bypass these — the agents load conventions automatically. Doing it your
 | `/dev-migrate <desc>` | Scaffold + apply an Alembic migration |
 | `/dev-review` | 3-agent parallel code review before a PR |
 | `/spec-pipeline <project>` | Run braindump → full spec set via bootstrap API |
+| `/impl-guide <project>` | epic + architecture → single high-level implementation guide (no code, fast) |
 
 ## Available agents (delegate with /agents or use in tasks)
 
