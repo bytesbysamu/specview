@@ -389,6 +389,192 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/expand:
+    post:
+      summary: Expand text with more detail and depth
+      operationId: expandText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextRequest'
+      responses:
+        '200':
+          description: Expanded text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+        '400':
+          description: Missing or empty text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/compress:
+    post:
+      summary: Compress text to a shorter form
+      operationId: compressText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextRequest'
+      responses:
+        '200':
+          description: Compressed text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+        '400':
+          description: Missing or empty text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/clarify:
+    post:
+      summary: Clarify text for improved clarity and precision
+      operationId: clarifyText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextRequest'
+      responses:
+        '200':
+          description: Clarified text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+        '400':
+          description: Missing or empty text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/simplify:
+    post:
+      summary: Simplify text for a general audience
+      operationId: simplifyText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextRequest'
+      responses:
+        '200':
+          description: Simplified text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+        '400':
+          description: Missing or empty text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tldr:
+    post:
+      summary: Produce a TL;DR summary of the text
+      operationId: tldrText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextRequest'
+      responses:
+        '200':
+          description: TL;DR summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+        '400':
+          description: Missing or empty text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/bullets:
+    post:
+      summary: Convert text into bullet points
+      operationId: bulletsText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextRequest'
+      responses:
+        '200':
+          description: Bulleted text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+        '400':
+          description: Missing or empty text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/brainstorm:
+    post:
+      summary: Brainstorm ideas from text with an optional question and context
+      operationId: brainstormText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrainstormRequest'
+      responses:
+        '200':
+          description: Brainstormed ideas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+
+  /api/rewrite:
+    post:
+      summary: Rewrite text in a specified style
+      operationId: rewriteAction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewriteActionRequest'
+      responses:
+        '200':
+          description: Rewritten text in the requested style
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextResponse'
+        '400':
+          description: Missing text or invalid style
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/ai/text/rewrite:
     post:
       summary: Rewrite text with optional instructions
@@ -1083,6 +1269,44 @@ paths:
 components:
 
   schemas:
+
+    TextResponse:
+      type: object
+      required: [text, latencyMs]
+      properties:
+        text:
+          type: string
+        latencyMs:
+          type: integer
+          minimum: 0
+
+    TextRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    BrainstormRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        question:
+          type: string
+        context:
+          type: string
+
+    RewriteActionRequest:
+      type: object
+      required: [text, style]
+      properties:
+        text:
+          type: string
+        style:
+          type: string
+          enum: [Concise, Technical, Executive, Narrative, Punchy]
 
     HealthResponse:
       type: object

@@ -53,12 +53,6 @@ class LintBraindumpFlag(BaseModel):
     message: str
 
 
-class LintBraindumpRequest(BaseModel):
-    braindump: constr(min_length=1) = Field(
-        ..., description='Brain dump text to analyse for spec readiness.'
-    )
-
-
 class LintBraindumpResponse(BaseModel):
     ready: bool
     flags: List[LintBraindumpFlag]
@@ -147,83 +141,6 @@ class ContextUpdateRequest(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: str
-
-
-class GenerateRequest(BaseModel):
-    prompt: constr(min_length=1) = Field(
-        ...,
-        description='Prompt text to generate from. Whitespace-only values are rejected by the server.\n',
-    )
-    tone: Optional[str] = Field(
-        'balanced',
-        description='Optional tone directive (e.g. "balanced", "formal", "casual"). Defaults to "balanced" to match the Angular client default.\n',
-    )
-
-
-class GenerateResponse(BaseModel):
-    text: str
-    latencyMs: conint(ge=0)
-
-
-class RewriteRequest(BaseModel):
-    text: constr(min_length=1) = Field(
-        ...,
-        description='Text to rewrite. Whitespace-only values are rejected by the server.',
-    )
-    instructions: Optional[str] = Field(
-        '',
-        description='Optional rewrite instruction. Empty string means clean rewrite.',
-    )
-
-
-class RewriteResponse(BaseModel):
-    text: str
-    latencyMs: conint(ge=0)
-
-
-class GenerateSpecRequest(BaseModel):
-    input: constr(min_length=1) = Field(
-        ...,
-        description='Brain dump text. Whitespace-only values are rejected by the server.',
-    )
-
-
-class GenerateSpecResponse(BaseModel):
-    text: str = Field(
-        ...,
-        description='Raw multi-file output with ===FILE: filename=== markers. Not JSON-wrapped. The Angular parser splits on this exact string; wrapping breaks the parser.\n',
-    )
-    latencyMs: conint(ge=0)
-
-
-class IterateRequest(BaseModel):
-    document: constr(min_length=1) = Field(
-        ...,
-        description='Document content to iterate on. Whitespace-only values are rejected by the server.\n',
-    )
-    instruction: Optional[str] = Field(
-        '',
-        description='Optional editing instruction. Empty string means clean/improve with no specific directive.\n',
-    )
-
-
-class IterateResponse(BaseModel):
-    text: str
-    latencyMs: conint(ge=0)
-
-
-class ReviewRequest(BaseModel):
-    documents: Dict[str, str] = Field(
-        ..., description='Map of document name to content.'
-    )
-
-
-class ReviewResponse(BaseModel):
-    scores: Dict[str, float] = Field(
-        ...,
-        description='Quality scores keyed by dimension (clarity, completeness, etc.)',
-    )
-    issues: List[str] = Field(..., description='List of issues found in the documents.')
 
 
 class BootstrapProjectRequest(BaseModel):

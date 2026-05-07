@@ -456,12 +456,9 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!question.trim()) return;
     const context = currentResult
       ? `${spec?.content ?? ''}\n\n---\nPrevious brainstorm:\n${currentResult}`
-      : (spec?.content ?? '');
+      : undefined;
     this.brainstormQuestion.set('');
-    this._runAi(() => this.aiSvc.rewrite(context,
-      `You are a brainstorming partner. The user wants to explore: "${question}"\n` +
-      `Go deep on this specific thread — concrete ideas, examples, and connections. Be direct and generative.`
-    ));
+    this._runAi(() => this.aiSvc.brainstorm(spec?.content ?? '', question, context));
   }
 
   async generateFromBrainstormResult() {

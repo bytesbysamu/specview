@@ -1,0 +1,5 @@
+{
+  "input": "../api/openapi.yaml",
+  "output": "src/app/api",
+  "ignoreUnusedModels": false
+}
