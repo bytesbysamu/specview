@@ -10,6 +10,7 @@ services:
   api:
     environment:
       CHAIN_PROVIDER: cli
+      CHAIN_AGENT: chain-agent
       SPEC_DOC_DIR: /data/spec-doc
     volumes:
       - /Users/sam/.claude:/home/appuser/.claude
