@@ -49,6 +49,7 @@ Do not bypass these — the agents load conventions automatically. Doing it your
 - Never import from `modules/runtime/chain/providers/*` in feature modules — import only from `chain/adapter.py`. Enforced by `test_structural.py`.
 - Angular state is signals only — no BehaviorSubject, no Observable for local state.
 - **When a skill is invoked, execute every step in its Procedure — no skipping.** Post-implementation steps (dev-test, dev-review, summary file) are mandatory, not optional. Re-read the skill's Procedure before reporting done.
+- **Always commit generated files** (e.g. `web-ng/src/app/api/`, migration files, spec outputs) — do not leave them unstaged.
 
 ## Available skills (invoke with /skill-name)
 
