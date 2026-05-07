@@ -34,18 +34,21 @@ def load_skill_registry(skill_name: str) -> dict:
         return json.load(f)
 
 
-def _build_prompt(skill_name: str, user_input: str) -> str:
-    """Prepend SKILL.md instructions to the user input block."""
-    skill_md = _skills_dir() / skill_name / "SKILL.md"
-    instructions = skill_md.read_text()
-    return f"{instructions}\n\n---\n\n{user_input}"
+def _load_instructions(skill_name: str) -> str:
+    """Return SKILL.md content for the named skill."""
+    return (_skills_dir() / skill_name / "SKILL.md").read_text()
 
 
 def run_skill(skill_name: str, user_input: str, registry: dict) -> Any:
-    """Execute a skill synchronously. Returns validated parsed output."""
-    prompt = _build_prompt(skill_name, user_input)
+    """Execute a skill synchronously. Returns validated parsed output.
+
+    SKILL.md is passed as the system prompt so it governs Claude's behaviour.
+    The user_input JSON is the user message.  The CLI provider routes this via
+    --system-prompt (not --agent) so the skill instructions take precedence.
+    """
+    instructions = _load_instructions(skill_name)
     try:
-        result = chain_adapter.generate("", prompt)
+        result = chain_adapter.generate(instructions, user_input)
     except ProviderError as exc:
         raise RuntimeError(f"AI provider error: {exc.message}") from exc
 

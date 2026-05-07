@@ -102,15 +102,50 @@ Working directory: /Users/sam/Projects/specview
 
 Collect the review output and include it in the final summary.
 
-### 7. Final summary
+### 7. Write summary file
+
+Write the following to `data/projects/<project-dir>/exec-guide-summary.md` using the Write tool:
+
+```markdown
+# exec-guide summary — <project name>
+
+**Date:** <today's date>
+**Tasks run:** N
+**Tasks passed:** N / N
+**Tests:** passed | FAILED (backend: <module> — N passed)
+**Review:** <critical count> critical, <warning count> warnings
+
+## Tasks
+
+| Task | Status | Files changed |
+|------|--------|---------------|
+| Task 1: <name> | ✓ complete | file1.py, file2.py |
+| Task 2: <name> | ✓ complete | file3.py |
+
+## Test results
+
+<paste dev-test output summary>
+
+## Review findings
+
+<paste dev-review critical/warning list, or "No issues found">
+
+## Next steps
+
+- Run `/commit` to commit all changes
+- <any task-specific follow-ups noted by agents>
+```
+
+Then print the same content to the conversation so it's visible.
+
+### 8. Report to user
 
 ```
 exec-guide: complete
-  Tasks run: N
-  Tasks passed: N
-  Tasks failed: 0
+  Tasks run: N  (N passed, 0 failed)
   Tests: passed (backend: <module> — N passed)
   Review: <critical count> critical, <warning count> warnings
+  Summary written to: data/projects/<project-dir>/exec-guide-summary.md
   Next: run /commit to commit the changes
 ```
 
@@ -119,7 +154,7 @@ exec-guide: complete
 - `implementation-guide.md` not found → stop, tell user to run `/impl-guide <project>` first.
 - Agent reports a blocking error on a task → stop, report the error, do not proceed to the next task.
 - A Verify check fails → treat as a blocking error; report and stop.
-- Tests fail after implementation → stop, report failures, do not run review.
+- Tests fail after implementation → stop, report failures, do not run review, do not write summary file.
 
 ## Notes
 
