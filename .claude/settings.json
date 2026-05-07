@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/sam/Projects/specview/plugin/hooks/session-start.mjs"
+            "command": "node ./plugin/hooks/session-start.mjs"
           }
         ]
       }
