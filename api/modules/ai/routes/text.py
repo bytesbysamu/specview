@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 import threading
 import time
 import uuid
@@ -14,7 +13,6 @@ from dtos.models import (
     IterateRequest,
     IterateResponse,
     LintBraindumpRequest,
-    LintBraindumpResponse,
     ReviewRequest,
     ReviewResponse,
     GenerateRequest,
@@ -31,16 +29,13 @@ from modules.runtime.chain.errors import ProviderError
 from config import PROJECTS_DIR
 from modules.data.context.service import read_context
 from modules.ai.services.text_prompts import (
-    rewrite_prompt,
-    iterate_prompt,
-    lint_braindump_prompt,
-    review_prompt,
     generate_prompt,
     generate_spec_prompt,
     bootstrap_analysis_prompt,
     bootstrap_epic_prompt,
     bootstrap_architecture_prompt,
 )
+from modules.ai.routes.generic_skill_service import load_skill_registry, run_skill
 from modules.ai.services.task_gen import bootstrap_extract_tasks
 from modules.data.templates.generators import generate_spec_index, generate_timeline, generate_readme
 from modules.runtime.workflows.execution import ExecutionStatus, WorkflowExecution
@@ -65,19 +60,20 @@ _BOOTSTRAP_JOBS: dict[str, WorkflowExecution] = {}
 def rewrite():
     req = RewriteRequest.model_validate(request.get_json(force=True, silent=False) or {})
     text = req.text.strip()
-    instructions = (req.instructions or "").strip()
     if not text:
         return jsonify({"error": "text is required"}), 400
-    system, prompt = rewrite_prompt(text, instructions)
     try:
-        try:
-            result = chain_adapter.rewrite(system, prompt)
-        except ProviderError as exc:
-            raise AIProviderError(exc.message) from exc
-        response = RewriteResponse(text=result.text, latencyMs=result.latency_ms)
-        return jsonify(response.model_dump())
-    except AIProviderError as exc:
-        return jsonify({"error": str(exc), "status": 502}), 502
+        registry = load_skill_registry("rewrite")
+    except FileNotFoundError:
+        return jsonify({"error": "skill unavailable: rewrite"}), 503
+    user_input = json.dumps({"text": text, "instructions": req.instructions or ""})
+    t0 = time.monotonic()
+    try:
+        result = run_skill("rewrite", user_input, registry)
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 502
+    latency_ms = int((time.monotonic() - t0) * 1000)
+    return jsonify(RewriteResponse(text=result["text"], latencyMs=latency_ms).model_dump())
 
 
 @ai_bp.post("/iterate")
@@ -89,16 +85,18 @@ def iterate():
     instruction = (req.instruction or "").strip()
     if not document:
         return jsonify({"error": "document is required"}), 400
-    system, prompt = iterate_prompt(instruction, document, "", "")
     try:
-        try:
-            result = chain_adapter.generate(system, prompt)
-        except ProviderError as exc:
-            raise AIProviderError(exc.message) from exc
-        response = IterateResponse(text=result.text, latencyMs=result.latency_ms)
-        return jsonify(response.model_dump())
-    except AIProviderError as exc:
-        return jsonify({"error": str(exc), "status": 502}), 502
+        registry = load_skill_registry("iterate")
+    except FileNotFoundError:
+        return jsonify({"error": "skill unavailable: iterate"}), 503
+    user_input = json.dumps({"document": document, "instruction": instruction})
+    t0 = time.monotonic()
+    try:
+        result = run_skill("iterate", user_input, registry)
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 502
+    latency_ms = int((time.monotonic() - t0) * 1000)
+    return jsonify(IterateResponse(text=result["text"], latencyMs=latency_ms).model_dump())
 
 
 @ai_bp.post("/lint-braindump")
@@ -109,24 +107,16 @@ def lint_braindump():
     braindump = req.braindump.strip()
     if not braindump:
         return jsonify({"error": "braindump is required"}), 400
-    system, prompt = lint_braindump_prompt(braindump)
     try:
-        try:
-            result = chain_adapter.generate(system, prompt)
-        except ProviderError as exc:
-            raise AIProviderError(exc.message) from exc
-        try:
-            raw = re.sub(r'```(?:json)?\n?|\n?```', '', result.text).strip()
-            parsed = json.loads(raw)
-        except (ValueError, KeyError) as exc:
-            raise AIProviderError("lint_braindump_parse_failed") from exc
-        response = LintBraindumpResponse(
-            ready=parsed["ready"],
-            flags=parsed.get("flags", []),
-        )
-        return jsonify(response.model_dump(mode="json"))
-    except AIProviderError as exc:
-        return jsonify({"error": str(exc), "status": 502}), 502
+        registry = load_skill_registry("brainstorm")
+    except FileNotFoundError:
+        return jsonify({"error": "skill unavailable: brainstorm"}), 503
+    user_input = json.dumps({"braindump": braindump})
+    try:
+        result = run_skill("brainstorm", user_input, registry)
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 502
+    return jsonify(result)
 
 
 @ai_bp.post("/review")
@@ -134,21 +124,16 @@ def lint_braindump():
 @check_usage_limit("text")
 def review():
     req = ReviewRequest.model_validate(request.get_json(force=True, silent=False) or {})
-    system, prompt = review_prompt(req.documents)
     try:
-        try:
-            result = chain_adapter.generate(system, prompt)
-        except ProviderError as exc:
-            raise AIProviderError(exc.message) from exc
-        raw = re.sub(r'```(?:json)?\n?|\n?```', '', result.text).strip()
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            raise AIProviderError("review_parse_failed")
-        response = ReviewResponse(scores=parsed["scores"], issues=parsed["issues"])
-        return jsonify(response.model_dump())
-    except AIProviderError as exc:
-        return jsonify({"error": str(exc), "status": 502}), 502
+        registry = load_skill_registry("review")
+    except FileNotFoundError:
+        return jsonify({"error": "skill unavailable: review"}), 503
+    user_input = json.dumps({"documents": req.documents})
+    try:
+        result = run_skill("review", user_input, registry)
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 502
+    return jsonify(ReviewResponse(scores=result["scores"], issues=result["issues"]).model_dump())
 
 
 @ai_bp.post("/generate")

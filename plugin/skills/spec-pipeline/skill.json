@@ -1,0 +1,16 @@
+{
+  "name": "spec-pipeline",
+  "version": "1.0.0",
+  "description": "Run the full spec generation pipeline for a project: braindump → analysis → epic → architecture → timeline",
+  "execution_model": "async",
+  "estimated_duration_s": 900,
+  "output_schema": {
+    "type": "object",
+    "required": ["status", "files"],
+    "properties": {
+      "status": {"type": "string"},
+      "files": {"type": "array"},
+      "project_id": {"type": "string"}
+    }
+  }
+}

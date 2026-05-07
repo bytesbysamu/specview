@@ -29,55 +29,6 @@ class _PromptBuilder:
         return "".join(self._parts)
 
 
-# ---------------------------------------------------------------------------
-# Route prompt functions (formerly inlined in modules.ai.routes.text)
-# ---------------------------------------------------------------------------
-
-def rewrite_prompt(text: str, instructions: str) -> tuple[str, str]:
-    system = (
-        "You are a precise text editor. Apply the given instruction to rewrite "
-        "the provided text. Return only the rewritten text — no preamble, no commentary."
-    )
-    return system, f"Instruction: {instructions}\n\nText:\n{text}"
-
-
-def iterate_prompt(base_spec: str, current_content: str, builder: str, principles: str) -> tuple[str, str]:
-    system = (
-        _PromptBuilder(
-            "You are a spec editor. Update the current document to reflect the intended "
-            "changes while preserving canonical structure and section headings."
-        )
-        .section("Builder Profile", builder)
-        .section("Principles", principles)
-        .build()
-    )
-    prompt = f"## Base specification\n{base_spec}\n\n## Current document\n{current_content}"
-    return system, prompt
-
-
-def lint_braindump_prompt(braindump: str) -> tuple[str, str]:
-    system = (
-        "You are a spec readiness checker. Analyse the brain dump for gaps and contradictions. "
-        'Return ONLY valid JSON — no commentary, no markdown fences: '
-        '{"ready":<true|false>,"flags":[{"severity":"error"|"warning"|"info","message":"..."}]}'
-    )
-    return system, _PromptBuilder().raw(braindump).build()
-
-
-def review_prompt(documents: dict) -> tuple[str, str]:
-    system = (
-        "You are a spec reviewer. Score documents on six dimensions: "
-        "clarity, completeness, actionability, consistency, specificity, feasibility. "
-        'Return ONLY valid JSON — no commentary, no markdown fences: '
-        '{"scores":{"clarity":<1-5>,"completeness":<1-5>,"actionability":<1-5>,'
-        '"consistency":<1-5>,"specificity":<1-5>,"feasibility":<1-5>},"issues":["..."]}'
-    )
-    user = _PromptBuilder().raw(
-        "\n\n".join(f"## {k}\n{v}" for k, v in documents.items())
-    ).build()
-    return system, user
-
-
 def generate_prompt(prompt_text: str, builder: str, principles: str, tone: str) -> tuple[str, str]:
     system = (
         _PromptBuilder("You are a markdown spec writer producing documentation.")
