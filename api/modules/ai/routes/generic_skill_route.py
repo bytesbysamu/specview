@@ -21,6 +21,7 @@ import threading
 from flask import Blueprint, jsonify, request
 
 from modules.auth.decorators import require_auth
+from modules.usage.decorators import check_usage_limit
 from modules.ai.job_store import create_job, get_job
 from .generic_skill_service import load_skill_registry, run_skill, run_skill_async
 
@@ -33,6 +34,7 @@ _SKILL_NAME_RE = re.compile(r'^[a-z][a-z0-9-]{0,63}$')
 
 @skill_bp.post("/run/<skill_name>")
 @require_auth
+@check_usage_limit("skill")
 def run_skill_endpoint(skill_name: str):
     # Security gate 1: name regex (before any filesystem access)
     if not _SKILL_NAME_RE.match(skill_name):
@@ -45,7 +47,7 @@ def run_skill_endpoint(skill_name: str):
         return jsonify({"error": f"skill not found: {skill_name!r}"}), 404
 
     # Parse request body — passed verbatim as JSON string to the skill
-    body = request.get_json(force=True, silent=True) or {}
+    body = request.get_json(force=True, silent=False) or {}
     user_input = json.dumps(body, ensure_ascii=False)
 
     execution_model = registry.get("execution_model", "sync")
@@ -94,6 +96,7 @@ def get_job_status(job_id: str):
 
 
 @skill_bp.get("/")
+@require_auth
 def list_skills():
     """List all available skills from their skill.json metadata."""
     from .generic_skill_service import _skills_dir
