@@ -14,8 +14,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
+<div class="page">
 
   <!-- Masthead -->
   <header class="masthead">
@@ -27,7 +29,10 @@
         <div class="masthead-tagline">All the Specs Fit to Build</div>
       </div>
       <div class="masthead-actions">
-        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" id="theme-btn">☀️</button>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" id="theme-btn">
+          <i data-lucide="sun" id="icon-sun"></i>
+          <i data-lucide="moon" id="icon-moon"></i>
+        </button>
       </div>
     </div>
   </header>
@@ -63,37 +68,35 @@
       <div class="aside-label">What gets generated</div>
       <ul class="aside-list">
         <li>
-          <strong>🔍 Analysis</strong>
+          <strong><i data-lucide="search"></i> Analysis</strong>
           <span>problem · constraints · scope</span>
         </li>
         <li>
-          <strong>🎯 Epic</strong>
+          <strong><i data-lucide="target"></i> Epic</strong>
           <span>tasks · effort · dependencies</span>
         </li>
         <li>
-          <strong>🏗 Architecture</strong>
+          <strong><i data-lucide="layers"></i> Architecture</strong>
           <span>design · decisions · flow</span>
         </li>
         <li>
-          <strong>📅 Timeline</strong>
+          <strong><i data-lucide="calendar"></i> Timeline</strong>
           <span>status · progress · done</span>
         </li>
         <li>
-          <strong>📋 Implementation Guide</strong>
+          <strong><i data-lucide="list-checks"></i> Implementation Guide</strong>
           <span>steps · files · tests · commit</span>
         </li>
       </ul>
     </aside>
   </section>
 
-  <hr class="divider thick">
-
   <!-- Output docs -->
   <div class="section-heading" id="output">What Spec Doc generates</div>
 
   <section class="output-grid">
     <div class="output-card">
-      <span class="output-card__icon">🔍</span>
+      <span class="output-card__icon"><i data-lucide="search"></i></span>
       <h3 class="output-card__title">Analysis</h3>
       <div class="output-card__filename">analysis.md</div>
       <p class="output-card__body">
@@ -103,7 +106,7 @@
       </p>
     </div>
     <div class="output-card">
-      <span class="output-card__icon">🎯</span>
+      <span class="output-card__icon"><i data-lucide="target"></i></span>
       <h3 class="output-card__title">Epic</h3>
       <div class="output-card__filename">epic.md</div>
       <p class="output-card__body">
@@ -112,7 +115,7 @@
       </p>
     </div>
     <div class="output-card">
-      <span class="output-card__icon">🏗</span>
+      <span class="output-card__icon"><i data-lucide="layers"></i></span>
       <h3 class="output-card__title">Architecture</h3>
       <div class="output-card__filename">architecture.md</div>
       <p class="output-card__body">
@@ -122,7 +125,7 @@
       </p>
     </div>
     <div class="output-card">
-      <span class="output-card__icon">📋</span>
+      <span class="output-card__icon"><i data-lucide="list-checks"></i></span>
       <h3 class="output-card__title">Implementation Guide</h3>
       <div class="output-card__filename">implementation-guide.md</div>
       <p class="output-card__body">
@@ -209,7 +212,7 @@ Write flask-conventions.md first.</div>
         </div>
         <div class="demo-sidebar-divider" style="width:1px"></div>
         <div class="demo-content">
-          <div class="demo-tag">🔍 Analysis</div>
+          <div class="demo-tag"><i data-lucide="search"></i> Analysis</div>
           <h3>Claude Code Provider Plugin — Analysis</h3>
           <p><strong>Problem 1 — Raw CLI calls:</strong> providers/cli.py calls <code>claude -p "&lt;full system prompt + task&gt;"</code> as a subprocess. The full convention context is re-sent on every call — chain rules, Flask patterns, Angular idioms — as a raw string.</p>
           <p><strong>Problem 2 — Session context:</strong> Every spec-doc/specview session wastes 10–15 minutes re-establishing Flask/Angular conventions that a Claude agent should already know.</p>
@@ -289,25 +292,29 @@ docker compose up -d
   </footer>
 
   <script>
+    // Init Lucide icons
+    lucide.createIcons();
+
     // Set date
     document.getElementById('date-label').textContent =
       new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('icon-sun').style.display = theme === 'dark' ? 'none' : '';
+      document.getElementById('icon-moon').style.display = theme === 'dark' ? '' : 'none';
+    }
+
     // Theme toggle
     function toggleTheme() {
-      const html = document.documentElement;
-      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       localStorage.setItem('theme', next);
-      document.getElementById('theme-btn').textContent = next === 'dark' ? '🌙' : '☀️';
+      applyTheme(next);
     }
 
     // Restore theme
-    const saved = localStorage.getItem('theme');
-    if (saved) {
-      document.documentElement.setAttribute('data-theme', saved);
-      document.getElementById('theme-btn').textContent = saved === 'dark' ? '🌙' : '☀️';
-    }
+    applyTheme(localStorage.getItem('theme') || 'light');
   </script>
+</div><!-- .page -->
 </body>
 </html>
