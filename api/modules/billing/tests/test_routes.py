@@ -123,7 +123,8 @@ def test_status_for_free_user_returns_free_plan_and_null_manage_url(client):
 def test_status_for_pro_user_returns_pro_plan_with_manage_url(client, db_session, make_user):
     from modules.billing.models import Subscription
 
-    user = make_user(auth_user_id="pro-1", email="pro@example.com")
+    # Must match the auth_user_id injected by the conftest _auth_bypass fixture.
+    user = make_user(auth_user_id="test-user", email="test@example.com")
     sub = Subscription(
         user_id=user.id,
         plan="pro",
@@ -139,10 +140,7 @@ def test_status_for_pro_user_returns_pro_plan_with_manage_url(client, db_session
         "modules.billing.routes.create_portal_session",
         return_value="https://billing.stripe.com/p/session/abc",
     ) as portal:
-        resp = client.get(
-            "/api/billing/status",
-            headers={"X-User-Id": "pro-1", "X-User-Email": "pro@example.com"},
-        )
+        resp = client.get("/api/billing/status")
 
     assert resp.status_code == 200
     body = resp.get_json()

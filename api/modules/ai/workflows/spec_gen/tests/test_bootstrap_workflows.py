@@ -46,7 +46,7 @@ def analysisOnly_isRegisteredWithSingleStep(app):
 def analysisOnly_inputsMatchParentAnalysisStep(app):
     with app.app_context():
         wf = app.workflow_repository.get("spec_gen/bootstrap-analysis-only")
-    assert wf.inputs == frozenset({"braindump", "project_name", "builder"}), (
+    assert wf.inputs == frozenset({"braindump_path", "project_name"}), (
         f"analysis-only workflow inputs must match the parent's analysis step; "
         f"got {wf.inputs}"
     )
@@ -65,18 +65,17 @@ def epicOnly_isRegisteredWithSingleStep(app):
 
 
 def epicOnly_declaresAnalysisAsInput(app):
-    """Epic-only must accept 'analysis' as an input so the retry route can pass-through."""
+    """Epic-only must accept 'analysis_path' as an input so the retry route can pass-through."""
     with app.app_context():
         wf = app.workflow_repository.get("spec_gen/bootstrap-epic-only")
-    assert "analysis" in wf.inputs, (
-        f"epic-only must accept 'analysis' as input; declared inputs: {wf.inputs}"
+    assert "analysis_path" in wf.inputs, (
+        f"epic-only must accept 'analysis_path' as input; declared inputs: {wf.inputs}"
     )
-    # Epic step's required inputs (input_keys) must NOT list "analysis" — it
-    # flows through prompt_template, not context.inputs validation.
+    # Epic step's required inputs (input_keys) must include "analysis_path" — it
+    # flows through prompt_template format and is validated via _validate_inputs.
     epic_step = wf.steps[0]
-    assert "analysis" not in epic_step.input_keys, (
-        "epic step input_keys must list workflow-level inputs only; "
-        "'analysis' flows via prompt_template, not _validate_inputs"
+    assert "analysis_path" in epic_step.input_keys, (
+        "epic step input_keys must declare 'analysis_path' as a required workflow input"
     )
 
 
@@ -100,7 +99,7 @@ def architectureOnly_isRegisteredWithSingleStreamingStep(app):
 def architectureOnly_declaresAnalysisAndEpicAsInputs(app):
     with app.app_context():
         wf = app.workflow_repository.get("spec_gen/bootstrap-architecture-only")
-    for required in ("analysis", "epic"):
+    for required in ("epic_path", "project_name"):
         assert required in wf.inputs, (
             f"architecture-only must accept {required!r} as input; "
             f"declared inputs: {wf.inputs}"

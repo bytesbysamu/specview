@@ -1,0 +1,13 @@
+{
+  "name": "clarify",
+  "version": "1.0.0",
+  "description": "Rewrite text for clarity and flow.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {"type": "string"}
+    }
+  }
+}

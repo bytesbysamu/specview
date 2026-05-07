@@ -55,20 +55,20 @@ class TestBootstrapWorkflowShape:
     def test_workflow_inputs_are_complete(self):
         wf = buildWorkflow()
         assert wf.inputs == frozenset(
-            {"braindump", "project_name", "builder", "principles", "codebase", "references"}
+            {"braindump_path", "project_name", "analysis_path", "epic_path"}
         )
 
     def test_analysis_input_keys(self):
         wf = buildWorkflow()
         step = wf.steps[0]
-        assert set(step.input_keys) == {"braindump", "project_name", "builder"}
+        assert set(step.input_keys) == {"project_name", "braindump_path"}
 
-    def test_architecture_input_keys_include_codebase_and_references(self):
+    def test_architecture_input_keys_include_epic_path(self):
         wf = buildWorkflow()
         step = wf.steps[2]
         keys = set(step.input_keys)
-        assert "codebase" in keys, "architecture step must declare codebase as required input"
-        assert "references" in keys, "architecture step must declare references as required input"
+        assert "epic_path" in keys, "architecture step must declare epic_path as required input"
+        assert "project_name" in keys, "architecture step must declare project_name as required input"
 
 
 class TestMarshalFiles:

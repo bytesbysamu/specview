@@ -1,0 +1,13 @@
+{
+  "name": "tldr",
+  "version": "1.0.0",
+  "description": "Produce a TL;DR summary as 4-6 bullet points.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {"type": "string"}
+    }
+  }
+}

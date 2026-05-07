@@ -1,0 +1,13 @@
+{
+  "name": "simplify",
+  "version": "1.0.0",
+  "description": "Rewrite text in plain language for a non-specialist reader.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {"type": "string"}
+    }
+  }
+}

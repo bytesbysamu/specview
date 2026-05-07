@@ -1,0 +1,13 @@
+{
+  "name": "bullets",
+  "version": "1.0.0",
+  "description": "Convert text to bullet points grouped by logical sections.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {"type": "string"}
+    }
+  }
+}

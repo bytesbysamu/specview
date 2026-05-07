@@ -1,0 +1,13 @@
+{
+  "name": "expand",
+  "version": "1.0.0",
+  "description": "Expand text with more detail and examples.",
+  "execution_model": "sync",
+  "output_schema": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {"type": "string"}
+    }
+  }
+}
