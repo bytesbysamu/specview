@@ -22,7 +22,7 @@
   <!-- Masthead -->
   <header class="masthead">
     <div class="masthead-top">
-      <span class="masthead-edition">Builder Tools</span>
+      <span class="masthead-edition"></span>
       <div class="masthead-center">
         <div class="masthead-date" id="date-label"></div>
         <h1 class="masthead-title">Spec Doc</h1>
@@ -41,7 +41,6 @@
   <nav class="section-bar">
     <a href="#what" class="active">What</a>
     <a href="#how">How it works</a>
-    <a href="#output">Output</a>
     <a href="#pricing">Pricing</a>
   </nav>
 
@@ -92,50 +91,16 @@
     </aside>
   </section>
 
-  <!-- Output docs -->
-  <div class="section-heading" id="output">What Spec Doc generates</div>
-
-  <section class="output-grid">
-    <div class="output-card">
-      <span class="output-card__icon"><i data-lucide="search"></i></span>
-      <h3 class="output-card__title">Analysis</h3>
-      <div class="output-card__filename">analysis.md</div>
-      <p class="output-card__body">
-        The problem, distilled. Hard constraints, open questions, scope boundaries,
-        and sequencing decisions — extracted from your raw notes.
-        No fluff. No assumptions invented.
-      </p>
-    </div>
-    <div class="output-card">
-      <span class="output-card__icon"><i data-lucide="target"></i></span>
-      <h3 class="output-card__title">Epic</h3>
-      <div class="output-card__filename">epic.md</div>
-      <p class="output-card__body">
-        Business value, task breakdown, effort estimates, dependencies, success criteria,
-        and explicit non-goals. The contract between what you want and what gets built.
-      </p>
-    </div>
-    <div class="output-card">
-      <span class="output-card__icon"><i data-lucide="layers"></i></span>
-      <h3 class="output-card__title">Architecture</h3>
-      <div class="output-card__filename">architecture.md</div>
-      <p class="output-card__body">
-        System boundaries, component design, design decisions with rationale,
-        technology stack, and execution flow. The long-lived document that
-        outlives the sprint.
-      </p>
-    </div>
-    <div class="output-card">
-      <span class="output-card__icon"><i data-lucide="list-checks"></i></span>
-      <h3 class="output-card__title">Implementation Guide</h3>
-      <div class="output-card__filename">implementation-guide.md</div>
-      <p class="output-card__body">
-        Executor-ready instructions for every task: context, files to create or modify,
-        implementation steps, test cases, commit plan, verification, and rollback.
-        Hand directly to Claude Code.
-      </p>
-    </div>
-  </section>
+  <!-- Metrics bar -->
+  <div class="metrics-bar">
+    <span>764<span class="metrics-plus">+</span> tests passing</span>
+    <span class="metrics-sep">·</span>
+    <span>433 commits</span>
+    <span class="metrics-sep">·</span>
+    <span>36 projects generated</span>
+    <span class="metrics-sep">·</span>
+    <span>0 human code lines written</span>
+  </div>
 
   <!-- How it works -->
   <div class="section-heading" id="how">How it works</div>
@@ -189,39 +154,6 @@ Follow architecture.md §Component Design.
 Write flask-conventions.md first.</div>
     </div>
   </section>
-
-  <!-- App demo -->
-  <div class="section-heading">The tool</div>
-
-  <div class="demo-strip">
-    <div class="demo-strip-inner">
-      <div class="demo-masthead">
-        <div>
-          <div class="demo-title">Specview</div>
-          <div class="demo-tagline">All the Specs Fit to Read</div>
-        </div>
-      </div>
-      <div class="demo-body">
-        <div class="demo-sidebar">
-          <div class="demo-sidebar-label">Claude Code Provider Plugin</div>
-          <div class="demo-sidebar-item">braindump.md</div>
-          <div class="demo-sidebar-item active">analysis.md</div>
-          <div class="demo-sidebar-item">epic.md</div>
-          <div class="demo-sidebar-item">architecture.md</div>
-          <div class="demo-sidebar-item">timeline.md</div>
-          <div class="demo-sidebar-item">implementation-guide.md</div>
-        </div>
-        <div class="demo-sidebar-divider" style="width:1px"></div>
-        <div class="demo-content">
-          <div class="demo-tag"><i data-lucide="search"></i> Analysis</div>
-          <h3>Claude Code Provider Plugin — Analysis</h3>
-          <p><strong>Problem 1 — Raw CLI calls:</strong> providers/cli.py calls <code>claude -p "&lt;full system prompt + task&gt;"</code> as a subprocess. The full convention context is re-sent on every call — chain rules, Flask patterns, Angular idioms — as a raw string.</p>
-          <p><strong>Problem 2 — Session context:</strong> Every spec-doc/specview session wastes 10–15 minutes re-establishing Flask/Angular conventions that a Claude agent should already know.</p>
-          <p><strong>Backend Provider Interface (Primary Scope):</strong> The plugin installs as a proper Claude Code plugin (financing-plugin layout: agents/, skills/, references/, hooks/). The backend's providers/cli.py gains a structured call mode: <code>claude --agent chain-agent -p "&lt;task&gt;"</code>.</p>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ══════════════════════════════════════
        PRICING SECTION
@@ -290,25 +222,16 @@ Write flask-conventions.md first.</div>
 
   <hr class="divider">
 
-  <!-- Pullquotes -->
-  <section class="pullquote-row">
+  <!-- Pullquote -->
+  <section class="pullquote-row pullquote-single">
     <div class="pullquote">
       <div class="pullquote-mark">"</div>
       <p class="pullquote-text">
-        The agent that loads chain-conventions.md before writing a workflow step
-        cannot bypass the adapter boundary, because the rule is in its context —
-        not its memory.
+        I wrote 3 paragraphs about a feature. 47 seconds later I had an analysis,
+        an epic, an architecture doc, and an implementation guide with test bodies.
+        Human code lines written: 0.
       </p>
-      <div class="pullquote-attr">From the Claude Code Provider Plugin epic</div>
-    </div>
-    <div class="pullquote-divider"></div>
-    <div class="pullquote">
-      <div class="pullquote-mark">"</div>
-      <p class="pullquote-text">
-        Encode conventions once into reference files so Claude never re-establishes
-        context and never generates a pattern violation.
-      </p>
-      <div class="pullquote-attr">Spec Doc value proposition</div>
+      <div class="pullquote-attr">What using Spec Doc feels like</div>
     </div>
   </section>
 

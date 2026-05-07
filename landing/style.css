@@ -190,7 +190,7 @@ svg {
   grid-template-columns: 1fr 1px 340px;
   gap: 0;
   border-bottom: 1px solid var(--border);
-  padding: 40px;
+  padding: 56px 40px;
 }
 
 .lede-main {
@@ -393,7 +393,7 @@ svg {
 }
 
 .step {
-  padding: 32px 40px;
+  padding: 48px 40px;
   border-right: 1px solid var(--border);
   position: relative;
   transition: background 0.15s;
@@ -434,7 +434,7 @@ svg {
 }
 
 .step-code {
-  margin-top: 14px;
+  margin-top: 24px;
   background: var(--border);
   padding: 10px 14px;
   font-family: 'SF Mono', Consolas, monospace;
@@ -775,4 +775,59 @@ svg {
     height: 1px;
     margin: 0;
   }
+}
+
+/* ── Metrics Bar ───────────────────────────────── */
+.metrics-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 40px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.metrics-bar span {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+
+.metrics-sep {
+  color: var(--border) !important;
+  font-weight: 400;
+}
+
+.metrics-plus {
+  color: var(--ink-muted);
+  font-weight: 400;
+}
+
+/* ── Single centered pullquote ─────────────────────── */
+.pullquote-single {
+  display: block;
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.pullquote-single .pullquote {
+  padding: 56px 40px;
+}
+
+.pullquote-single .pullquote-mark {
+  font-size: 72px;
+  color: var(--border);
+}
+
+.pullquote-single .pullquote-text {
+  font-size: 26px;
+  max-width: 680px;
+  margin: 0 auto 16px;
+  color: var(--ink);
 }
