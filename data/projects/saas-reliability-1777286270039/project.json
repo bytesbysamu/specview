@@ -1,4 +1,6 @@
 {
   "name": "SaaS Reliability",
-  "createdAt": "2026-04-26T00:00:00.000Z"
+  "createdAt": "2026-04-26T00:00:00.000Z",
+  "section": "platform",
+  "priority": 2
 }

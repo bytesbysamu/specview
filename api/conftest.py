@@ -3,87 +3,64 @@
 Auth bypass for protected routes
 ================================
 
-SaaS Auth Task 3 wraps every existing protected route in
-`@require_auth`, which inspects the `Authorization: Bearer <jwt>` header
-and hydrates `g.current_user` via `verify_jwt` + `get_or_create_user_from_claims`.
-Existing tests across the suite hit those routes without a real JWT and
-without a real user repository attached to the Flask app. To keep the
-decorator-sprinkle pass green without rewriting every integration test,
-this conftest installs a session-scoped autouse fixture that:
+Every protected route is wrapped in `@require_auth`, which:
+  1. Reads ``Authorization: Bearer <token>`` from the request header.
+  2. Calls ``verify_token(token)`` (HS256 decode) to get ``{"sub": "<user_id>", ...}``.
+  3. Calls ``_load_user(int(claims["sub"]))`` to fetch the User from DB.
+  4. Sets ``g.current_user = user``.
 
-  1. monkeypatches `modules.auth.decorators.verify_jwt` to return a
-     synthetic claims dict — no JWKS HTTP call, no signature check;
-  2. monkeypatches `modules.auth.decorators.get_or_create_user_from_claims`
-     to return a fixed `User` row without touching the (often unset)
-     `current_app.user_repository` attribute;
-  3. attaches a default `user_repository` to `flask.Flask` as a class
-     attribute so `current_app.user_repository` access in the wrapper
-     never AttributeErrors before the patched function is invoked;
-  4. wraps `werkzeug.test.Client.open` so every test-client request
-     gets a default `Authorization: Bearer test-token` header — unless
-     the caller explicitly passes its own `Authorization` header (so
-     401-asserting tests can opt out by passing `headers={"Authorization": ""}`
-     or by calling `client.open(... headers=[])`).
+Existing tests hit protected routes without a real JWT and without a real
+DB.  To keep every integration test green this conftest installs a
+function-scoped autouse fixture that:
 
-Tests that explicitly verify the decorator's negative paths (missing /
-malformed bearer, JWKS error → 401) live in
-`modules/auth/tests/test_decorators.py` and use their own
-monkeypatches; pytest's `monkeypatch` fixture is function-scoped, so the
-test-local patches override these session-level stubs for the duration
-of that single test.
+  1. Monkeypatches ``modules.auth.decorators.verify_token`` to return a
+     synthetic claims dict — no HS256 decode, no signature check.
+  2. Monkeypatches ``modules.auth.decorators._load_user`` to return a
+     fixed ``User`` row without opening a DB session.
+  3. Wraps ``FlaskClient.open`` so every test-client request carries a
+     default ``Authorization: Bearer test-token`` header — unless the
+     caller explicitly passes its own ``Authorization`` header (tests that
+     assert 401 pass ``headers={"Authorization": ""}`` to opt out).
+
+Tests that exercise the real decorator's negative paths (missing bearer,
+bad token → 401) live in ``modules/auth/tests/test_decorators.py`` and
+provide their own monkeypatches; pytest's ``monkeypatch`` fixture is
+function-scoped so test-local patches override these stubs only for that
+single test.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
 import pytest
-from flask import Flask
 from flask.testing import FlaskClient
 
 
-_FAKE_CLAIMS = {"sub": "test-user", "email": "test@example.com"}
+_FAKE_USER_ID = 1
 
 
-def _fake_verify_jwt(token: str) -> dict:
-    """Bypass for the real PyJWKClient + RS256 verifier.
+def _fake_verify_token(token: str) -> dict:
+    """Bypass for the real HS256 verifier.
 
-    Honours the legacy `X-User-Id` / `X-User-Email` headers used by the
-    pre-auth billing tests (originally consumed by the now-removed
-    `modules/billing/decorators.py` AUTH_BYPASS path) so those tests can
-    keep targeting specific user rows without a rewrite.
+    Returns a claims dict whose ``sub`` matches ``_FAKE_USER_ID`` so that
+    ``_load_user(int(claims["sub"]))`` receives a valid integer without a
+    real JWT decode.
     """
-    from flask import request
-    claims = dict(_FAKE_CLAIMS)
-    try:
-        sub = request.headers.get("X-User-Id")
-        email = request.headers.get("X-User-Email")
-    except RuntimeError:
-        sub = email = None
-    if sub:
-        claims["sub"] = sub
-    if email:
-        claims["email"] = email
-    return claims
+    return {"sub": str(_FAKE_USER_ID), "email": "test@example.com"}
 
 
-def _fake_get_or_create_user_from_claims(claims: dict, _user_repo) -> object:
-    """Return a fixed User without hitting `current_app.user_repository`.
+def _fake_load_user(user_id: int):
+    """Return a fixed User without opening a DB session.
 
-    Importing `User` lazily so this conftest stays import-safe even if a
-    test environment hasn't yet built the SQLModel registry.
-
-    `plan="pro"` is intentional: `@check_usage_limit` short-circuits for
-    Pro users without opening a DB session, which keeps the auth-bypass
-    test path away from the metering DB (test envs that haven't seeded
-    `usage_counter` would otherwise raise `OperationalError`). Tests that
-    exercise the free-tier metering branch live under
-    `modules/usage/tests/` and supply their own user fixture there.
+    ``plan="pro"`` is intentional: ``@check_usage_limit`` short-circuits
+    for Pro users without querying the usage_counter table, which keeps
+    the bypass path away from the metering DB.  Tests that exercise the
+    free-tier metering branch live under ``modules/usage/tests/`` and
+    provide their own user fixture there.
     """
     from modules.auth.models import User
     return User(
-        id=1,
-        auth_user_id=claims.get("sub", "test-user"),
-        email=claims.get("email", "test@example.com"),
+        id=user_id,
+        auth_user_id="test-user",
+        email="test@example.com",
         plan="pro",
     )
 
@@ -102,60 +79,45 @@ def _has_authorization(headers) -> bool:
 
 @pytest.fixture(autouse=True)
 def _auth_bypass(request, monkeypatch):
-    """Session-stable auth bypass for every test in the suite.
+    """Function-scoped auth bypass for every test in the suite.
 
-    Function-scoped (matching pytest's default) so individual tests can
-    rebind the same attributes via their own monkeypatch fixture; the
-    teardown restores our defaults, not the originals from the module.
+    Patches the two internal seams of ``require_auth``:
+      - ``modules.auth.decorators.verify_token``  → returns fake claims
+      - ``modules.auth.decorators._load_user``    → returns fake User
 
-    Tests under `modules/auth/tests/` exercise the real decorator's
-    negative paths (missing / malformed bearer, JWKS errors → 401) and
-    own their own JWT-verifier stubs. Skip the bypass for them so those
-    assertions keep firing.
+    Tests under ``modules/auth/tests/`` exercise the real decorator's
+    negative paths (missing bearer, bad token → 401) and own their own
+    stubs.  Skip the bypass for them so those assertions keep firing.
     """
     test_path = str(request.fspath)
     if "/modules/auth/tests/" in test_path:
         # Auth tests exercise the real decorator; clear SKIP_AUTH so the
-        # decorator's bypass path doesn't interfere even if .env has it set.
+        # env-based bypass path doesn't interfere.
         monkeypatch.delenv("SKIP_AUTH", raising=False)
         yield
         return
 
-    # Clear SKIP_AUTH — this bypass provides its own JWT injection, so the
-    # env-based shortcut must be off to avoid g.current_user=None crashes.
+    # Clear SKIP_AUTH — this bypass provides its own JWT injection.
     monkeypatch.delenv("SKIP_AUTH", raising=False)
 
-    # Patch the names the decorator's wrapper looks up at call time.
+    # Patch the two names require_auth's wrapper resolves at call time.
     import modules.auth.decorators as _decorators
-    monkeypatch.setattr(_decorators, "verify_jwt", _fake_verify_jwt)
-    monkeypatch.setattr(
-        _decorators,
-        "get_or_create_user_from_claims",
-        _fake_get_or_create_user_from_claims,
-    )
+    monkeypatch.setattr(_decorators, "verify_token", _fake_verify_token)
+    monkeypatch.setattr(_decorators, "_load_user", _fake_load_user)
 
-    # `current_app.user_repository` is evaluated by the wrapper before
-    # the patched function is called. Provide a class-level default so
-    # any Flask app instance the test creates carries one without the
-    # test having to attach it manually.
-    monkeypatch.setattr(Flask, "user_repository", MagicMock(), raising=False)
-
-    # Auto-inject the bearer header on every test-client call. Tests
-    # that need to assert "no token => 401" can pass an explicit
-    # `Authorization` header (empty string or anything non-Bearer) to
-    # opt out of the default.
-    # Patch `FlaskClient.open` (not werkzeug `Client.open`) because Flask's
-    # subclass collapses path/headers/etc into a Request object before
-    # delegating to super().open — patching the werkzeug parent would see
-    # only a Request positional and a (buffered, follow_redirects) kwargs
-    # pair, with no `headers` to inject.
+    # Auto-inject the bearer header on every test-client call.  Tests
+    # that need "no token => 401" pass ``headers={"Authorization": ""}``
+    # to opt out of the default injection.
+    #
+    # Patch FlaskClient.open (not werkzeug Client.open) because Flask's
+    # subclass collapses path/headers/etc into a Request before calling
+    # super().open — patching the werkzeug parent sees only a positional
+    # Request with headers already baked in.
     original_open = FlaskClient.open
 
     def _open_with_auth(self, *args, **kwargs):
-        # When the caller hands a pre-built EnvironBuilder / dict environ
-        # / Request straight to `client.open(...)`, the headers are
-        # already baked in — adding a `headers=` kwarg would force Flask
-        # down a different code path. Leave those calls alone.
+        # Pre-built EnvironBuilder / environ dict / Request objects have
+        # headers baked in — leave them untouched.
         from werkzeug.test import EnvironBuilder
         from werkzeug.wrappers import Request as _WzRequest
         if args and isinstance(args[0], (EnvironBuilder, dict, _WzRequest)):

@@ -1,4 +1,6 @@
 {
   "name": "Workflows as a Domain Layer",
-  "createdAt": "2026-04-26T13:13:14.017Z"
+  "createdAt": "2026-04-26T13:13:14.017Z",
+  "section": "platform",
+  "priority": 3
 }

@@ -1,4 +1,6 @@
 {
   "name": "E2E foundation  ",
-  "createdAt": "2026-04-25T09:10:12.614Z"
+  "createdAt": "2026-04-25T09:10:12.614Z",
+  "section": "platform",
+  "priority": 3
 }

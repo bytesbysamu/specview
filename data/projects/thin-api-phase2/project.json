@@ -1,4 +1,6 @@
 {
-  "name": "Thin API Phase 2 — Zero-Python AI Layer",
-  "createdAt": "2026-05-07T14:00:00.000Z"
+  "name": "Thin API Phase 2 \u2014 Zero-Python AI Layer",
+  "createdAt": "2026-05-07T14:00:00.000Z",
+  "section": "platform",
+  "priority": 2
 }

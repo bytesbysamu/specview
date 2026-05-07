@@ -1,4 +1,6 @@
 {
   "name": "SaaS Persistence",
-  "createdAt": "2026-04-26T19:37:54.169Z"
+  "createdAt": "2026-04-26T19:37:54.169Z",
+  "section": "platform",
+  "priority": 2
 }

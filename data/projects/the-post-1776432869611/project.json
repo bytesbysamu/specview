@@ -1,4 +1,6 @@
 {
   "name": "The Post",
-  "createdAt": "2026-04-17T13:34:29.612505Z"
+  "createdAt": "2026-04-17T13:34:29.612505Z",
+  "section": "products",
+  "priority": 3
 }
