@@ -27,9 +27,9 @@ services:
       - specview
 
   landing:
-    image: nginx:alpine
-    volumes:
-      - ./landing:/usr/share/nginx/html:ro
+    build:
+      context: landing
+      dockerfile: Dockerfile
     expose:
       - "80"
     restart: unless-stopped
