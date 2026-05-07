@@ -1,6 +1,6 @@
 ---
 name: dev-test
-description: "Run pytest for the specview API or ng test for the Angular frontend. Scope-aware: run only the tests nearest to cwd."
+description: "Use this skill when the user asks to run tests, check if tests pass, verify a fix with tests, mentions failing tests, or wants to confirm nothing is broken after a change. Also use after implementing any new feature or bug fix."
 ---
 
 # /dev-test — Run tests

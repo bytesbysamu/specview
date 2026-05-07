@@ -1,6 +1,6 @@
 ---
 name: dev-build
-description: "Build the specview API (pytest dry-run) or Angular frontend (ng build). Auto-detects stack from cwd. Reports errors, never auto-fixes."
+description: "Use this skill when the user asks to build, compile, check imports, verify the project builds, or mentions build errors, import errors, or compilation failures. Also use when starting work on a module to confirm it is in a buildable state."
 ---
 
 # /dev-build — Build check

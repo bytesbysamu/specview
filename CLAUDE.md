@@ -22,6 +22,22 @@ specview/
 └── .claude/                 — Active plugin wiring (agents, skills, settings)
 ```
 
+## Agent and skill routing — always check first
+
+Before acting on any request, check whether a skill or agent applies:
+
+- Any build, compile, or import check → use `/dev-build`
+- Any test run, pytest, failing test → use `/dev-test`
+- Any database schema change, new column, new table → use `/dev-migrate <desc>`
+- Any code review, pre-PR check, diff review → use `/dev-review`
+- Any spec generation, braindump processing → use `/spec-pipeline <project>`
+- Any Flask route, SQLModel model, migration, service → delegate to `spec-backend` agent
+- Any Angular component, signal, service, template → delegate to `spec-frontend` agent
+- Any chain adapter, prompt, workflow step, provider → delegate to `chain-agent`
+- Cross-layer or unclear scope → delegate to `chain-developer` agent
+
+Do not bypass these — the agents load conventions automatically. Doing it yourself skips the reference files and risks convention violations.
+
 ## Non-negotiable rules
 
 - `CHAIN_PROVIDER=cli` always — never use the SDK provider in Docker.

@@ -1,6 +1,6 @@
 ---
 name: spec-pipeline
-description: "Run the full spec-doc generation pipeline for a project: braindump -> analysis -> epic -> architecture -> timeline. Usage: /spec-pipeline <project_id_or_name>"
+description: "Use this skill when the user wants to generate specs, run the spec pipeline, process a braindump, or create analysis/epic/architecture documents for a project."
 ---
 
 # /spec-pipeline — Spec generation pipeline

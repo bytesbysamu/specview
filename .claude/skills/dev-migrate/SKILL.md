@@ -1,6 +1,6 @@
 ---
 name: dev-migrate
-description: "Scaffold an Alembic migration for specview, apply it, and verify the schema. Usage: /dev-migrate <description>"
+description: "Use this skill when the user wants to add a column, create a table, change the database schema, or mentions a migration. Scaffolds an Alembic migration, reviews it, applies it, and verifies the schema."
 ---
 
 # /dev-migrate — Alembic migration

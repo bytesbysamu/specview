@@ -1,6 +1,6 @@
 ---
 name: dev-review
-description: "Multi-agent code review for specview. Routes to chain-agent (chain layer), spec-backend (Flask/SQLModel), and spec-frontend (Angular) in parallel. Usage: /dev-review"
+description: "Use this skill when the user asks for a code review, wants to check code before a PR, asks if the code looks good, or wants to verify convention compliance. Fans out to chain-agent, spec-backend, and spec-frontend in parallel."
 ---
 
 # /dev-review — Code review
