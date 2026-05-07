@@ -190,7 +190,9 @@ svg {
   grid-template-columns: 1fr 1px 340px;
   gap: 0;
   border-bottom: 1px solid var(--border);
-  padding: 56px 40px;
+  padding: 80px 40px;
+  min-height: calc(100vh - 100px);
+  align-items: center;
 }
 
 .lede-main {
@@ -390,13 +392,17 @@ svg {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   border-bottom: 1px solid var(--border);
+  min-height: 100vh;
 }
 
 .step {
-  padding: 48px 40px;
+  padding: 80px 48px;
   border-right: 1px solid var(--border);
   position: relative;
   transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .step:hover {
@@ -411,11 +417,11 @@ svg {
 
 .step-num {
   font-family: var(--serif);
-  font-size: 64px;
+  font-size: 96px;
   font-weight: 700;
   color: var(--border);
   line-height: 1;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
   display: block;
 }
 
@@ -674,7 +680,11 @@ svg {
 /* ── Pricing Section ───────────────────────────────── */
 .pricing {
   border-bottom: 1px solid var(--border);
-  padding: 0 40px 40px;
+  padding: 80px 40px;
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* 1fr 1px 1fr — middle column IS the divider */
@@ -682,6 +692,9 @@ svg {
   display: grid;
   grid-template-columns: 1fr 1px 1fr;
   gap: 0 40px;
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .pricing-divider {
@@ -809,15 +822,17 @@ svg {
 
 /* ── Single centered pullquote ─────────────────────── */
 .pullquote-single {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0;
+  min-height: 60vh;
+  border-bottom: 1px solid var(--border);
 }
 
 .pullquote-single .pullquote {
-  padding: 56px 40px;
+  padding: 80px 40px;
+  max-width: 800px;
 }
 
 .pullquote-single .pullquote-mark {
