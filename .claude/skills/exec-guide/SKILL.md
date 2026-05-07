@@ -5,6 +5,10 @@ description: "Use this skill when the user wants to execute a task from an imple
 
 # /exec-guide — Implementation Guide Executor
 
+## STOP — Read first
+
+**All 8 steps of the Procedure are mandatory. Steps 5–8 (dev-test, dev-review, summary file, report) are not optional — execute them every time, even if the implementation steps went smoothly. Do not report "done" until the summary file is written.**
+
 Read a project's `implementation-guide.md` and execute one or all tasks by
 dispatching to the correct specialist agent. The agent reads the task's Steps
 and Files sections and makes the actual code changes.

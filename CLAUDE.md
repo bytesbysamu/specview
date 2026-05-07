@@ -48,6 +48,7 @@ Do not bypass these — the agents load conventions automatically. Doing it your
 - Run `pytest` in `api/` before any merge.
 - Never import from `modules/runtime/chain/providers/*` in feature modules — import only from `chain/adapter.py`. Enforced by `test_structural.py`.
 - Angular state is signals only — no BehaviorSubject, no Observable for local state.
+- **When a skill is invoked, execute every step in its Procedure — no skipping.** Post-implementation steps (dev-test, dev-review, summary file) are mandatory, not optional. Re-read the skill's Procedure before reporting done.
 
 ## Available skills (invoke with /skill-name)
 
