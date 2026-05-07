@@ -10,7 +10,7 @@ High-level. No code. Fast. Architecture and epic are the only inputs.
 
 ## Parameters
 
-- `$ARGUMENTS` — project directory path, or project name (partial match against `data/spec-doc/projects/`)
+- `$ARGUMENTS` — project directory path, or project name (partial match against `data/projects/`)
 
 ## Pre-flight
 
@@ -99,7 +99,7 @@ Generate the implementation guide now.
 2. Substitute content into the prompt template above.
 3. Call the chain: `chain.generate(system, user, model="claude-sonnet-4-6", max_tokens=8192)`
    - If running as a plugin skill (no API): use `claude -p "<user prompt>" --system "<system>"` directly.
-4. Write output to `data/projects/{project_id}/implementation-guide.md`.
+4. Write output to `{resolved_project_dir}/implementation-guide.md` — use the **exact directory path** resolved in Pre-flight step 1. Do not reconstruct the path from the project name or ID.
 5. Report:
 
 ```
