@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -18,26 +18,33 @@ from modules.runtime.workflows.execution import WorkflowExecution, ExecutionStat
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — wrapped in a class so pytest does not collect them via *_* rule
 # ---------------------------------------------------------------------------
 
-def _make_execution() -> WorkflowExecution:
-    exc = WorkflowExecution(workflow_ref="epic_guide/test", inputs={})
-    exc.start()
-    return exc
+class _H:
+    """Namespace for non-test helper functions."""
 
+    @staticmethod
+    def execution() -> WorkflowExecution:
+        exc = WorkflowExecution(workflow_ref="epic_guide/test", inputs={})
+        exc.start()
+        return exc
 
-def _seed_dir(base: Path, project_id: str, *, with_epic: bool = True) -> Path:
-    """Seed a minimal project directory. Returns base."""
-    proj = base / project_id
-    proj.mkdir(parents=True)
-    (proj / "project.json").write_text(
-        json.dumps({"name": "Test Project", "createdAt": "2024-01-01T00:00:00.000Z"}),
-        encoding="utf-8",
-    )
-    if with_epic:
-        (proj / "epic.md").write_text("# Epic\n## Tasks\n| 1 | **Task One** | None | - | 1d | High |\n", encoding="utf-8")
-    return base
+    @staticmethod
+    def seed(base: Path, project_id: str, *, with_epic: bool = True) -> Path:
+        """Seed a minimal project directory. Returns base."""
+        proj = base / project_id
+        proj.mkdir(parents=True)
+        (proj / "project.json").write_text(
+            json.dumps({"name": "Test Project", "createdAt": "2024-01-01T00:00:00.000Z"}),
+            encoding="utf-8",
+        )
+        if with_epic:
+            (proj / "epic.md").write_text(
+                "# Epic\n## Tasks\n| 1 | **Task One** | None | - | 1d | High |\n",
+                encoding="utf-8",
+            )
+        return base
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +54,6 @@ def _seed_dir(base: Path, project_id: str, *, with_epic: bool = True) -> Path:
 def test_is_running_returns_false_when_no_execution():
     """is_running should return False for an unknown project_id."""
     import modules.ai.services.epic_guide as svc
-    # Use a unique id to avoid state bleed from other tests
     assert svc.is_running("no-such-project-xyz") is False
 
 
@@ -56,7 +62,7 @@ def test_is_running_returns_true_when_execution_is_running():
     import modules.ai.services.epic_guide as svc
 
     pid = "running-project-test"
-    exc = _make_execution()
+    exc = _H.execution()
     with svc._LOCK:
         svc._EXECUTIONS[pid] = exc
 
@@ -83,7 +89,7 @@ def test_snapshot_returns_filename_when_execution_completes(tmp_path: Path):
     import modules.ai.services.epic_guide as svc
 
     pid = "snap-complete-test"
-    exc = _make_execution()
+    exc = _H.execution()
     exc.outputs["filename"] = "implementation-guide.md"
     exc.complete()
     with svc._LOCK:
@@ -104,7 +110,7 @@ def test_snapshot_returns_error_when_execution_fails():
     import modules.ai.services.epic_guide as svc
 
     pid = "snap-error-test"
-    exc = _make_execution()
+    exc = _H.execution()
     exc.fail("chain timed out")
     with svc._LOCK:
         svc._EXECUTIONS[pid] = exc
@@ -127,7 +133,7 @@ def test_start_returns_false_when_already_running():
     import modules.ai.services.epic_guide as svc
 
     pid = "start-dup-test"
-    exc = _make_execution()
+    exc = _H.execution()
     with svc._LOCK:
         svc._EXECUTIONS[pid] = exc
 
@@ -144,7 +150,6 @@ def test_start_returns_true_and_spawns_thread_when_idle(tmp_path: Path):
     import modules.ai.services.epic_guide as svc
 
     pid = "start-idle-test"
-    # Ensure no leftover state
     with svc._LOCK:
         svc._EXECUTIONS.pop(pid, None)
 
@@ -156,7 +161,6 @@ def test_start_returns_true_and_spawns_thread_when_idle(tmp_path: Path):
 
     assert result is True
 
-    # Cleanup
     with svc._LOCK:
         svc._EXECUTIONS.pop(pid, None)
 
@@ -170,8 +174,8 @@ def test_run_generation_calls_generate_with_empty_system_and_path_prompt(tmp_pat
     import modules.ai.services.epic_guide as svc
 
     pid = "gen-prompt-test"
-    _seed_dir(tmp_path, pid)
-    exc = _make_execution()
+    _H.seed(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text="generated guide", latency_ms=5)
 
     with patch("modules.ai.services.epic_guide.chain_adapter.generate", return_value=fake_result) as mock_gen, \
@@ -179,9 +183,8 @@ def test_run_generation_calls_generate_with_empty_system_and_path_prompt(tmp_pat
         svc.run_generation(pid, tmp_path, exc)
 
     mock_gen.assert_called_once()
-    call_args = mock_gen.call_args
-    system_arg = call_args[0][0]
-    prompt_arg = call_args[0][1]
+    system_arg = mock_gen.call_args[0][0]
+    prompt_arg = mock_gen.call_args[0][1]
 
     assert system_arg == "", f"Expected empty system string, got: {system_arg!r}"
     assert str(tmp_path / pid) in prompt_arg, "prompt must include project_dir path"
@@ -192,8 +195,8 @@ def test_run_generation_writes_output_file_via_update_file(tmp_path: Path):
     import modules.ai.services.epic_guide as svc
 
     pid = "gen-write-test"
-    _seed_dir(tmp_path, pid)
-    exc = _make_execution()
+    _H.seed(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text="the guide content", latency_ms=5)
 
     with patch("modules.ai.services.epic_guide.chain_adapter.generate", return_value=fake_result), \
@@ -209,8 +212,8 @@ def test_run_generation_sets_filename_output_on_success(tmp_path: Path):
     import modules.ai.services.epic_guide as svc
 
     pid = "gen-filename-test"
-    _seed_dir(tmp_path, pid)
-    exc = _make_execution()
+    _H.seed(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text="content", latency_ms=5)
 
     with patch("modules.ai.services.epic_guide.chain_adapter.generate", return_value=fake_result), \
@@ -221,28 +224,16 @@ def test_run_generation_sets_filename_output_on_success(tmp_path: Path):
 
 
 def test_run_generation_fails_when_project_not_found(tmp_path: Path):
-    """run_generation calls execution.fail when project directory is missing."""
+    """run_generation calls execution.fail when chain raises due to missing project."""
     import modules.ai.services.epic_guide as svc
 
     pid = "no-project-here"
-    exc = _make_execution()
+    exc = _H.execution()
 
-    # patch get_project is not used by epic_guide — it reads project_dir directly.
-    # The mock chain will raise if called; we expect it NOT to be called.
-    with patch("modules.ai.services.epic_guide.chain_adapter.generate") as mock_gen, \
-         patch("modules.ai.services.epic_guide.update_file") as mock_write:
-        # project_dir does not exist → run_generation will hit the generate call
-        # (epic_guide doesn't call get_project; it passes the path directly to the AI).
-        # The real failure mode is a ProviderError or any exception in the thread body.
-        # For a missing dir, chain.generate still succeeds but update_file will fail.
-        mock_gen.return_value = ChainResult(text="txt", latency_ms=1)
-        mock_write.return_value = False  # update_file returns False for missing project
-
-        # run_generation catches all exceptions in the outer try/except.
-        # With update_file returning False (not raising), no error path fires.
-        # The test therefore verifies the happy-path guard works by simulating
-        # chain raising ProviderError instead.
-        mock_gen.side_effect = ProviderError("project dir inaccessible")
+    # epic_guide passes project_dir to AI directly; simulate an error from chain.
+    with patch("modules.ai.services.epic_guide.chain_adapter.generate",
+               side_effect=ProviderError("project dir inaccessible")), \
+         patch("modules.ai.services.epic_guide.update_file"):
         svc.run_generation(pid, tmp_path, exc)
 
     assert exc.status == ExecutionStatus.ERROR
@@ -254,8 +245,8 @@ def test_run_generation_fails_when_chain_raises_provider_error(tmp_path: Path):
     import modules.ai.services.epic_guide as svc
 
     pid = "gen-provider-error"
-    _seed_dir(tmp_path, pid)
-    exc = _make_execution()
+    _H.seed(tmp_path, pid)
+    exc = _H.execution()
 
     with patch("modules.ai.services.epic_guide.chain_adapter.generate",
                side_effect=ProviderError("chain failed", 502)):

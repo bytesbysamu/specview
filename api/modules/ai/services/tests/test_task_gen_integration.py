@@ -3,14 +3,14 @@
 run_generation() is called synchronously (not via start()) to keep
 tests deterministic and avoid threading races.
 
-All chain adapter calls are monkeypatched. File system is isolated using
-tmp_path.
+All chain adapter calls are monkeypatched. File system is isolated
+using tmp_path.
 """
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -21,7 +21,7 @@ from modules.quality.lint import Flag
 
 
 # ---------------------------------------------------------------------------
-# Fixtures / helpers
+# Fixtures and constants
 # ---------------------------------------------------------------------------
 
 EPIC_MD = """\
@@ -83,41 +83,47 @@ None.
 """
 
 
-def _make_execution() -> WorkflowExecution:
-    exc = WorkflowExecution(workflow_ref="task_gen/test", inputs={})
-    exc.start()
-    return exc
+# ---------------------------------------------------------------------------
+# Helpers — wrapped in a class so pytest does not collect them via *_* rule
+# ---------------------------------------------------------------------------
 
+class _H:
+    """Non-test helper namespace."""
 
-def _create_project(
-    base: Path,
-    project_id: str,
-    *,
-    epic_content: str = EPIC_MD,
-    extra_files: dict[str, str] | None = None,
-) -> Path:
-    """Create a project directory with project.json and epic.md. Returns base."""
-    proj = base / project_id
-    proj.mkdir(parents=True, exist_ok=True)
-    (proj / "project.json").write_text(
-        json.dumps({"name": "Test Project", "createdAt": "2024-01-01T00:00:00.000Z"}),
-        encoding="utf-8",
-    )
-    (proj / "epic.md").write_text(epic_content, encoding="utf-8")
-    if extra_files:
-        for fname, content in extra_files.items():
-            (proj / fname).write_text(content, encoding="utf-8")
-    return base
+    @staticmethod
+    def execution() -> WorkflowExecution:
+        exc = WorkflowExecution(workflow_ref="task_gen/test", inputs={})
+        exc.start()
+        return exc
 
+    @staticmethod
+    def project(
+        base: Path,
+        pid: str,
+        *,
+        epic: str = EPIC_MD,
+        extra: dict[str, str] | None = None,
+    ) -> Path:
+        """Seed a project directory. Returns base."""
+        proj = base / pid
+        proj.mkdir(parents=True, exist_ok=True)
+        (proj / "project.json").write_text(
+            json.dumps({"name": "Test Project", "createdAt": "2024-01-01T00:00:00.000Z"}),
+            encoding="utf-8",
+        )
+        (proj / "epic.md").write_text(epic, encoding="utf-8")
+        if extra:
+            for fname, content in extra.items():
+                (proj / fname).write_text(content, encoding="utf-8")
+        return base
 
-def _lint_clean(ignored: str) -> list[Flag]:
-    """Lint stub returning no flags — simulates a clean document."""
-    return []
+    @staticmethod
+    def lint_clean(text: str) -> list[Flag]:  # noqa: ARG004
+        return []
 
-
-def _lint_error(ignored: str) -> list[Flag]:
-    """Lint stub returning one error-severity flag — blocks the write."""
-    return [Flag(rule="preamble-leak", severity="error", message="Reasoning text detected", line=1)]
+    @staticmethod
+    def lint_error(text: str) -> list[Flag]:  # noqa: ARG004
+        return [Flag(rule="preamble-leak", severity="error", message="Reasoning text detected", line=1)]
 
 
 # ---------------------------------------------------------------------------
@@ -129,12 +135,12 @@ def test_run_generation_builds_prompt_with_task_num_name_and_dir(tmp_path: Path)
     import modules.ai.services.task_gen as svc
 
     pid = "prompt-test-1"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result) as mock_gen, \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_clean), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_clean), \
          patch("modules.ai.services.task_gen.update_file"):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
@@ -151,17 +157,16 @@ def test_run_generation_appends_prior_contracts_when_non_empty(tmp_path: Path):
 
     pid = "prior-contracts-test"
     task1_content = "# Task 1: Setup DB\n\n## 3. Files\n\n### To Create (new)\n- `db/schema.sql`\n"
-    _create_project(tmp_path, pid, extra_files={"task-1-setup-db.md": task1_content})
-    exc = _make_execution()
+    _H.project(tmp_path, pid, extra={"task-1-setup-db.md": task1_content})
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result) as mock_gen, \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_clean), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_clean), \
          patch("modules.ai.services.task_gen.update_file"):
         svc.run_generation(pid, tmp_path, task_num="2", execution=exc)
 
     prompt = mock_gen.call_args[0][1]
-    # Prior contracts section is appended when non-empty
     assert "db/schema.sql" in prompt or "task-1" in prompt.lower()
 
 
@@ -170,17 +175,16 @@ def test_run_generation_does_not_append_contracts_when_empty(tmp_path: Path):
     import modules.ai.services.task_gen as svc
 
     pid = "no-contracts-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result) as mock_gen, \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_clean), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_clean), \
          patch("modules.ai.services.task_gen.update_file"):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
     prompt = mock_gen.call_args[0][1]
-    # No prior tasks → no "Do NOT re-declare" section
     assert "Do NOT re-declare" not in prompt
 
 
@@ -189,12 +193,12 @@ def test_run_generation_calls_generate_with_empty_system_string(tmp_path: Path):
     import modules.ai.services.task_gen as svc
 
     pid = "empty-system-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result) as mock_gen, \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_clean), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_clean), \
          patch("modules.ai.services.task_gen.update_file"):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
@@ -211,21 +215,21 @@ def test_run_generation_calls_lint_on_result_text(tmp_path: Path):
     import modules.ai.services.task_gen as svc
 
     pid = "lint-call-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
-    lint_calls: list[str] = []
+    captured: list[str] = []
 
-    def _capture_lint(text: str) -> list[Flag]:
-        lint_calls.append(text)
+    def record_lint(text: str) -> list[Flag]:
+        captured.append(text)
         return []
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result), \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_capture_lint), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=record_lint), \
          patch("modules.ai.services.task_gen.update_file"):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
-    assert lint_calls == [CLEAN_GUIDE]
+    assert captured == [CLEAN_GUIDE]
 
 
 def test_run_generation_calls_execution_fail_when_lint_returns_error_flags(tmp_path: Path):
@@ -233,12 +237,12 @@ def test_run_generation_calls_execution_fail_when_lint_returns_error_flags(tmp_p
     import modules.ai.services.task_gen as svc
 
     pid = "lint-error-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text="bad output", latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result), \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_error), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_error), \
          patch("modules.ai.services.task_gen.update_file") as mock_write:
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
@@ -251,12 +255,12 @@ def test_run_generation_writes_file_and_completes_when_lint_passes(tmp_path: Pat
     import modules.ai.services.task_gen as svc
 
     pid = "lint-pass-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result), \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_clean), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_clean), \
          patch("modules.ai.services.task_gen.update_file") as mock_write:
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
@@ -269,12 +273,12 @@ def test_run_generation_sets_lint_errors_on_outputs_when_lint_blocks(tmp_path: P
     import modules.ai.services.task_gen as svc
 
     pid = "lint-errors-output"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text="bad", latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result), \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_error), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_error), \
          patch("modules.ai.services.task_gen.update_file"):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
@@ -292,21 +296,20 @@ def test_run_generation_writes_correct_filename(tmp_path: Path):
     import modules.ai.services.task_gen as svc
 
     pid = "filename-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
-    written_filenames: list[str] = []
+    written: list[str] = []
 
-    def _capture_write(projects_dir, project_id, filename, content):
-        written_filenames.append(filename)
+    def capture(base, proj, fname, content):  # noqa: ARG001
+        written.append(fname)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result), \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_clean), \
-         patch("modules.ai.services.task_gen.update_file", side_effect=_capture_write):
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_clean), \
+         patch("modules.ai.services.task_gen.update_file", side_effect=capture):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
-    assert len(written_filenames) == 1
-    assert written_filenames[0] == "task-1-setup-db.md"
+    assert written == ["task-1-setup-db.md"]
 
 
 # ---------------------------------------------------------------------------
@@ -318,12 +321,12 @@ def test_run_generation_sets_task_outputs_on_success(tmp_path: Path):
     import modules.ai.services.task_gen as svc
 
     pid = "outputs-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate", return_value=fake_result), \
-         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_lint_clean), \
+         patch("modules.ai.services.task_gen.lint_task_guide", side_effect=_H.lint_clean), \
          patch("modules.ai.services.task_gen.update_file"):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
@@ -341,8 +344,8 @@ def test_run_generation_fails_when_chain_raises_provider_error(tmp_path: Path):
     import modules.ai.services.task_gen as svc
 
     pid = "chain-error-test"
-    _create_project(tmp_path, pid)
-    exc = _make_execution()
+    _H.project(tmp_path, pid)
+    exc = _H.execution()
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate",
                side_effect=ProviderError("upstream timeout", 504)):
@@ -357,8 +360,7 @@ def test_run_generation_fails_when_project_not_found(tmp_path: Path):
     import modules.ai.services.task_gen as svc
 
     pid = "missing-project-xyz"
-    # Do NOT seed the project directory
-    exc = _make_execution()
+    exc = _H.execution()
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate") as mock_gen:
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
@@ -381,7 +383,7 @@ def test_run_generation_fails_when_epic_md_missing(tmp_path: Path):
     )
     # Intentionally omit epic.md
 
-    exc = _make_execution()
+    exc = _H.execution()
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate") as mock_gen:
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
@@ -395,15 +397,14 @@ def test_run_generation_fails_when_no_tasks_parseable(tmp_path: Path):
     """execution.fail is called when epic.md contains no task table rows."""
     import modules.ai.services.task_gen as svc
 
-    pid = "no-tasks-test"
     empty_epic = "# Epic: Empty\n\nNo tasks here.\n"
-    _create_project(tmp_path, pid, epic_content=empty_epic)
-    exc = _make_execution()
+    pid = "no-tasks-test"
+    _H.project(tmp_path, pid, epic=empty_epic)
+    exc = _H.execution()
 
     with patch("modules.ai.services.task_gen.chain_adapter.generate") as mock_gen:
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
     assert exc.status == ExecutionStatus.ERROR
-    # Either "no tasks parsed" or "task 1 not found"
     assert exc.error is not None
     mock_gen.assert_not_called()
