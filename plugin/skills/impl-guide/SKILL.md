@@ -14,7 +14,7 @@ High-level. No code. Fast. Architecture and epic are the only inputs.
 
 ## Pre-flight
 
-1. Resolve project dir. If `$ARGUMENTS` looks like a path, use it directly. Otherwise glob `data/spec-doc/projects/*$ARGUMENTS*` and take the first match.
+1. Resolve project dir. If `$ARGUMENTS` looks like a path, use it directly. Otherwise glob `data/projects/*$ARGUMENTS*` and take the first match.
 2. Read `epic.md` from the project dir. Abort if missing.
 3. Read `architecture.md` from the project dir. Abort if missing.
 4. `analysis.md` is optional — include if present.
@@ -99,7 +99,7 @@ Generate the implementation guide now.
 2. Substitute content into the prompt template above.
 3. Call the chain: `chain.generate(system, user, model="claude-sonnet-4-6", max_tokens=8192)`
    - If running as a plugin skill (no API): use `claude -p "<user prompt>" --system "<system>"` directly.
-4. Write output to `{project_dir}/implementation-guide.md`.
+4. Write output to `data/projects/{project_id}/implementation-guide.md`.
 5. Report:
 
 ```

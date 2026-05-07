@@ -376,7 +376,7 @@ def test_each_step_has_distinct_name():
 
 
 def test_analysis_user_template_renders_without_error():
-    from modules.ai.prompts.spec_gen import ANALYSIS_USER
+    from modules.ai.workflows.spec_gen.generate_spec import ANALYSIS_USER
 
     ctx = {"braindump": "test dump", "project_name": "My Project", "builder": ""}
     rendered = ANALYSIS_USER.format(**ctx)
@@ -385,7 +385,7 @@ def test_analysis_user_template_renders_without_error():
 
 
 def test_epic_user_template_renders_with_prior_analysis():
-    from modules.ai.prompts.spec_gen import EPIC_USER
+    from modules.ai.workflows.spec_gen.generate_spec import EPIC_USER
 
     ctx = {
         "braindump": "bd",
@@ -400,7 +400,7 @@ def test_epic_user_template_renders_with_prior_analysis():
 
 
 def test_architecture_user_template_renders_with_epic():
-    from modules.ai.prompts.spec_gen import ARCHITECTURE_USER
+    from modules.ai.workflows.spec_gen.generate_spec import ARCHITECTURE_USER
 
     ctx = {
         "braindump": "bd",
@@ -413,3 +413,45 @@ def test_architecture_user_template_renders_with_epic():
     }
     rendered = ARCHITECTURE_USER.format(**ctx)
     assert "# Epic" in rendered
+
+
+# ── Bootstrap status response shape (baseline snapshot) ──────────────────────
+
+
+def test_bootstrap_status_response_contains_done_and_running_keys():
+    """GET /api/ai/text/bootstrap-project/status/<job_id> must return a body
+    that includes both 'done' and 'running' boolean keys.
+
+    This is a shape-only baseline assertion — it seeds a known execution in
+    the in-process job registry and polls the status endpoint to confirm the
+    contract is intact before any refactoring begins.
+    """
+    import os
+
+    os.environ.setdefault("CHAIN_PROVIDER", "mock")
+
+    from create_app import create_app as createApp
+    from modules.ai.routes.text import _BOOTSTRAP_JOBS
+    from modules.runtime.workflows.execution import WorkflowExecution
+
+    application = createApp({"TESTING": True})
+    _BOOTSTRAP_JOBS.clear()
+
+    execution = WorkflowExecution(
+        workflow_ref="spec_gen/bootstrap-project",
+        inputs={"project_name": "baseline"},
+    )
+    execution.start()
+    _BOOTSTRAP_JOBS["baseline-shape-job"] = execution
+
+    with application.test_client() as c:
+        resp = c.get("/api/ai/text/bootstrap-project/status/baseline-shape-job")
+
+    _BOOTSTRAP_JOBS.clear()
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "done" in body, f"'done' key missing from bootstrap status response: {body}"
+    assert "running" in body, f"'running' key missing from bootstrap status response: {body}"
+    assert isinstance(body["done"], bool), "'done' must be a boolean"
+    assert isinstance(body["running"], bool), "'running' must be a boolean"

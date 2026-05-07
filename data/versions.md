@@ -3,57 +3,57 @@
 Injected into every implementation guide so generated code uses correct versions.
 
 ## Runtime
+
 | Component | Version |
 |-----------|---------|
 | Python | 3.11 |
 | Flask | 3.x |
-| gunicorn | 23.x (`gthread` worker class, `--workers 1`) |
 | Angular | 17 (standalone components, signals) |
 | Node | 22 LTS |
-| Ionic | 7.x + Capacitor 6.x (mobile projects) |
 
 ## AI
-| Component | Value |
-|-----------|-------|
-| Claude model | `claude-sonnet-4-6` |
-| Chain provider (local dev) | `cli` (subprocess via Claude Code CLI) |
-| Chain provider (production) | `claude` (Anthropic SDK) |
-| OpenClaw provider | `claude-cli/claude-sonnet-4-6` |
-| CLI subprocess timeout | 3,600s |
-| Angular HTTP timeout | 1,800,000ms (30 min) |
-| Max tokens — task guides | 16,384 |
-| Max tokens — bootstrap steps | 4,096 (analysis/epic) / 16,384 (architecture) |
 
-## OpenClaw
 | Component | Value |
 |-----------|-------|
-| Image | `ghcr.io/openclaw/openclaw:latest` |
-| Gateway port | 18789 |
-| Bridge port | 18790 |
-| Workspace | `~/.openclaw/workspace/` |
-| Config dir | `~/.openclaw/` |
-| Telegram bot | `@ClawBoiSamBot` |
+| Claude model (default) | `claude-sonnet-4-6` |
+| Chain provider (local dev) | `cli` — subprocess via `claude` CLI |
+| Chain provider (Docker) | `cli` — always, never SDK |
+| Chain provider (tests) | `mock` |
+| CLI subprocess timeout | 3,600s |
+| Max tokens — task guides | 8,192 |
+| Max tokens — bootstrap architecture | 16,384 |
+| Max tokens — other bootstrap steps | 4,096 |
 
 ## Key Dependencies
+
 | Package | Version |
 |---------|---------|
-| datamodel-code-generator | 0.45.0 |
+| SQLModel | 0.x |
 | pydantic | 2.x |
 | pytest | 8.x |
-| @anthropic-ai/claude-code | latest (global npm install) |
+| alembic | 1.x |
 
-## Paths (local dev)
+## Paths (local dev, no Docker)
+
 | Purpose | Path |
 |---------|------|
-| SPEC_DOC_DIR (dev) | `/Users/sam/Projects/2026/spec-doc` |
-| SPEC_DOC_DIR (Docker) | `/data/spec-doc` → host `~/Projects/spec-doc-data` |
-| Projects | `$SPEC_DOC_DIR/projects/` |
-| Context files | `$SPEC_DOC_DIR/*.md` |
-| OpenClaw workspace | `~/.openclaw/workspace/` |
-| Sam's projects (in container) | `/home/node/Projects/` |
+| SPEC_DOC_DIR | `/Users/sam/Projects/specview/data` |
+| Projects | `/Users/sam/Projects/specview/data/projects/` |
+| Context files | `/Users/sam/Projects/specview/data/*.md` |
+| API entry point | `/Users/sam/Projects/specview/api/app.py` |
+| API port | `5001` |
+| Frontend port | `4201` |
+
+## Paths (Docker)
+
+| Purpose | Path |
+|---------|------|
+| SPEC_DOC_DIR | `/data/spec-doc` |
+| Projects | `/data/spec-doc/projects/` |
 
 ## CI
-- GitHub Actions: `.github/workflows/deploy.yml`
-- Branch: `master` (PRs only, no direct push)
-- DTO check: `make check-dtos` with `--target-python-version 3.9`
-- Docker integration: `CHAIN_PROVIDER=mock`, `APP_ENV=test`
+
+- GitHub Actions: `.github/workflows/` (if present)
+- Branch: `master` — PRs only, no direct push
+- Tests: `pytest api/ -q` must pass before merge
+- Provider in CI: `CHAIN_PROVIDER=mock`

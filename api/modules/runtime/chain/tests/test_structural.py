@@ -29,6 +29,20 @@ def featureModules_mustNotImportProvidersDirectly():
     )
 
 
+def test_prompts_directory_does_not_exist():
+    """Asserts that the legacy modules/ai/prompts/ directory has been fully deleted.
+
+    This directory was removed as part of the Thin API Layer refactor. Any
+    re-introduction of it would bypass the workflow-based prompt system.
+    """
+    api_root = pathlib.Path(__file__).resolve().parents[4]  # api/
+    prompts_dir = api_root / "modules" / "ai" / "prompts"
+    assert not prompts_dir.exists(), (
+        f"Legacy prompts directory must not exist: {prompts_dir}. "
+        "Prompts now live inside workflow step definitions."
+    )
+
+
 def test_feature_modules_must_not_branch_on_chain_provider():
     """ELA #1 - provider selection lives in adapter.py and nowhere else."""
     api_root = pathlib.Path(__file__).resolve().parents[4]  # api/

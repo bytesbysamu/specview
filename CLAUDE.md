@@ -32,6 +32,7 @@ Before acting on any request, check whether a skill or agent applies:
 - Any code review, pre-PR check, diff review → use `/dev-review`
 - Any spec generation, braindump processing → use `/spec-pipeline <project>`
 - Any implementation guide, task guide, how-to-build document → use `/impl-guide <project>`
+- Execute an implementation guide task, implement what the guide describes → use `/exec-guide <project> [task-N]`
 - Any Flask route, SQLModel model, migration, service → delegate to `spec-backend` agent
 - Any Angular component, signal, service, template → delegate to `spec-frontend` agent
 - Any chain adapter, prompt, workflow step, provider → delegate to `chain-agent`

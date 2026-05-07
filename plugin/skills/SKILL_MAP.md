@@ -1,6 +1,6 @@
 # Skill Map — chain-agent-plugin
 
-Master index of all skills. 6 skills total: 4 dev-tools + 1 spec-pipeline + 1 impl-guide.
+Master index of all skills. 7 skills total: 4 dev-tools + 1 spec-pipeline + 1 impl-guide + 1 exec-guide.
 
 **Plugin:** chain-agent-plugin v0.1.0
 
@@ -52,6 +52,7 @@ agent  back   front
 |-------|---------|-------------|---------------|
 | **spec-pipeline** | `/spec-pipeline <id>` | Braindump → full spec set via bootstrap API | Bash, Read, Glob, Grep, WebFetch, AskUserQuestion |
 | **impl-guide** | `/impl-guide <id>` | epic + architecture → single high-level guide, no code, fast | Bash, Read, Glob, Grep, Write |
+| **exec-guide** | `/exec-guide <id> [task-N]` | Execute tasks from implementation-guide.md via specialist agents | Agent, Read, Glob, Grep, Bash |
 
 ---
 
@@ -82,4 +83,8 @@ Invoked by dev-review and consulted during development.
 
 # Implementation guide (high-level, no code)
 /impl-guide my-project        # epic + architecture -> implementation-guide.md
+
+# Execute the plan
+/exec-guide my-project        # run all tasks in implementation-guide.md
+/exec-guide my-project task-2 # run only Task 2
 ```

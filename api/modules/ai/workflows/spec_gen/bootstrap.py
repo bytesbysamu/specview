@@ -10,14 +10,6 @@ Convention required by WorkflowRepositoryFs:
 from __future__ import annotations
 
 from dtos.models import BootstrapFile
-from modules.ai.prompts import (
-    BOOTSTRAP_ANALYSIS_SYSTEM,
-    BOOTSTRAP_ANALYSIS_USER,
-    BOOTSTRAP_ARCHITECTURE_SYSTEM,
-    BOOTSTRAP_ARCHITECTURE_USER,
-    BOOTSTRAP_EPIC_SYSTEM,
-    BOOTSTRAP_EPIC_USER,
-)
 from modules.runtime.workflows.steps import registry as _registry
 from modules.runtime.workflows.steps.ai_call import AICall
 from modules.runtime.workflows.steps.base import StepContext
@@ -65,9 +57,9 @@ _ensure_marshal_files_registered()
 def _analysis_step() -> AICall:
     return AICall(
         name="analysis",
-        system=BOOTSTRAP_ANALYSIS_SYSTEM,
-        prompt_template=BOOTSTRAP_ANALYSIS_USER,
-        input_keys=("braindump", "project_name", "builder"),
+        system="",
+        prompt_template="Generate analysis for project '{project_name}' from braindump at {braindump_path}.",
+        input_keys=("project_name", "braindump_path"),
         model="claude-haiku-4-5",  # cheap, short prompt
     )
 
@@ -75,9 +67,9 @@ def _analysis_step() -> AICall:
 def _epic_step() -> AICall:
     return AICall(
         name="epic",
-        system=BOOTSTRAP_EPIC_SYSTEM,
-        prompt_template=BOOTSTRAP_EPIC_USER,
-        input_keys=("braindump", "project_name", "builder", "principles"),
+        system="",
+        prompt_template="Generate epic for project '{project_name}' from analysis at {analysis_path}.",
+        input_keys=("project_name", "analysis_path"),
         model="claude-sonnet-4-5",  # default; explicit for auditability
     )
 
@@ -89,16 +81,9 @@ def _architecture_step() -> AICall:
     # (see ai_call.py and the SaaS-Reliability architecture doc).
     return AICall(
         name="architecture",
-        system=BOOTSTRAP_ARCHITECTURE_SYSTEM,
-        prompt_template=BOOTSTRAP_ARCHITECTURE_USER,
-        input_keys=(
-            "braindump",
-            "project_name",
-            "builder",
-            "principles",
-            "codebase",
-            "references",
-        ),
+        system="",
+        prompt_template="Generate architecture for project '{project_name}' from epic at {epic_path}.",
+        input_keys=("project_name", "epic_path"),
         model="claude-opus-4-7",  # quality matters most here
         max_tokens=16384,  # per braindump-raise-max-tokens.md
         stream=True,
@@ -109,12 +94,10 @@ def _build_workflow() -> Workflow:
     return (
         Workflow.builder("bootstrap-project")  # _PrefixedRepo prepends spec_gen/
         .inputs(
-            "braindump",
+            "braindump_path",
             "project_name",
-            "builder",
-            "principles",
-            "codebase",
-            "references",
+            "analysis_path",
+            "epic_path",
         )
         .outputs("analysis", "epic", "architecture", "files")
         .step(_analysis_step())
@@ -133,7 +116,7 @@ def _build_analysis_only_workflow() -> Workflow:
     """
     return (
         Workflow.builder("bootstrap-analysis-only")
-        .inputs("braindump", "project_name", "builder")
+        .inputs("project_name", "braindump_path")
         .outputs("analysis")
         .step(_analysis_step())
         .build()
@@ -143,15 +126,13 @@ def _build_analysis_only_workflow() -> Workflow:
 def _build_epic_only_workflow() -> Workflow:
     """Sub-workflow for epic-only retry.
 
-    The epic step's prompt template references {analysis.text}, so the retry
-    route supplies "analysis" as a workflow input rather than re-running the
-    analysis step. Declaring "analysis" in workflow inputs lets
-    AbstractStep._validate_inputs accept the prompt's reference (the merged
-    {**outputs, **inputs} dict makes inputs visible to format_map).
+    The epic step's prompt template references {analysis_path}, so the retry
+    route supplies "analysis_path" as a workflow input. Declaring it in workflow
+    inputs lets AbstractStep._validate_inputs accept the prompt's reference.
     """
     return (
         Workflow.builder("bootstrap-epic-only")
-        .inputs("braindump", "project_name", "builder", "principles", "analysis")
+        .inputs("project_name", "analysis_path")
         .outputs("epic")
         .step(_epic_step())
         .build()
@@ -161,22 +142,15 @@ def _build_epic_only_workflow() -> Workflow:
 def _build_architecture_only_workflow() -> Workflow:
     """Sub-workflow for architecture-only retry.
 
-    Both "analysis" and "epic" flow as workflow inputs (the prompt template
-    references {epic.text}). The architecture step itself opts into streaming
-    via _architecture_step()'s stream=True so the retry surface matches the
-    parent workflow's live-preview behaviour.
+    The architecture step's prompt template references {epic_path}. The step
+    opts into streaming via _architecture_step()'s stream=True so the retry
+    surface matches the parent workflow's live-preview behaviour.
     """
     return (
         Workflow.builder("bootstrap-architecture-only")
         .inputs(
-            "braindump",
             "project_name",
-            "builder",
-            "principles",
-            "codebase",
-            "references",
-            "analysis",
-            "epic",
+            "epic_path",
         )
         .outputs("architecture")
         .step(_architecture_step())

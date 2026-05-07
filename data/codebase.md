@@ -1,81 +1,78 @@
-# Codebase Context — Current Target: OpenClaw Workspace (sam-plugin)
+# Codebase Context — specview
 
-The sam-plugin lives in the OpenClaw workspace. This file describes the target environment
-where generated tasks will be executed.
+specview is a self-hosted spec generation tool. Users paste a braindump; an AI chain
+generates analysis, epic, architecture, timeline, and implementation guide.
 
-## OpenClaw Workspace Layout
-```
-~/.openclaw/workspace/           # mounted at /home/node/.openclaw/workspace in container
-├── AGENTS.md                    # session startup instructions (auto-loaded)
-├── MEMORY.md                    # long-term curated memory (auto-loaded in main session)
-├── USER.md                      # Sam's profile and projects
-├── TOOLS.md                     # stack, GitHub, environment details
-├── SOUL.md                      # agent identity and values
-├── IDENTITY.md                  # agent self-description
-├── HEARTBEAT.md                 # proactive check-in config
-├── anchor.md                    # session anchor context
-├── skills/                      # workspace skills (SKILL.md files, auto-discovered)
-│   ├── sam-context/
-│   │   └── SKILL.md             # [TO BUILD] boot hook + live snapshot
-│   ├── sam-specDoc/
-│   │   └── SKILL.md             # [TO BUILD] spec-doc bridge tools
-│   └── sam-projects/
-│       └── SKILL.md             # [TO BUILD] project registry + git tools
-└── memory/                      # daily notes + claude-ai export
-    ├── YYYY-MM-DD.md            # daily logs (today + yesterday auto-loaded)
-    └── claude-ai/               # searchable conversation history
-```
+## Project Layout
 
-## OpenClaw Container Environment
 ```
-Container: openclaw-openclaw-cli-1 / openclaw-openclaw-gateway-1
-Image: ghcr.io/openclaw/openclaw:latest
-Node user: /home/node
-Mounts:
-  /home/node/.openclaw           → ~/.openclaw (config, workspace)
-  /home/node/.claude             → ~/.claude   (claude CLI auth)
-  /home/node/.claude.json        → ~/.claude.json
-  /home/node/Projects            → ~/Projects  (all Sam's projects)
-  /home/node/spec-doc-data       → ~/Projects/spec-doc-data (generated specs)
-Ports: 18789 (gateway), 18790 (bridge)
-Channels: Telegram (@ClawBoiSamBot), web UI
-Provider: claude-cli (claude-sonnet-4-6 via Claude Code CLI)
-```
-
-## Sam's Projects on Disk (visible at /home/node/Projects)
-```
-~/Projects/
-├── 2026/
-│   ├── spec-doc/               Flask :3101 + Angular :4201
-│   ├── constellation/          Next.js 15 + Flask
-│   └── wardrobai/              Trendfy (Ionic + Flask)
-├── bubls/                      Ionic + Angular + Capacitor
-├── humanize-me/                Next.js 15 + Flask (production)
-├── openclaw/                   OpenClaw gateway (Node/TS, docker-compose)
-└── spec-doc-data/              Generated spec-doc project data
-    └── projects/
-        └── sam-s-studio-*/     Sam's Studio project (this project's output)
+/Users/sam/Projects/specview/
+├── api/                            Flask API (Python 3.11)
+│   ├── app.py                      App entry point (python app.py → port 5001)
+│   ├── config.py                   SPEC_DOC_DIR, PROJECTS_DIR, CONTEXT_PATHS
+│   └── modules/
+│       ├── ai/                     Spec generation routes + services
+│       │   ├── prompts/            Python prompt builders (being migrated out)
+│       │   ├── services/           epic_guide.py, task_gen.py
+│       │   ├── workflows/spec_gen/ bootstrap.py (4-step chain)
+│       │   └── routes/             spec_gen.py, task_gen.py, text.py, stats.py
+│       ├── runtime/chain/          AI adapter layer (only AI call boundary)
+│       │   ├── adapter.py          generate(), stream(), rewrite(), stream_generate()
+│       │   └── providers/          cli.py, claude.py, mock.py
+│       ├── auth/                   JWT auth (require_auth decorator)
+│       ├── data/                   Projects CRUD, context file service
+│       └── quality/                lint_task_guide() — pre-write lint gate
+├── web-ng/                         Angular 17 SPA (signals, no NgRx)
+│   └── src/app/                    Components, services, routing
+├── landing/                        Static marketing page (nginx:alpine)
+├── plugin/                         Claude Code plugin
+│   ├── agents/                     chain-agent, spec-backend, spec-frontend, chain-developer
+│   ├── references/                 chain-conventions.md, flask-conventions.md, angular-conventions.md
+│   └── skills/                     dev-build, dev-test, dev-migrate, dev-review,
+│                                   spec-pipeline, impl-guide, exec-guide
+├── .claude/                        Active plugin wiring (agents, skills, settings)
+└── data/                           Runtime data (SPEC_DOC_DIR)
+    ├── builder.md                  Builder profile context
+    ├── principles.md               Engineering principles
+    ├── codebase.md                 This file
+    ├── references.md               Reference code patterns
+    ├── quality.md                  Lint + coherence rules
+    ├── versions.md                 Deployment versions fact sheet
+    └── projects/                   Per-project spec files
+        └── <project-id>/
+            ├── project.json        { name, createdAt }
+            ├── braindump.md
+            ├── analysis.md
+            ├── epic.md
+            ├── architecture.md
+            ├── timeline.md
+            └── implementation-guide.md
 ```
 
-## spec-doc API Layout (secondary context)
-```
-~/Projects/2026/spec-doc/api/
-├── create_app.py               App factory
-├── config.py                   SPEC_DOC_DIR, CONTEXT_PATHS
-├── openapi.yaml                API contract (source of truth)
-├── dtos/models.py              Generated DTOs — never hand-edit
-└── modules/
-    ├── ai/                     Bootstrap + generate-task routes
-    ├── chain/adapter.py        ONLY import point for AI calls
-    ├── context/                Read/write builder.md, principles.md, etc.
-    ├── data/projects/          Project CRUD, file read/write
-    └── ai/routes/task_gen.py  POST /generate-task (async 202 + polling)
-```
+## Key URLs (local dev, no Docker)
 
-## Key URLs (local dev)
 | Service | URL |
 |---------|-----|
-| spec-doc web | http://localhost:8080 |
-| spec-doc API | http://localhost:3101 |
-| OpenClaw gateway | http://localhost:18789 |
-| Telegram bot | @ClawBoiSamBot |
+| Flask API | http://localhost:5001 |
+| Angular SPA | http://localhost:4201 |
+
+## Chain Adapter
+
+All AI calls go through `modules/runtime/chain/adapter.py` only. Never import from `providers/*` directly.
+
+- `CHAIN_PROVIDER=cli` → subprocess `claude -p` (local dev + Docker)
+- `CHAIN_AGENT=chain-agent` → routes through `claude --agent chain-agent -p`
+- `CHAIN_PROVIDER=mock` → deterministic fixture output (tests only)
+
+## Background Jobs
+
+Long AI generation runs in `threading.Thread`. State in module-level dict.
+`snapshot(job_id)` → `{ running, done, error?, files? }`.
+
+## Test Suite
+
+```bash
+cd /Users/sam/Projects/specview/api
+pytest -q          # full suite
+pytest modules/ai/ # AI module only
+```

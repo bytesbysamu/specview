@@ -85,6 +85,28 @@ Error: claude CLI exited with code 1 — check container logs
 - `error` field present in poll response.
 - Job runs for more than 10 minutes without `done: true`.
 
+## Plugin-Direct Procedure
+
+When the API is unavailable or you want to generate specs without the HTTP layer,
+invoke `chain-agent` directly via the Claude CLI. Each command produces one file.
+Run them in order — each step's output feeds the next.
+
+```
+# Step 1 — Analysis
+claude --agent chain-agent -p "Generate an analysis.md for project '<name>'. Braindump: <content of braindump.md>"
+
+# Step 2 — Epic (pass analysis output)
+claude --agent chain-agent -p "Generate an epic.md for project '<name>'. Braindump: <braindump>. Analysis: <output of step 1>"
+
+# Step 3 — Architecture (pass epic output)
+claude --agent chain-agent -p "Generate an architecture.md for project '<name>'. Braindump: <braindump>. Epic: <output of step 2>"
+
+# Step 4 — Timeline (pass analysis + epic + architecture)
+claude --agent chain-agent -p "Generate a timeline.md for project '<name>'. Analysis: <step 1>. Epic: <step 2>. Architecture: <step 3>"
+```
+
+Save each file to `SPEC_DOC_DIR/<project_id>/` after generation.
+
 ## Allowed Tools
 
 Bash, Read, Glob, Grep, WebFetch, AskUserQuestion

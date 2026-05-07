@@ -16,9 +16,7 @@ import threading
 from pathlib import Path
 
 from modules.runtime.chain import adapter as chain_adapter
-from modules.data.context.service import read_context
-from modules.ai.prompts.epic_guide import build_epic_guide_prompt
-from modules.data.projects.service import get_project, update_file
+from modules.data.projects.service import update_file
 from modules.runtime.workflows.execution import WorkflowExecution
 
 logger = logging.getLogger(__name__)
@@ -48,52 +46,20 @@ def snapshot(project_id: str) -> dict:
     return out
 
 
-def _spec(specs: list[dict], filename: str) -> str:
-    for s in specs:
-        if s.get("filename") == filename:
-            return s.get("content") or ""
-    return ""
-
-
 def run_generation(
     project_id: str,
     projects_dir: Path,
     execution: WorkflowExecution,
 ) -> None:
-    """Background thread: load specs → build prompt → call AI → write file."""
+    """Background thread: build prompt → call AI → write file."""
     try:
-        project = get_project(projects_dir, project_id)
-        if project is None:
-            execution.fail("project not found")
-            return
-        specs = project.get("specs") or []
+        project_dir = projects_dir / project_id
 
-        epic = _spec(specs, "epic.md")
-        if not epic:
-            execution.fail("epic.md missing or empty")
-            return
-
-        arch = _spec(specs, "architecture.md")
-        analysis = _spec(specs, "analysis.md")
-
-        builder = read_context("builder")
-        principles = read_context("principles")
-        codebase = read_context("codebase")
-        references = read_context("references")
-        versions = read_context("versions")
-
-        system, user = build_epic_guide_prompt(
-            epic=epic,
-            arch=arch,
-            analysis=analysis,
-            builder=builder,
-            principles=principles,
-            codebase=codebase,
-            references=references,
-            versions=versions,
+        result = chain_adapter.generate(
+            "",
+            f"Generate implementation-guide.md for the project at {project_dir}. Read epic.md and architecture.md from that directory.",
+            max_tokens=8192,
         )
-
-        result = chain_adapter.generate(system, user, max_tokens=8192)
 
         update_file(projects_dir, project_id, OUTPUT_FILENAME, result.text)
         execution.outputs["filename"] = OUTPUT_FILENAME

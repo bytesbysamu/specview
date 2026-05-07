@@ -31,15 +31,33 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from modules.ai.prompts import bootstrap_extract_tasks
 from modules.runtime.chain import adapter as chain_adapter
-from modules.data.context.service import read_context
-from modules.ai.prompts.impl_guide import build_implementation_guide_prompt
 from modules.data.projects.service import get_project, update_file
 from modules.quality.lint import lint_task_guide
 from modules.runtime.workflows.execution import WorkflowExecution
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap task extraction (inlined from former modules.ai.prompts)
+# ---------------------------------------------------------------------------
+
+def bootstrap_extract_tasks(epic_content: str) -> list[dict]:
+    """Parse task table rows from an epic.md document.
+
+    Finds rows matching: | N | **Task Name** | ... | Effort | High/Medium/Low |
+    Returns list of dicts with keys {num, name, effort}.
+    """
+    tasks = []
+    for line in epic_content.splitlines():
+        m = re.match(
+            r'^\|\s*([\d.]+)\s*\|\s*\*\*([^*]+)\*\*\s*\|.*\|\s*([^|]+)\s*\|\s*(?:High|Medium|Low)\s*\|',
+            line,
+        )
+        if m:
+            tasks.append({"num": m.group(1), "name": m.group(2).strip(), "effort": m.group(3).strip()})
+    return tasks
 
 
 # ---------------------------------------------------------------------------
@@ -435,39 +453,23 @@ def run_generation(
         # Step 5: extract task description block
         task_desc = extract_task_desc(epic, task["num"])
 
-        # Step 6: load context
-        builder = read_context("builder")
-        principles = read_context("principles")
-        codebase = read_context("codebase")
-        references = read_context("references")
-        quality = read_context("quality")        # rendered linter+coherence rules
-        versions = read_context("versions")      # deployment fact sheet
-
-        # Step 7: collect prior task contracts (structured file declarations)
+        # Step 6: collect prior task contracts (structured file declarations)
         contracts = collect_prior_task_contracts(specs, task["num"])
         prior = _format_contracts(contracts)
 
-        # Step 8: build prompt
-        arch = _arch_content(specs)
-        system, user = build_implementation_guide_prompt(
-            task_num=task["num"],
-            task_name=task["name"],
-            task_effort=task.get("effort", ""),
-            task_desc=task_desc,
-            arch=arch,
-            builder=builder,
-            principles=principles,
-            codebase=codebase,
-            references=references,
-            quality=quality,
-            versions=versions,
-            prior=prior,
+        # Step 7: build prompt
+        project_dir = projects_dir / project_id
+        prompt = (
+            f"Generate task guide for task {task['num']} ({task['name']}) "
+            f"in project at {project_dir}. Read epic.md and architecture.md."
         )
+        if prior:
+            prompt += f"\n\n{prior}"
 
-        # Step 9: call chain adapter (the only AI call)
-        result = chain_adapter.generate(system, user)
+        # Step 8: call chain adapter (the only AI call)
+        result = chain_adapter.generate("", prompt)
 
-        # Step 10: pre-emit lint — run before any disk write
+        # Step 9: pre-emit lint — run before any disk write
         flags = lint_task_guide(result.text)
         error_flags = [f for f in flags if f.severity == "error"]
         if error_flags:
@@ -483,7 +485,7 @@ def run_generation(
             return
         warning_flags = [f for f in flags if f.severity == "warning"]
 
-        # Step 11: write output file (only reached when no error flags)
+        # Step 10: write output file (only reached when no error flags)
         filename = derive_task_filename(task["num"], task["name"])
         update_file(projects_dir, project_id, filename, result.text)
 
