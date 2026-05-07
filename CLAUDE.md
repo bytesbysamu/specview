@@ -31,6 +31,7 @@ Before acting on any request, check whether a skill or agent applies:
 - Any database schema change, new column, new table → use `/dev-migrate <desc>`
 - Any code review, pre-PR check, diff review → use `/dev-review`
 - Any spec generation, braindump processing → use `/spec-pipeline <project>`
+- Any project cleanup, archive stale projects, set priorities → use `/triage-projects`
 - Any implementation guide, task guide, how-to-build document → use `/impl-guide <project>`
 - Execute an implementation guide task, implement what the guide describes → use `/exec-guide <project> [task-N]`
 - Any Flask route, SQLModel model, migration, service → delegate to `spec-backend` agent
@@ -52,6 +53,7 @@ Do not bypass these — the agents load conventions automatically. Doing it your
 
 | Skill | When to use |
 |-------|-------------|
+| `/triage-projects` | Archive stale projects, set priorities, sync to container |
 | `/dev-build` | Check backend imports or frontend build |
 | `/dev-test` | Run pytest (scoped to nearest module) |
 | `/dev-migrate <desc>` | Scaffold + apply an Alembic migration |

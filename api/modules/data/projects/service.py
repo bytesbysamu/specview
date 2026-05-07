@@ -90,14 +90,18 @@ def list_projects(projects_dir: Path) -> list[dict]:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             continue  # skip corrupt/unreadable entries gracefully
+        if meta.get("archived"):
+            continue
         results.append({
             "id": d.name,
             "name": meta["name"],
             "createdAt": meta["createdAt"],
+            "section": meta.get("section", ""),
+            "priority": meta.get("priority", 99),
             "specs": _read_specs(d, include_content=False, teaser_chars=300),
         })
-    # Sort newest first — port of server.js:497
-    results.sort(key=lambda p: p["createdAt"], reverse=True)
+    # Sort by priority asc (1=highest), then newest first within same priority
+    results.sort(key=lambda p: (p["priority"], p["createdAt"]))
     return results
 
 

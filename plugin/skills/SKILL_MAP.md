@@ -1,6 +1,6 @@
 # Skill Map — chain-agent-plugin
 
-Master index of all skills. 7 skills total: 4 dev-tools + 1 spec-pipeline + 1 impl-guide + 1 exec-guide.
+Master index of all skills. 8 skills total: 4 dev-tools + 1 spec-pipeline + 1 impl-guide + 1 exec-guide + 1 triage-projects.
 
 **Plugin:** chain-agent-plugin v0.1.0
 
@@ -56,6 +56,14 @@ agent  back   front
 
 ---
 
+## Data Skills (1)
+
+| Skill | Command | Description | Allowed Tools |
+|-------|---------|-------------|---------------|
+| **triage-projects** | `/triage-projects` | Archive stale projects, set priorities, sync to container | Bash, Read, Glob, Grep, Write, Edit, AskUserQuestion |
+
+---
+
 ## Domain Agents (4)
 
 Invoked by dev-review and consulted during development.
@@ -87,4 +95,8 @@ Invoked by dev-review and consulted during development.
 # Execute the plan
 /exec-guide my-project        # run all tasks in implementation-guide.md
 /exec-guide my-project task-2 # run only Task 2
+
+# Triage and clean up projects
+/triage-projects              # archive stale, set priorities, sync to container
+/triage-projects --dry-run    # preview changes without writing
 ```
