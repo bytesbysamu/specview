@@ -26,6 +26,8 @@ def _build_cmd(system: str) -> list[str]:
         # Route through the named Claude Code agent — conventions are in the
         # agent definition, so we omit the raw system-prompt.
         cmd = ["claude", "--agent", _CHAIN_AGENT, "-p", "--output-format", "text"]
+        if _CLI_KEY:
+            cmd.append("--bare")  # skip keychain reads in Docker; auth via ANTHROPIC_API_KEY env
     else:
         cmd = ["claude", "-p", "--output-format", "text"]
         if _CLI_KEY:

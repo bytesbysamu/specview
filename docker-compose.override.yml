@@ -11,9 +11,11 @@ services:
     environment:
       CHAIN_PROVIDER: cli
       CHAIN_AGENT: chain-agent
+      ANTHROPIC_CLI_KEY: "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"
       SPEC_DOC_DIR: /data/spec-doc
     volumes:
       - /Users/sam/.claude:/home/appuser/.claude
       - /Users/sam/.claude.json:/home/appuser/.claude.json:ro
+      - /Users/sam/Projects/specview/.claude/agents:/home/appuser/.claude/agents:ro
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw
       - /Users/sam/Projects/specview/data:/data/spec-doc
