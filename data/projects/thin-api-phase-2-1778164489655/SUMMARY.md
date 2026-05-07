@@ -2,62 +2,66 @@
 
 ## Status
 
-Task 1 (Skill Registry Contract + Generic Route) is complete. Tasks 2–4 are unstarted.
+**Complete.** All in-scope tasks shipped. Task 2 (Benchmark Runner) skipped by decision.
 
 ---
 
-## What Was Built (Task 1 complete)
+## What Was Built
 
-- `api/modules/ai/job_store.py` — In-process job store. `SkillJob` dataclass (job_id, skill_name, skill_version, status, result, error). Thread-safe via `_LOCK`. No eviction. Four functions: `create_job`, `get_job`, `complete_job`, `fail_job`.
-- `api/modules/ai/routes/generic_skill_route.py` — Flask Blueprint registered at `/api/skills`. Three endpoints (see Deployment). Name validated against regex before any filesystem access. Branches on `execution_model` from `skill.json` — no per-skill conditionals anywhere.
-- `api/modules/ai/routes/generic_skill_service.py` — Execution layer. `load_skill_registry` reads `skill.json`. `_build_prompt` concatenates `SKILL.md` + user input — the full "zero AI strings in Python" enforcement point. `run_skill` calls `chain_adapter.generate()` and delegates to the validator. `run_skill_async` wraps `run_skill` in a daemon thread and updates the job store.
-- `api/modules/ai/routes/output_validator.py` — Strips markdown fences, parses JSON, checks `required` fields from `output_schema`. Raises `ValueError` on failure; the route maps that to a 502 skill error before any response is written.
-- `plugin/skills/rewrite/skill.json` — `execution_model: sync`, `output_schema: {required: ["text"]}`.
-- `plugin/skills/review/skill.json` — `execution_model: sync`, `output_schema: {required: ["scores", "issues"]}`.
-- `plugin/skills/brainstorm/skill.json` — `execution_model: async`, `output_schema: {required: ["questions", "recommendations", "rewritten_braindump"], optional: ["suggested_action"]}`.
-- `docker-compose.override.yml` — `PLUGIN_DIR=/app/plugin` env var set; `plugin/` mounted read-only at `/app/plugin`.
+### Task 1 — Skill Registry Contract
+- `api/modules/ai/job_store.py` — In-process job store. `SkillJob` dataclass (job_id, skill_name, skill_version, status, result, error). Thread-safe via `_LOCK`.
+- `api/modules/ai/routes/generic_skill_route.py` — Blueprint at `/api/skills`. Three endpoints. Security gate: name regex → skill.json existence → validated. Branches on `execution_model` from skill.json.
+- `api/modules/ai/routes/generic_skill_service.py` — Reads SKILL.md → `chain_adapter.generate()` → validates output. Zero AI strings in Python.
+- `api/modules/ai/routes/output_validator.py` — Strips markdown fences, parses JSON, checks `required` fields from `output_schema`.
+- `docker-compose.override.yml` — `PLUGIN_DIR=/app/plugin` + plugin volume mounted read-only.
+
+### Task 3 — Track A Sync Migration (rewrite, iterate, review)
+- `api/modules/ai/routes/text.py` — `rewrite`, `iterate`, `review` handlers now call `load_skill_registry()` + `run_skill()` from generic_skill_service. No prompt building in Python.
+- `api/modules/ai/services/text_prompts.py` — `rewrite_prompt`, `iterate_prompt`, `lint_braindump_prompt`, `review_prompt` deleted. Zero AI strings in migrated handlers.
+- Old route URLs (`/api/ai/text/rewrite`, etc.) preserved — frontend unchanged.
+
+### Task 4 — Track B Async Migration (brainstorm, spec-pipeline)
+- `api/modules/ai/routes/text.py` — `lint_braindump` handler migrated to `brainstorm` skill. Returns `{questions, recommendations, rewritten_braindump, suggested_action}` replacing `{ready, flags}`.
+- `plugin/skills/spec-pipeline/skill.json` — Added (`execution_model: async`). spec-pipeline now registered in the skill registry.
 
 ---
 
 ## Plugin Skills
 
-| Skill | execution_model | output_schema required fields | status |
-|-------|----------------|-------------------------------|--------|
-| rewrite | sync | `text` | skill.json + SKILL.md present |
-| review | sync | `scores`, `issues` | skill.json + SKILL.md present |
-| brainstorm | async | `questions`, `recommendations`, `rewritten_braindump` (+ optional `suggested_action`) | skill.json + SKILL.md present |
-| spec-pipeline | async | — | SKILL.md present; skill.json **missing** |
+| Skill | execution_model | Status |
+|-------|----------------|--------|
+| rewrite | sync | Live — `/api/ai/text/rewrite` calls it |
+| iterate | sync | Live — `/api/ai/text/iterate` calls it |
+| review | sync | Live — `/api/ai/text/review` calls it |
+| brainstorm | async | Live — `/api/ai/text/lint-braindump` calls it |
+| spec-pipeline | async | Registered (skill.json present); bootstrap-project not yet migrated |
 
 ---
 
-## Architecture Decision
+## Core Invariant
 
-The generic route reads `skill.json` to determine `execution_model` and `output_schema`; it calls `chain_adapter.generate()` with a prompt built entirely from `SKILL.md` + user input; it validates the agent's stdout against `output_schema` before writing any response. No skill name, prompt fragment, or output assumption appears in Python — all behavioral intelligence lives in the skill directory. The core invariant: zero AI instruction strings in Python, verifiable by grep over `api/modules/ai/`.
+`api/modules/ai/routes/text.py` contains zero AI instruction strings for the four migrated routes. Remaining strings in `text_prompts.py` are exclusively for `bootstrap_*` functions (WorkflowExecution path — out of scope).
 
----
-
-## What's Next
-
-1. **Task 2 — Benchmark Runner**: Consume `.jobs/<job_id>/run.log` corpus. Structural evaluator for async skills (key/type checks against `output_schema`). LLM-as-judge evaluator for sync skills (explicit versioned rubric, routed through `chain_adapter`). Produces per-track pass rate against N=10. Required before any old-route retirement.
-
-2. **Task 3 — Track A Sync Migration**: Run rewrite and review through the generic route under benchmark. Retire old per-skill Python routes only after 95%/N=10 gate clears. Can run in parallel with Task 2 development.
-
-3. **Task 4 — Track B Async Migration**: Add `skill.json` to `spec-pipeline` (currently missing). Migrate brainstorm and spec-pipeline through the generic route. `brainstorm` `suggested_action` field is already declared in the schema (stubbed null). Depends on Tasks 2 and 3 completing their gates.
+Verifiable: `grep -rn '"You are' api/modules/ai/routes/text.py` → empty.
 
 ---
 
-## Deployment
-
-Plugin is mounted read-only at `/app/plugin` (`docker-compose.override.yml`). `PLUGIN_DIR=/app/plugin` tells the service where to find skills. Skills resolve from `$PLUGIN_DIR/skills/<skill_name>/`.
-
-**Route URLs:**
+## Routes
 
 | Method | URL | Behavior |
 |--------|-----|----------|
-| `POST` | `/api/skills/run/<skill_name>` | Run a skill. Sync → `200 {"result": ...}` + `X-Job-Id` header. Async → `202 {"job_id": "..."}`. |
-| `GET` | `/api/skills/jobs/<job_id>` | Poll async job. Returns `{job_id, skill, version, status, done, result?, error?}`. |
-| `GET` | `/api/skills/` | List all skills with a `skill.json`. |
+| `POST` | `/api/skills/run/<skill_name>` | Generic skill route. sync → `200 {"result":...}` + `X-Job-Id`. async → `202 {"job_id":"..."}`. |
+| `GET` | `/api/skills/jobs/<job_id>` | Poll async job. |
+| `GET` | `/api/skills/` | List all registered skills from skill.json. |
+| `POST` | `/api/ai/text/rewrite` | Calls rewrite skill (backward-compat URL). |
+| `POST` | `/api/ai/text/iterate` | Calls iterate skill. |
+| `POST` | `/api/ai/text/review` | Calls review skill. |
+| `POST` | `/api/ai/text/lint-braindump` | Calls brainstorm skill (new response shape). |
 
-**Request body** (POST): any JSON object — passed verbatim as a JSON string appended after `SKILL.md` content in the prompt.
+---
 
-**Auth**: all three endpoints require `@require_auth`. POST also enforces `@check_usage_limit("skill")`.
+## What's Deferred
+
+- **Task 2 (Benchmark Runner)** — skipped by decision.
+- **bootstrap-project → spec-pipeline migration** — WorkflowExecution path requires separate effort.
+- **Brainstorm → spec-pipeline guided flow** — `suggested_action` field stubbed; frontend two-step UX is a follow-on.
