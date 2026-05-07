@@ -432,6 +432,14 @@ def bootstrap_retry(job_id: str):
         return jsonify({"error": "job not found"}), 404
 
     new_inputs = dict(prior.inputs)
+    # Inject prior outputs as inputs so downstream steps have their dependencies.
+    # epic retry needs analysis; architecture retry needs both.
+    if step in ("epic", "architecture"):
+        if "analysis" in prior.outputs:
+            new_inputs["analysis"] = prior.outputs["analysis"].text
+    if step == "architecture":
+        if "epic" in prior.outputs:
+            new_inputs["epic"] = prior.outputs["epic"].text
 
     try:
         workflow = current_app.workflow_repository.get(workflow_ref)

@@ -44,14 +44,17 @@ def clear_jobs():
     _BOOTSTRAP_JOBS.clear()
 
 
-def _bootstrap_body(**overrides) -> dict:
-    """Build a valid bootstrap request body."""
-    base = {
-        "project_name": "Test Bootstrap",
-        "braindump": "We need to build a widget factory.",
-    }
-    base.update(overrides)
-    return base
+class _H:
+    """Non-test helper namespace."""
+
+    @staticmethod
+    def body(**overrides) -> dict:
+        base = {
+            "project_name": "Test Bootstrap",
+            "braindump": "We need to build a widget factory.",
+        }
+        base.update(overrides)
+        return base
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +65,7 @@ def test_bootstrap_project_returns_401_without_auth_token(client):
     """POST without Authorization header returns 401."""
     response = client.post(
         "/api/ai/text/bootstrap-project",
-        json=_bootstrap_body(),
+        json=_H.body(),
         headers={"Authorization": ""},  # opts out of the autouse bypass
     )
     assert response.status_code == 401, (
@@ -108,7 +111,7 @@ def test_bootstrap_project_returns_202_with_job_id(client):
 
         response = client.post(
             "/api/ai/text/bootstrap-project",
-            json=_bootstrap_body(),
+            json=_H.body(),
         )
 
     assert response.status_code == 202, (
@@ -130,7 +133,7 @@ def test_bootstrap_project_creates_job_entry_in_bootstrap_jobs(client):
 
         response = client.post(
             "/api/ai/text/bootstrap-project",
-            json=_bootstrap_body(),
+            json=_H.body(),
         )
 
     body = response.get_json()
