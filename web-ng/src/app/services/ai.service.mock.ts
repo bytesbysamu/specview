@@ -1,6 +1,7 @@
-import { AiService, TextOperationResponse } from './ai.service';
+import { AiService } from './ai.service';
+import { TextResponse } from '../api/models/text-response';
 
-const MOCK_RESULT: TextOperationResponse = { text: 'mock result', latencyMs: 100 };
+const MOCK_RESULT: TextResponse = { text: 'mock result', latencyMs: 100 };
 
 export function createAiServiceMock(): jasmine.SpyObj<AiService> {
   const mock = jasmine.createSpyObj<AiService>('AiService', [
