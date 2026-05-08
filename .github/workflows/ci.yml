@@ -145,7 +145,7 @@ jobs:
 
   docker:
     name: Docker build & smoke
-    needs: [backend, frontend, e2e]
+    needs: [e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
