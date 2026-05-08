@@ -63,23 +63,8 @@ const CONTEXT_FILES = [
 const REFRESH_INTERVAL = 30_000;
 const GEN_POLL_INTERVAL = 10_000;
 
-function stripMarkdown(md = ''): string {
-  return md
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`[^`]*`/g, '')
-    .replace(/#{1,6}\s+/g, '')
-    .replace(/\*\*([^*]*)\*\*/g, '$1')
-    .replace(/\*([^*]*)\*/g, '$1')
-    .replace(/!\[.*?\]\(.*?\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/[-*+]\s+/g, '')
-    .replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
-function teaser(content = '', len = 140): string {
-  const plain = stripMarkdown(content);
-  return plain.length > len ? plain.slice(0, len).trimEnd() + '…' : plain;
-}
+
 
 declare const lucide: { createIcons(): void };
 let _lucideScheduled = false;

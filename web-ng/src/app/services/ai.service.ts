@@ -13,7 +13,6 @@ import { bulletsText } from '../api/fn/operations/bullets-text';
 import { rewriteAction } from '../api/fn/operations/rewrite-action';
 import { TextResponse } from '../api/models/text-response';
 
-const AI_TIMEOUT_MS = 1_800_000;
 
 @Injectable({ providedIn: 'root' })
 export class AiService {

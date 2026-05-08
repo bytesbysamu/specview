@@ -40,7 +40,7 @@
         @if (s.id === 'context') {
           <span class="section-count section-count-pulse"
                 [class.pulsing]="pulsingSections().has('context')">{{ contextFiles.length }}</span>
-        } @else if (sectionCounts()[s.id] != null) {
+        } @else if (sectionCounts()[s.id] !== null) {
           <span class="section-count section-count-pulse"
                 [class.pulsing]="pulsingSections().has(s.id)">{{ sectionCounts()[s.id] }}</span>
         }
