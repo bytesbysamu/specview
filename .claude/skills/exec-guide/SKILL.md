@@ -48,9 +48,34 @@ For each task to execute:
 
 Pull the full markdown block for the task — from its `## Task N:` heading to the next `---` or end of file. This becomes the agent's work order.
 
-### 2. Build agent prompt
+### 2. Load agent context
+
+Before building the prompt, load the target agent's full definition:
+
+1. Read `.claude/agents/<agent-name>.md` (e.g. `.claude/agents/spec-backend.md`).
+2. Parse its **Loaded References** section — find every `plugin/references/*.md` file listed.
+3. Read each referenced file from `plugin/references/`.
+4. This content becomes the **agent preamble** that leads the subagent prompt.
+
+The goal: the `general-purpose` subagent receives the same persona, quality gates, and conventions that the specialist plugin agent would have loaded in an interactive session.
+
+### 3. Build agent prompt
 
 ```
+# Agent: <agent-name>
+
+<paste full content of .claude/agents/<agent-name>.md here>
+
+---
+
+# Reference: <reference-file-name>
+
+<paste full content of each plugin/references/*.md listed in the agent's Loaded References>
+
+---
+
+# Task
+
 You are executing Task N from the implementation guide for project "<name>".
 
 Here is the task:
@@ -64,12 +89,12 @@ Working directory: /Users/sam/Projects/specview
 Do not ask for confirmation — execute the steps directly.
 ```
 
-### 3. Dispatch
+### 4. Dispatch
 
-Use the Agent tool with the correct `subagent_type` and the prompt above.
+Use the Agent tool with `subagent_type: "general-purpose"` and the prompt above.
 Run tasks sequentially (each task may depend on the previous).
 
-### 4. Report after each task
+### 5. Report after each task
 
 ```
 Task N: <name>
@@ -90,9 +115,9 @@ Scope: <module path, e.g. modules/ai/routes>
 Working directory: /Users/sam/Projects/specview/api
 ```
 
-If tests fail, stop and report failures. Do not proceed to step 6 until tests pass.
+If tests fail, stop and report failures. Do not proceed to step 7 until tests pass.
 
-### 6. Run code review (automatic — do not skip)
+### 7. Run code review (automatic — do not skip)
 
 After tests pass, invoke the `/dev-review` skill on the changed files:
 
@@ -106,7 +131,7 @@ Working directory: /Users/sam/Projects/specview
 
 Collect the review output and include it in the final summary.
 
-### 7. Write summary file
+### 8. Write summary file
 
 Write the following to `data/projects/<project-dir>/exec-guide-summary.md` using the Write tool:
 
@@ -142,7 +167,7 @@ Write the following to `data/projects/<project-dir>/exec-guide-summary.md` using
 
 Then print the same content to the conversation so it's visible.
 
-### 8. Report to user
+### 9. Report to user
 
 ```
 exec-guide: complete

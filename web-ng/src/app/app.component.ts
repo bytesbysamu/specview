@@ -151,6 +151,7 @@ export class AppComponent implements OnInit, OnDestroy {
   polling = signal(false);
   pollOk = signal(true);
   pollingError = signal<string | null>(null);
+  billingError = signal<string | null>(null);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private genPollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly POLL_MAX_RETRIES = 30;
@@ -442,12 +443,17 @@ export class AppComponent implements OnInit, OnDestroy {
     this.aiResult.set(null);
     this.aiLatencyMs.set(null);
     this.aiError.set(false);
+    this.billingError.set(null);
     try {
       const res = await fn();
       this.aiResult.set(res.text);
       this.aiLatencyMs.set(res.latencyMs);
-    } catch {
-      this.aiError.set(true);
+    } catch (err: any) {
+      if (err?.status === 429) {
+        this.billingError.set('You have reached your daily limit. Upgrade to Pro to continue.');
+      } else {
+        this.aiError.set(true);
+      }
     } finally {
       this.aiLoading.set(false);
     }

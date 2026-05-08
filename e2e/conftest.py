@@ -6,6 +6,9 @@ import time
 
 import pytest
 
+# Make step definitions discoverable by pytest-bdd
+pytest_plugins = ["e2e.steps.common_steps"]
+
 
 def _wait_for_port(host: str, port: int, timeout: float = 30.0) -> None:
     deadline = time.monotonic() + timeout
@@ -16,6 +19,12 @@ def _wait_for_port(host: str, port: int, timeout: float = 30.0) -> None:
         except OSError:
             time.sleep(0.5)
     raise RuntimeError(f"Server did not start on {host}:{port} within {timeout}s")
+
+
+@pytest.fixture
+def context():
+    """Mutable dict shared across steps in a single scenario."""
+    return {}
 
 
 @pytest.fixture(scope="session")

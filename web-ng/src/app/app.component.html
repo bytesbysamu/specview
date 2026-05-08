@@ -255,6 +255,12 @@
             </div>
           }
 
+          @if (billingError()) {
+            <div data-test="billing-gate-message" class="text-ops-error text-ops-billing">
+              {{ billingError() }}
+            </div>
+          }
+
           @if (aiError()) {
             <div class="text-ops-error">Could not reach AI — check connection.</div>
           }
