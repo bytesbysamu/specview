@@ -17,16 +17,19 @@ from modules.usage.decorators import check_usage_limit
 
 logger = logging.getLogger(__name__)
 
-SKILL_TIMEOUT_SECONDS = 120
+SKILL_TIMEOUT_SECONDS = 300
 
 
 def _run_with_timeout(skill_name: str, user_input: str, registry: dict):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(run_skill, skill_name, user_input, registry)
-        try:
-            return future.result(timeout=SKILL_TIMEOUT_SECONDS)
-        except concurrent.futures.TimeoutError:
-            raise RuntimeError(f"skill timed out after {SKILL_TIMEOUT_SECONDS}s")
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(run_skill, skill_name, user_input, registry)
+    try:
+        return future.result(timeout=SKILL_TIMEOUT_SECONDS)
+    except concurrent.futures.TimeoutError:
+        pool.shutdown(wait=False, cancel_futures=True)
+        raise RuntimeError(f"skill timed out after {SKILL_TIMEOUT_SECONDS}s")
+    finally:
+        pool.shutdown(wait=False)
 
 actions_bp = Blueprint("actions", __name__, url_prefix="/api")
 
@@ -61,7 +64,7 @@ def _make_handler(verb: str):
             return jsonify({"error": str(exc)}), 500
         latency_ms = int((time.monotonic() - t0) * 1000)
         if "text" not in result:
-            logger.exception("skill %r returned unexpected output shape: %r", verb, result)
+            logger.error("skill %r returned unexpected output shape: %r", verb, result)
             return jsonify({"error": "skill returned unexpected output shape"}), 500
         return jsonify({"text": result["text"], "latencyMs": latency_ms})
 
@@ -102,7 +105,7 @@ def brainstorm():
         return jsonify({"error": str(exc)}), 500
     latency_ms = int((time.monotonic() - t0) * 1000)
     if "text" not in result:
-        logger.exception("skill 'brainstorm' returned unexpected output shape: %r", result)
+        logger.error("skill 'brainstorm' returned unexpected output shape: %r", result)
         return jsonify({"error": "skill returned unexpected output shape"}), 500
     return jsonify({"text": result["text"], "latencyMs": latency_ms})
 
@@ -134,6 +137,6 @@ def rewrite():
         return jsonify({"error": str(exc)}), 500
     latency_ms = int((time.monotonic() - t0) * 1000)
     if "text" not in result:
-        logger.exception("skill 'rewrite' returned unexpected output shape: %r", result)
+        logger.error("skill 'rewrite' returned unexpected output shape: %r", result)
         return jsonify({"error": "skill returned unexpected output shape"}), 500
     return jsonify({"text": result["text"], "latencyMs": latency_ms})
