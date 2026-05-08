@@ -55,7 +55,7 @@ jobs:
           cache-dependency-path: web-ng/package-lock.json
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --progress=false
+        run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
 
       - name: Lint
         run: npm run lint
@@ -133,7 +133,7 @@ jobs:
           cache-dependency-path: web-ng/package-lock.json
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --progress=false
+        run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
 
       - name: Unit tests (ChromeHeadlessCI)
         run: npx ng test --watch=false --browsers=ChromeHeadlessCI
@@ -145,7 +145,7 @@ jobs:
 
   docker:
     name: Docker build & smoke
-    needs: [backend, frontend]
+    needs: [backend, frontend, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -229,7 +229,7 @@ jobs:
 
       - name: Install Node dependencies
         working-directory: web-ng
-        run: npm ci --prefer-offline --no-audit --progress=false
+        run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
 
       - name: Run E2E tests
         env:

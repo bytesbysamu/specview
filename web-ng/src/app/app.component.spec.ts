@@ -83,7 +83,7 @@ describe('AppComponent — polling lifecycle', () => {
     component['pollRetries'] = 30;
 
     // checkForUpdates increments to 31 which is > 30 → stops + sets error
-    const call = component.checkForUpdates();
+    component.checkForUpdates();
     tick(0);
 
     expect(component.pollingError()).toBeTruthy();

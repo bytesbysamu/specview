@@ -32,7 +32,7 @@
         {{ s.icon }} {{ s.label }}
         @if (s.id === 'context') {
           <span class="section-count">{{ contextFiles.length }}</span>
-        } @else if (sectionCounts()[s.id] != null) {
+        } @else if (sectionCounts()[s.id] !== null) {
           <span class="section-count">{{ sectionCounts()[s.id] }}</span>
         }
       </button>

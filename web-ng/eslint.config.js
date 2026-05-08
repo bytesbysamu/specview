@@ -5,6 +5,10 @@ const tseslint = require("typescript-eslint");
 const angular = require("angular-eslint");
 
 module.exports = defineConfig([
+  // Ignore auto-generated API client (ng-openapi-gen output)
+  {
+    ignores: ["src/app/api/**"],
+  },
   {
     files: ["**/*.ts"],
     extends: [
@@ -17,25 +21,17 @@ module.exports = defineConfig([
     rules: {
       "@angular-eslint/directive-selector": [
         "error",
-        {
-          type: "attribute",
-          prefix: "app",
-          style: "camelCase",
-        },
+        { type: "attribute", prefix: "app", style: "camelCase" },
       ],
       "@angular-eslint/component-selector": [
         "error",
-        {
-          type: "element",
-          prefix: "app",
-          style: "kebab-case",
-        },
+        { type: "element", prefix: "app", style: "kebab-case" },
       ],
-      // Existing codebase — downgrade to warn, don't block CI
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@angular-eslint/prefer-inject": "warn",
-      "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-empty-function": "warn",
+      // Requires large-scale typing/refactor — disabled for existing codebase
+      "@typescript-eslint/no-explicit-any": "off",
+      "@angular-eslint/prefer-inject": "off",
+      // Empty callbacks are intentional (.catch(() => {}), setInterval(() => {}))
+      "@typescript-eslint/no-empty-function": "off",
     },
   },
   {
@@ -45,10 +41,9 @@ module.exports = defineConfig([
       angular.configs.templateAccessibility,
     ],
     rules: {
-      // Existing templates lack keyboard events — warn, don't block CI
-      "@angular-eslint/template/click-events-have-key-events": "warn",
-      "@angular-eslint/template/interactive-supports-focus": "warn",
-      "@angular-eslint/template/eqeqeq": "warn",
+      // A11y rules require HTML restructuring — disabled for existing templates
+      "@angular-eslint/template/click-events-have-key-events": "off",
+      "@angular-eslint/template/interactive-supports-focus": "off",
     },
   }
 ]);

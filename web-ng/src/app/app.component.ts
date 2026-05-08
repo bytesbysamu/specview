@@ -38,10 +38,6 @@ function computeParagraphDiff(original: string, result: string): ParagraphDiff[]
   return diffs;
 }
 
-function escHtml(s: string): string {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 const SECTIONS = [
   { id: 'context',      label: 'Context',       icon: '📐' },
   { id: 'all',          label: 'All',            icon: '' },
