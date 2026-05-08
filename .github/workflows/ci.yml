@@ -42,67 +42,12 @@ jobs:
               - 'docker-compose.yml'
               - '.github/workflows/ci.yml'
 
-  # ── Stage 1 (parallel) — lint ─────────────────────────────────────────────
-
-  lint-backend:
-    name: Python lint (ruff)
-    needs: [changes]
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    defaults:
-      run:
-        working-directory: api
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-      - name: Generate Python DTOs
-        run: |
-          pip install datamodel-code-generator==0.45.0
-          python -m datamodel_code_generator \
-            --input openapi.yaml \
-            --output dtos/models.py \
-            --output-model-type pydantic_v2.BaseModel \
-            --input-file-type openapi \
-            --target-python-version 3.10 \
-            --disable-timestamp
-      - name: Lint
-        run: pip install ruff && ruff check .
-
-  lint-frontend:
-    name: TypeScript lint (ng lint)
-    needs: [changes]
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: web-ng
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web-ng/package-lock.json
-      - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
-      - name: Generate Angular API client
-        run: npm run generate:api
-      - name: Lint
-        run: npm run lint
-
-  # ── Stage 2 (parallel, gates on lint) ────────────────────────────────────
+  # ── Stage 1 — backend and frontend tracks run in parallel, independently ──
 
   backend:
-    name: Backend tests
-    needs: [changes, lint-backend]
-    if: >-
-      always() &&
-      (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
-      (needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
+    name: Backend — lint + test
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -116,7 +61,7 @@ jobs:
           cache: pip
           cache-dependency-path: api/requirements.txt
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-cov datamodel-code-generator==0.45.0
+        run: pip install -r requirements.txt pytest pytest-cov ruff datamodel-code-generator==0.45.0
       - name: Generate Python DTOs
         run: |
           python -m datamodel_code_generator \
@@ -126,7 +71,9 @@ jobs:
             --input-file-type openapi \
             --target-python-version 3.10 \
             --disable-timestamp
-      - name: Run tests with coverage
+      - name: Lint
+        run: ruff check .
+      - name: Test
         env:
           CHAIN_PROVIDER: mock
         run: |
@@ -154,12 +101,9 @@ jobs:
           retention-days: 7
 
   frontend:
-    name: Frontend tests
-    needs: [changes, lint-frontend]
-    if: >-
-      always() &&
-      (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
-      (needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch')
+    name: Frontend — lint + test + build
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -176,12 +120,14 @@ jobs:
         run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
       - name: Generate Angular API client
         run: npm run generate:api
-      - name: Unit tests (ChromeHeadlessCI)
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
         run: npx ng test --watch=false --browsers=ChromeHeadlessCI
       - name: Build (production)
         run: npm run build -- --configuration production
 
-  # ── Stage 3 — integration ────────────────────────────────────────────────
+  # ── Stage 2 — integration (gates on both tracks) ──────────────────────────
 
   e2e:
     name: E2E tests
@@ -244,6 +190,8 @@ jobs:
           path: e2e-output.txt
           retention-days: 7
 
+  # ── Stage 3 — docker build + smoke ───────────────────────────────────────
+
   docker:
     name: Docker build & smoke
     needs: [e2e]
@@ -292,7 +240,7 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
 
-  # ── Auto-merge (gates on docker) ─────────────────────────────────────────
+  # ── Stage 4 — auto-merge (gates on docker) ────────────────────────────────
 
   auto-merge:
     name: Auto-merge PR
@@ -300,16 +248,26 @@ jobs:
     if: >-
       always() &&
       needs.docker.result == 'success' &&
-      github.event_name == 'pull_request' &&
-      github.base_ref == 'master'
+      github.ref != 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: write
     steps:
-      - name: Enable auto-merge
+      - name: Merge PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge --squash --auto ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }}
+          PR=$(gh pr list \
+            --repo ${{ github.repository }} \
+            --head ${{ github.ref_name }} \
+            --base master \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+          if [ -z "$PR" ] || [ "$PR" = "null" ]; then
+            echo "No open PR found for this branch — skipping"
+            exit 0
+          fi
+          echo "Merging PR #$PR"
+          gh pr merge --squash "$PR" --repo ${{ github.repository }}

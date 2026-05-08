@@ -37,8 +37,10 @@ def _build_cmd(system: str) -> list[str]:
             cmd.append("--bare")  # skip keychain reads; auth via ANTHROPIC_API_KEY env
         if system:
             cmd.extend(["--system-prompt", system])
-    # Grant the agent read access to the spec-doc data directory
-    if _SPEC_DOC_DIR:
+    # Grant data directory access only for agent/generation calls (not skill calls).
+    # Skill calls have a system prompt and are self-contained text transforms —
+    # they don't need file access, and --add-dir adds ~4s overhead per call.
+    if _SPEC_DOC_DIR and not system:
         cmd.extend(["--add-dir", _SPEC_DOC_DIR])
     return cmd
 

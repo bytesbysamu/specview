@@ -63,25 +63,11 @@ const CONTEXT_FILES = [
 const REFRESH_INTERVAL = 30_000;
 const GEN_POLL_INTERVAL = 10_000;
 
-function stripMarkdown(md = ''): string {
-  return md
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`[^`]*`/g, '')
-    .replace(/#{1,6}\s+/g, '')
-    .replace(/\*\*([^*]*)\*\*/g, '$1')
-    .replace(/\*([^*]*)\*/g, '$1')
-    .replace(/!\[.*?\]\(.*?\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/[-*+]\s+/g, '')
-    .replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
-function teaser(content = '', len = 140): string {
-  const plain = stripMarkdown(content);
-  return plain.length > len ? plain.slice(0, len).trimEnd() + '…' : plain;
-}
+
 
 declare const lucide: { createIcons(): void };
+let _lucideScheduled = false;
 
 @Component({
   selector: 'app-root',
@@ -380,11 +366,18 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
     this._stopGenPoll();
     this._stopSyncElapsedTimer();
     if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
+    _lucideScheduled = false;
   }
 
   ngAfterViewChecked() {
-    if (typeof lucide !== 'undefined') {
-      lucide.createIcons();
+    if (typeof lucide !== 'undefined' && !_lucideScheduled) {
+      _lucideScheduled = true;
+      setTimeout(() => {
+        // Remove stale SVGs left behind by @if block re-renders before re-scanning.
+        document.querySelectorAll('[data-lucide] ~ svg').forEach(el => el.remove());
+        lucide.createIcons();
+        _lucideScheduled = false;
+      }, 0);
     }
   }
 
@@ -509,12 +502,15 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
       const fresh = await this.projectsSvc.listProjects();
       this.pollOk.set(true);
       this._markSyncNow();
-      if (fresh.length !== this.knownCount) {
+      // Always update on count change, OR if projects is empty (initial load may have failed)
+      if (fresh.length !== this.knownCount || this.knownCount === 0) {
         const diff = fresh.length - this.knownCount;
         this.projects.set(fresh);
         this.knownCount = fresh.length;
-        this.updateBanner.set(diff > 0 ? `+${diff} new` : 'Projects updated');
-        setTimeout(() => this.updateBanner.set(''), 5000);
+        if (diff > 0 && this.knownCount > 0) {
+          this.updateBanner.set(`+${diff} new`);
+          setTimeout(() => this.updateBanner.set(''), 5000);
+        }
       }
     } catch {
       this.pollOk.set(false);
