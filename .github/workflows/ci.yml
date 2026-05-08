@@ -5,6 +5,7 @@ on:
     branches: ["**"]
   pull_request:
     branches: ["master"]
+  workflow_dispatch:
 
 # Cancel in-progress runs on the same branch when a new push arrives.
 concurrency:
@@ -249,4 +250,22 @@ jobs:
           path: e2e-output.txt
           retention-days: 7
 
-  # deploy job — add here when ready; trigger on master push, needs: [docker, e2e]
+  # ── Auto-merge (gates on docker) ─────────────────────────────────────────
+
+  auto-merge:
+    name: Auto-merge PR
+    needs: [docker]
+    if: github.event_name == 'pull_request' && github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge --squash --auto ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }}
+
+  # deploy job — add here when ready; trigger on master push, needs: [auto-merge]
