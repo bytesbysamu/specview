@@ -82,6 +82,7 @@ function teaser(content = '', len = 140): string {
 }
 
 declare const lucide: { createIcons(): void };
+let _lucideScheduled = false;
 
 @Component({
   selector: 'app-root',
@@ -383,8 +384,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   ngAfterViewChecked() {
-    if (typeof lucide !== 'undefined') {
-      lucide.createIcons();
+    if (typeof lucide !== 'undefined' && !_lucideScheduled) {
+      _lucideScheduled = true;
+      setTimeout(() => { lucide.createIcons(); _lucideScheduled = false; }, 0);
     }
   }
 
@@ -509,12 +511,15 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
       const fresh = await this.projectsSvc.listProjects();
       this.pollOk.set(true);
       this._markSyncNow();
-      if (fresh.length !== this.knownCount) {
+      // Always update on count change, OR if projects is empty (initial load may have failed)
+      if (fresh.length !== this.knownCount || this.projects().length === 0) {
         const diff = fresh.length - this.knownCount;
         this.projects.set(fresh);
         this.knownCount = fresh.length;
-        this.updateBanner.set(diff > 0 ? `+${diff} new` : 'Projects updated');
-        setTimeout(() => this.updateBanner.set(''), 5000);
+        if (diff > 0 && this.knownCount > 0) {
+          this.updateBanner.set(`+${diff} new`);
+          setTimeout(() => this.updateBanner.set(''), 5000);
+        }
       }
     } catch {
       this.pollOk.set(false);

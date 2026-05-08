@@ -941,9 +941,13 @@ body {
 /* ── Inline gen status ───────────────────────── */
 .inline-gen-status {
   margin: 20px 0 0;
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--status-success-bg);
+  color: #fff;
   overflow: hidden;
+}
+[data-theme="dark"] .inline-gen-status {
+  background: var(--status-running);
+  color: #fff;
 }
 .inline-gen-status .gen-status-content {
   padding: 10px 20px;
@@ -951,7 +955,18 @@ body {
   font-family: 'Source Sans 3', sans-serif;
   letter-spacing: 0.03em;
 }
-.inline-gen-status .gen-status-track { height: 3px; }
+.inline-gen-status .gen-status-track {
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,0.5) 30%,
+    rgba(255,255,255,0.9) 50%,
+    rgba(255,255,255,0.5) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: gen-shimmer 1.6s linear infinite;
+}
 
 /* ── Unified diff (markdown sections) ───────── */
 .diff-unified {
