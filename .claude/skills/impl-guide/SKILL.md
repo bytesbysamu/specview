@@ -98,7 +98,7 @@ Generate the implementation guide now.
 1. Read the three files (epic, architecture, optional analysis).
 2. Substitute content into the prompt template above.
 3. Call the chain: `chain.generate(system, user, model="claude-sonnet-4-6", max_tokens=8192)`
-   - If running as a plugin skill (no API): use `claude -p "<user prompt>" --system "<system>"` directly.
+   - If running as a plugin skill (no API): prepend the system prompt to the user prompt and call `claude -p "<system content>\n\n<user prompt content>"` directly. Do NOT use `--system` — it is not a valid claude CLI flag.
 4. Write output to `{resolved_project_dir}/implementation-guide.md` — use the **exact directory path** resolved in Pre-flight step 1. Do not reconstruct the path from the project name or ID.
 5. Report:
 

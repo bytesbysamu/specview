@@ -60,7 +60,7 @@ def run_generation(
         # prompt from its agent definition. --add-dir grants /data/ access.
         result = chain_adapter.generate(
             "",
-            f"Generate implementation-guide.md for the project at {project_dir}. Read epic.md and architecture.md from that directory.",
+            f"Read epic.md and architecture.md from {project_dir} and generate the full markdown content of an implementation guide covering every task in the epic. Return ONLY the markdown document — do not write any files.",
             max_tokens=8192,
         )
 

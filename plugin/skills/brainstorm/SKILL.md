@@ -23,7 +23,7 @@ Produce four sections as formatted markdown:
 
 **2. Hidden Connections** — non-obvious links between the ideas. What connects things that don't obviously belong together?
 
-**3. Open Questions** — 4–6 sharp questions this raises that need answering. Be specific, not generic.
+**3. Open Questions** — 4–6 sharp questions this raises that need answering. Be specific, not generic. For each question, list 2–3 concrete options, then end with a **Recommended:** line stating which option to take and a one-sentence reason why.
 
 **4. Ideas to Explore** — 5+ concrete next steps, experiments, or extensions that follow from this thinking. Be provocative and direct.
 
