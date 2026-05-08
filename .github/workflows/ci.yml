@@ -83,6 +83,39 @@ jobs:
       - name: Build (production)
         run: npm run build -- --configuration production
 
+  # ── Docker build + compose smoke test ────────────────────────────────────
+  docker:
+    name: Docker build & health check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start stack
+        run: |
+          docker compose up -d
+          # Give gunicorn time to bind
+          sleep 5
+
+      - name: Health check — API
+        run: |
+          for i in $(seq 1 12); do
+            STATUS=$(docker compose exec -T api curl -sf http://localhost:3101/api/health -o /dev/null -w "%{http_code}" 2>/dev/null || echo "000")
+            echo "attempt $i: $STATUS"
+            [ "$STATUS" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "API health check failed after 60s"
+          docker compose logs api
+          exit 1
+
+      - name: Tear down
+        if: always()
+        run: docker compose down
+
   # ── E2E tests (pytest-bdd + Playwright, real Flask + Angular servers) ─────
   e2e:
     name: E2E tests
