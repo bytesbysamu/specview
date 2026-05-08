@@ -6,7 +6,7 @@ from functools import wraps
 
 import jwt
 from flask import g, jsonify, request
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from modules.auth.models import User
 from modules.auth.service import verify_token

@@ -13,15 +13,12 @@ from dtos.models import (
 )
 from pydantic import ValidationError
 from modules.runtime.chain import adapter as chain_adapter
-from modules.runtime.chain.errors import ProviderError
 from config import PROJECTS_DIR
 from modules.data.context.service import read_context
-from modules.ai.routes.generic_skill_service import load_skill_registry, run_skill
 from modules.ai.services.task_gen import bootstrap_extract_tasks
 from modules.data.templates.generators import generate_spec_index, generate_timeline, generate_readme
 from modules.runtime.workflows.execution import ExecutionStatus, WorkflowExecution
 from modules.runtime.workflows.runtime import WorkflowRuntime
-from modules.ai.errors import AIProviderError
 from modules.auth.decorators import require_auth
 from modules.usage.decorators import check_usage_limit
 
