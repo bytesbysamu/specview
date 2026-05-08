@@ -10,6 +10,12 @@
   --accent: #567B95;
   --red: #C41E3A;
   --code-bg: #F5F5F5;
+
+  /* Status bar four-state colors */
+  --status-idle:    #1a6b30;
+  --status-active:  #7a5800;
+  --status-success: #1a6b30;
+  --status-failure: #C41E3A;
 }
 
 [data-theme="dark"] {
@@ -22,9 +28,29 @@
   --accent: #7BAFC8;
   --red: #E05A72;
   --code-bg: #1E1E1E;
+
+  /* Status bar four-state colors — dark mode */
+  --status-idle:    #1a4d25;
+  --status-active:  #5a4000;
+  --status-success: #1a4d25;
+  --status-failure: #8B0000;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ── Lucide icons ────────────────────────────────────────────────────────── */
+
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  width: 1em;
+  height: 1em;
+  stroke-width: 2;
+}
 
 body {
   font-family: 'Source Serif 4', Georgia, serif;
@@ -361,6 +387,8 @@ body {
   padding: 8px 20px;
   text-align: left;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
 }
 .sidebar-file:hover { color: var(--ink); background: rgba(0,0,0,0.03); }
 .sidebar-file.active {
@@ -410,6 +438,32 @@ body {
   text-overflow: ellipsis;
 }
 
+/* ── Per-file status dots ────────────────────── */
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.7; }
+  50%       { transform: scale(1);   opacity: 1; }
+}
+
+.file-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 6px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.file-dot--running {
+  background: #d4a017;
+  animation: dot-pulse 1s ease-in-out infinite;
+}
+.file-dot--success {
+  background: #28a745;
+}
+.file-dot--failure {
+  background: var(--red);
+}
+
 .sidebar-generate {
   margin: 8px 16px 0;
   padding: 7px 12px;
@@ -428,6 +482,42 @@ body {
 }
 .sidebar-generate:hover:not(:disabled) { background: var(--accent); color: var(--bg); }
 .sidebar-generate:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Sidebar op chips ────────────────────────── */
+.sidebar-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.sidebar-ops .text-ops-label {
+  margin-bottom: 4px;
+}
+
+.sidebar-ops .op-chip {
+  width: 100%;
+  text-align: left;
+  padding: 5px 10px;
+}
+
+/* Style presets in sidebar — below chip row when Style is active */
+.sidebar-style-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 16px 0;
+  border-bottom: none;
+  animation: rise 0.15s ease;
+}
+
+.sidebar-style-presets .style-chip {
+  width: 100%;
+  text-align: left;
+  border-radius: 2px;
+}
 
 /* ── Main content area ───────────────────────── */
 .expanded-main {
@@ -556,6 +646,57 @@ body {
   opacity: 0.7;
 }
 
+/* Pulse animation when section count changes */
+@keyframes count-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.section-count-pulse {
+  display: inline-block;
+  animation: none;
+}
+.section-count-pulse.pulsing {
+  animation: count-pulse 200ms ease-out forwards;
+}
+
+/* ── Section group (taxonomy grouping in 'all' view) ── */
+.section-group {
+  grid-column: 1 / -1;
+  margin-bottom: 24px;
+}
+.section-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+.section-group-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+.section-group-count {
+  font-size: 9px;
+  color: var(--ink-muted);
+  font-weight: 400;
+  opacity: 0.7;
+}
+.section-group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+}
+.section-group-cards .file-item {
+  background: var(--bg);
+}
+
 /* ── Update banner ───────────────────────────── */
 .update-banner {
   font-family: 'Source Sans 3', sans-serif;
@@ -650,13 +791,21 @@ body {
   background: var(--bg);
   z-index: 9;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 0;
   padding: 10px 0;
   border-bottom: 2px solid var(--ink);
   margin-bottom: 0;
   transition: background 0.2s;
+}
+
+/* First row: chips + actions side by side */
+.editor-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
 }
 
 .editor-toolbar-sentinel { height: 1px; }
@@ -677,6 +826,14 @@ body {
 }
 [data-theme="dark"] .editor-toolbar--floating { box-shadow: 0 -4px 20px rgba(0,0,0,0.3); }
 
+/* Style presets as a toolbar sub-row */
+.style-presets--toolbar {
+  border-bottom: none;
+  border-top: 1px solid var(--border);
+  padding: 8px 0 4px;
+  margin-top: 4px;
+}
+
 .editor-toolbar-chips {
   display: flex;
   align-items: center;
@@ -692,24 +849,10 @@ body {
   flex-shrink: 0;
 }
 
-.editor-apply-btn {
-  font-family: 'Source Sans 3', sans-serif;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  background: var(--ink);
-  color: var(--bg);
-  border: 1px solid var(--ink);
-  padding: 4px 14px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: opacity 0.15s;
-}
-.editor-apply-btn:hover { opacity: 0.8; }
-
 .editor-hist-btn { opacity: 0.6; }
 .editor-hist-btn:hover { opacity: 1; }
 
+/* Ghost sibling buttons (Copy / Dismiss) */
 .editor-toolbar-actions button {
   font-family: 'Source Sans 3', sans-serif;
   font-size: 11px;
@@ -723,6 +866,22 @@ body {
   transition: color 0.15s, border-color 0.15s;
 }
 .editor-toolbar-actions button:hover { color: var(--ink); border-color: var(--ink); }
+
+/* Apply button — visually dominant: filled, larger, heavier weight */
+.editor-toolbar-actions .editor-apply-btn {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--ink);
+  padding: 6px 22px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: opacity 0.15s;
+}
+.editor-toolbar-actions .editor-apply-btn:hover { opacity: 0.8; color: var(--bg); }
 
 .editor-rewrite-row {
   margin-top: 12px;
@@ -828,30 +987,46 @@ body {
 .brainstorm-generate-btn:hover:not(:disabled) { background: var(--accent); color: var(--bg); }
 .brainstorm-generate-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* Status bar states */
-.gen-status-bar--ai   { background: var(--accent); }
-.gen-status-bar--err  { background: var(--red); }
+/* Status bar four states */
+.gen-status-bar--idle    { background: var(--status-idle); }
+.gen-status-bar--active  { background: var(--status-active); }
+.gen-status-bar--success { background: var(--status-success); animation: status-success-flash 2s ease-out forwards; }
+.gen-status-bar--failure { background: var(--status-failure); }
 
-/* Idle: green = live and healthy */
-.gen-status-bar--idle {
-  background: #1a6b30;
-}
-[data-theme="dark"] .gen-status-bar--idle { background: #1a4d25; }
-.gen-status-bar--idle .gen-status-content { padding: 5px 20px; }
-
-/* Poll flash: brief brighter green when polling fires */
-.gen-status-bar--poll {
-  background: #28a745;
-  animation: bar-poll-flash 0.7s ease-out forwards;
-}
-@keyframes bar-poll-flash {
+@keyframes status-success-flash {
   0%   { background: #28a745; }
-  100% { background: #1a6b30; }
+  40%  { background: #28a745; }
+  100% { background: var(--status-success); }
 }
+
+.gen-status-content--idle    { padding: 5px 20px; }
+.gen-status-content--success { padding: 5px 20px; }
+.gen-status-content--failure { padding: 5px 20px; }
+
+.gen-status-icon {
+  font-size: 13px;
+  margin-right: 2px;
+}
+
+.gen-status-retry {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.5);
+  color: inherit;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.gen-status-retry:hover { opacity: 1; }
 
 .gen-status-idle {
   font-size: 11px;
-  opacity: 0.8;
+  opacity: 0.85;
   letter-spacing: 0.06em;
 }
 
