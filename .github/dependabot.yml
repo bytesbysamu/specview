@@ -4,16 +4,22 @@ updates:
     directory: "/api"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    groups:
+      python-deps:
+        patterns: ["*"]
 
   - package-ecosystem: "npm"
     directory: "/web-ng"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    groups:
+      npm-deps:
+        patterns: ["*"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns: ["*"]
