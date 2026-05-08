@@ -17,16 +17,19 @@ from modules.usage.decorators import check_usage_limit
 
 logger = logging.getLogger(__name__)
 
-SKILL_TIMEOUT_SECONDS = 120
+SKILL_TIMEOUT_SECONDS = 300
 
 
 def _run_with_timeout(skill_name: str, user_input: str, registry: dict):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(run_skill, skill_name, user_input, registry)
-        try:
-            return future.result(timeout=SKILL_TIMEOUT_SECONDS)
-        except concurrent.futures.TimeoutError:
-            raise RuntimeError(f"skill timed out after {SKILL_TIMEOUT_SECONDS}s")
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(run_skill, skill_name, user_input, registry)
+    try:
+        return future.result(timeout=SKILL_TIMEOUT_SECONDS)
+    except concurrent.futures.TimeoutError:
+        pool.shutdown(wait=False, cancel_futures=True)
+        raise RuntimeError(f"skill timed out after {SKILL_TIMEOUT_SECONDS}s")
+    finally:
+        pool.shutdown(wait=False)
 
 actions_bp = Blueprint("actions", __name__, url_prefix="/api")
 

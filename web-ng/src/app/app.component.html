@@ -157,12 +157,6 @@
       <aside class="expanded-sidebar">
         <div class="sidebar-header">
           <button class="sidebar-back" (click)="closeExpanded()"><i data-lucide="arrow-left"></i> All</button>
-          <div class="sidebar-header-actions">
-            <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
-              @if (isDark()) { <i data-lucide="sun"></i> } @else { <i data-lucide="moon"></i> }
-            </button>
-            <button class="sidebar-signout" (click)="logout()" title="Sign out"><i data-lucide="log-out"></i></button>
-          </div>
         </div>
         <div class="sidebar-project">{{ expandedProject() }}</div>
 

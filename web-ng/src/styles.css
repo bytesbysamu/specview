@@ -21,7 +21,7 @@
   --status-failure: #C41E3A;
 
   /* Semantic status indicator tokens */
-  --status-running:    #F59E0B;
+  --status-running:    #22A66A;
   --status-success-bg: #2E7D32;
 }
 
@@ -43,7 +43,7 @@
   --status-failure: #8B0000;
 
   /* Semantic status indicator tokens — dark mode */
-  --status-running:    #D97706;
+  --status-running:    #1DB97A;
   --status-success-bg: #1B5E20;
 }
 
@@ -454,8 +454,8 @@ body {
   min-height: 0;
 }
 .sidebar-status--active {
-  border-color: var(--accent);
-  background: rgba(86, 123, 149, 0.06);
+  border-color: var(--status-running);
+  background: rgba(34,166,106,0.07);
   color: var(--ink);
 }
 .sidebar-status--success { border-color: var(--status-success-bg); color: var(--status-success-bg); }
@@ -475,8 +475,8 @@ body {
 .sidebar-status-dot--success { background: var(--status-success-bg); }
 .sidebar-status-dot--failure { background: var(--red); }
 @keyframes poll-pulse {
-  0%   { box-shadow: 0 0 0 0   rgba(249,158,11,0.5); }
-  100% { box-shadow: 0 0 0 5px rgba(249,158,11,0); }
+  0%   { box-shadow: 0 0 0 0   rgba(34,166,106,0.55); }
+  100% { box-shadow: 0 0 0 5px rgba(34,166,106,0); }
 }
 
 .sidebar-status-text {
