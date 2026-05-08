@@ -217,6 +217,38 @@
             </button>
           }
 
+          <!-- Sidebar status row — below file nav, single source of truth -->
+          <div class="sidebar-status"
+               [class.sidebar-status--active]="mode() === 'active'"
+               [class.sidebar-status--success]="mode() === 'success-flash'"
+               [class.sidebar-status--failure]="mode() === 'failure'">
+            @switch (mode()) {
+              @case ('active') {
+                <span class="sidebar-status-dot sidebar-status-dot--active"></span>
+                <span class="sidebar-status-text">
+                  @if (specGenLoading()) {
+                    {{ specGenStep() ?? 'starting…' }}
+                  } @else {
+                    {{ activeStepLabel() }}
+                  }
+                </span>
+              }
+              @case ('success-flash') {
+                <span class="sidebar-status-dot sidebar-status-dot--success"></span>
+                <span class="sidebar-status-text">done</span>
+              }
+              @case ('failure') {
+                <span class="sidebar-status-dot sidebar-status-dot--failure"></span>
+                <span class="sidebar-status-text">{{ statusFailureMsg() }}</span>
+                <button class="sidebar-status-retry" (click)="retryLastOp()">retry</button>
+              }
+              @default {
+                <span class="sidebar-status-dot"></span>
+                <span class="sidebar-status-text">connected</span>
+              }
+            }
+          </div>
+
           <!-- Op chips in sidebar (only when a spec file is open) -->
           @if (currentSpec()) {
             <div class="sidebar-ops">
@@ -360,60 +392,6 @@
 
 </div>
 
-<!-- Fixed status bar — always visible when logged in, single source of truth -->
-@if (auth.isLoggedIn()) {
-  <div class="gen-status-bar"
-       [class.gen-status-bar--active]="mode() === 'active'"
-       [class.gen-status-bar--success]="mode() === 'success-flash'"
-       [class.gen-status-bar--failure]="mode() === 'failure'"
-       [class.gen-status-bar--idle]="mode() === 'idle'">
-    @switch (mode()) {
-      @case ('active') {
-        <div class="gen-status-track"></div>
-        <div class="gen-status-content">
-          <span class="thinking-dot gen-dot"></span>
-          <span class="thinking-dot gen-dot"></span>
-          <span class="thinking-dot gen-dot"></span>
-          @if (specGenLoading()) {
-            <span class="gen-status-project">{{ specGenProjectName() }}</span>
-            <span class="gen-status-sep">·</span>
-            <span class="gen-status-step">{{ specGenStep() ?? 'starting…' }}</span>
-          } @else {
-            <span class="gen-status-project">{{ currentSpec()?.label }}</span>
-            <span class="gen-status-sep">·</span>
-            <span class="gen-status-step">{{ activeStepLabel() }}</span>
-          }
-        </div>
-      }
-      @case ('success-flash') {
-        <div class="gen-status-content gen-status-content--success">
-          <span class="gen-status-icon"><i data-lucide="check"></i></span>
-          <span class="gen-status-step">done</span>
-          @if (lastSyncAt()) {
-            <span class="gen-status-sep">·</span>
-            <span class="gen-status-idle">last sync {{ lastSyncLabel() }}</span>
-          }
-        </div>
-      }
-      @case ('failure') {
-        <div class="gen-status-content gen-status-content--failure">
-          <span class="gen-status-icon"><i data-lucide="x"></i></span>
-          <span class="gen-status-step">{{ statusFailureMsg() }}</span>
-          <button class="gen-status-retry" (click)="retryLastOp()">dismiss</button>
-        </div>
-      }
-      @default {
-        <div class="gen-status-content gen-status-content--idle">
-          <span class="gen-status-idle"><i data-lucide="circle-dot"></i> connected · specview api</span>
-          @if (lastSyncAt()) {
-            <span class="gen-status-sep">·</span>
-            <span class="gen-status-idle">last sync {{ lastSyncLabel() }}</span>
-          }
-        </div>
-      }
-    }
-  </div>
-}
 
 <!-- New Project Modal -->
 @if (showCreateModal()) {
