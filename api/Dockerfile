@@ -18,6 +18,10 @@ COPY api/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY api/ ./
+
+RUN pip install --no-cache-dir datamodel-code-generator==0.45.0 \
+ && make generate-dtos \
+ && pip uninstall -y datamodel-code-generator
 COPY plugin/ ./plugin/
 COPY data/ /data/spec-doc/
 

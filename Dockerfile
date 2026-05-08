@@ -4,7 +4,8 @@ WORKDIR /app
 COPY web-ng/package*.json ./
 RUN npm ci --quiet --legacy-peer-deps
 COPY web-ng/ .
-RUN npm run build
+COPY api/openapi.yaml /api/openapi.yaml
+RUN npm run generate:api && npm run build
 
 # ── Stage 2: Serve with nginx ─────────────────
 FROM nginx:alpine

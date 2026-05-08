@@ -40,11 +40,64 @@ jobs:
               - 'docker-compose.yml'
               - '.github/workflows/ci.yml'
 
+  # ── Stage 0.5 — generate DTOs from api/openapi.yaml (single source) ──────
+
+  generate:
+    name: Generate DTOs
+    needs: [changes]
+    if: >-
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.frontend == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Generate Python DTOs
+        working-directory: api
+        run: |
+          pip install datamodel-code-generator==0.45.0
+          make generate-dtos
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web-ng/package-lock.json
+
+      - name: Install Node dependencies
+        working-directory: web-ng
+        run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
+
+      - name: Generate Angular API client
+        working-directory: web-ng
+        run: npm run generate:api
+
+      - name: Upload Python DTOs
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-backend
+          path: api/dtos/models.py
+          retention-days: 1
+
+      - name: Upload Angular API client
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-frontend
+          path: web-ng/src/app/api/
+          retention-days: 1
+
   # ── Stage 1 (parallel) — lint ─────────────────────────────────────────────
 
   lint-backend:
     name: Python lint (ruff)
-    needs: [changes]
+    needs: [changes, generate]
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -60,18 +113,21 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install ruff + codegen
-        run: pip install ruff datamodel-code-generator==0.45.0
+      - name: Download Python DTOs
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-backend
+          path: api/dtos/
 
-      - name: Generate Python DTOs
-        run: make generate-dtos
+      - name: Install ruff
+        run: pip install ruff
 
       - name: Lint
         run: ruff check .
 
   lint-frontend:
     name: TypeScript lint (ng lint)
-    needs: [changes]
+    needs: [changes, generate]
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -92,8 +148,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
 
-      - name: Generate API client
-        run: npm run generate:api
+      - name: Download Angular API client
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-frontend
+          path: web-ng/src/app/api/
 
       - name: Lint
         run: npm run lint
@@ -102,9 +161,10 @@ jobs:
 
   backend:
     name: Backend tests
-    needs: [changes, lint-backend]
+    needs: [changes, generate, lint-backend]
     if: >-
       always() &&
+      (needs.generate.result == 'success' || needs.generate.result == 'skipped') &&
       (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
       (needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -124,10 +184,13 @@ jobs:
           cache-dependency-path: api/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-cov datamodel-code-generator==0.45.0
+        run: pip install -r requirements.txt pytest pytest-cov
 
-      - name: Generate Python DTOs
-        run: make generate-dtos
+      - name: Download Python DTOs
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-backend
+          path: api/dtos/
 
       - name: Run tests with coverage
         env:
@@ -160,9 +223,10 @@ jobs:
 
   frontend:
     name: Frontend tests
-    needs: [changes, lint-frontend]
+    needs: [changes, generate, lint-frontend]
     if: >-
       always() &&
+      (needs.generate.result == 'success' || needs.generate.result == 'skipped') &&
       (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
       (needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -184,8 +248,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
 
-      - name: Generate API client
-        run: npm run generate:api
+      - name: Download Angular API client
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-frontend
+          path: web-ng/src/app/api/
 
       - name: Unit tests (ChromeHeadlessCI)
         run: npx ng test --watch=false --browsers=ChromeHeadlessCI
@@ -197,11 +264,13 @@ jobs:
 
   e2e:
     name: E2E tests
-    needs: [backend, frontend]
+    needs: [generate, backend, frontend]
     if: >-
       always() &&
+      (needs.generate.result == 'success' || needs.generate.result == 'skipped') &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
-      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
+      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
+      (needs.backend.result == 'success' || needs.frontend.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -219,6 +288,12 @@ jobs:
           pip install -r api/requirements.txt
           pip install -r e2e/requirements.txt
 
+      - name: Download Python DTOs
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-backend
+          path: api/dtos/
+
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
 
@@ -231,6 +306,12 @@ jobs:
       - name: Install Node dependencies
         working-directory: web-ng
         run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
+
+      - name: Download Angular API client
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-frontend
+          path: web-ng/src/app/api/
 
       - name: Run E2E tests
         env:
