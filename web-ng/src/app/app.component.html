@@ -178,6 +178,38 @@
             }
           </nav>
 
+          <!-- Sidebar status row — immediately below file nav -->
+          <div class="sidebar-status"
+               [class.sidebar-status--active]="mode() === 'active'"
+               [class.sidebar-status--success]="mode() === 'success-flash'"
+               [class.sidebar-status--failure]="mode() === 'failure'">
+            @switch (mode()) {
+              @case ('active') {
+                <span class="sidebar-status-dot sidebar-status-dot--active"></span>
+                <span class="sidebar-status-text">
+                  @if (specGenLoading()) {
+                    {{ specGenStep() ?? 'starting…' }}
+                  } @else {
+                    {{ activeStepLabel() }}
+                  }
+                </span>
+              }
+              @case ('success-flash') {
+                <span class="sidebar-status-dot sidebar-status-dot--success"></span>
+                <span class="sidebar-status-text">done</span>
+              }
+              @case ('failure') {
+                <span class="sidebar-status-dot sidebar-status-dot--failure"></span>
+                <span class="sidebar-status-text">{{ statusFailureMsg() }}</span>
+                <button class="sidebar-status-retry" (click)="retryLastOp()">retry</button>
+              }
+              @default {
+                <span class="sidebar-status-dot"></span>
+                <span class="sidebar-status-text">connected</span>
+              }
+            }
+          </div>
+
           @if (canGenerateSpecs()) {
             <button
               class="sidebar-generate"
@@ -210,38 +242,6 @@
               }
             </button>
           }
-
-          <!-- Sidebar status row — below file nav, single source of truth -->
-          <div class="sidebar-status"
-               [class.sidebar-status--active]="mode() === 'active'"
-               [class.sidebar-status--success]="mode() === 'success-flash'"
-               [class.sidebar-status--failure]="mode() === 'failure'">
-            @switch (mode()) {
-              @case ('active') {
-                <span class="sidebar-status-dot sidebar-status-dot--active"></span>
-                <span class="sidebar-status-text">
-                  @if (specGenLoading()) {
-                    {{ specGenStep() ?? 'starting…' }}
-                  } @else {
-                    {{ activeStepLabel() }}
-                  }
-                </span>
-              }
-              @case ('success-flash') {
-                <span class="sidebar-status-dot sidebar-status-dot--success"></span>
-                <span class="sidebar-status-text">done</span>
-              }
-              @case ('failure') {
-                <span class="sidebar-status-dot sidebar-status-dot--failure"></span>
-                <span class="sidebar-status-text">{{ statusFailureMsg() }}</span>
-                <button class="sidebar-status-retry" (click)="retryLastOp()">retry</button>
-              }
-              @default {
-                <span class="sidebar-status-dot"></span>
-                <span class="sidebar-status-text">connected</span>
-              }
-            }
-          </div>
 
           <!-- Op chips in sidebar (only when a spec file is open) -->
           @if (currentSpec()) {

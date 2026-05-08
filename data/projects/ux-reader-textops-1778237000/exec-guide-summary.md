@@ -1,12 +1,14 @@
 # exec-guide summary — UX Reader, Text Ops & Navigation
 
 **Date:** 2026-05-08
-**Tasks run:** 5
+**Tasks run:** 5 (exec-guide) + post-run fixes
 **Tasks passed:** 5 / 5
 **Tests:** passed (frontend: web-ng — 5 passed)
-**Review:** 3 critical, 6 warnings
+**Review:** 3 critical, 6 warnings (original) — several addressed in post-run fixes
 
-## Tasks
+---
+
+## Original Tasks (exec-guide run)
 
 | Task | Status | Files changed |
 |------|--------|---------------|
@@ -16,99 +18,68 @@
 | Task 4: Unified Status Bar + Per-File Dots | ✓ complete | app.component.ts, app.component.html, styles.css |
 | Task 5: Panel Animation | ✓ complete | app.config.ts, app.component.ts, app.component.html |
 
-## Test results
+---
 
-Tests: passed (frontend: web-ng — 5 passed)
+## Post-Run Fixes (this session)
 
-## Review findings
+### Bug fixes
 
-### Critical (must fix before merge)
+| Fix | Commit | Detail |
+|-----|--------|--------|
+| 404 on all AI op buttons | `2ed9af0` | Task 1 agent used wrong endpoint paths (`/api/operations/*-text`). Real paths are `/api/expand`, `/api/compress` etc. |
+| Switch to generated API client | `7c72fdd` | `ai.service.ts` was using raw HttpClient. Switched to `ng-openapi-gen` generated functions (`brainstormText`, `expandText`, etc.) |
+| Color system aligned | `e646c29` | Hardcoded hex values replaced with CSS tokens matching landing page (`--status-running`, `--status-success-bg`, font stacks) |
+| Status bar location reversed | `2c6fe8f` | Epic had wrongly removed sidebar-status row and kept bottom bar. User's stated preference was the opposite. Fixed: bottom bar removed, sidebar-status row restored below file nav |
+| Amber color too dark | `2c6fe8f` | `--status-running` changed from `#B8860B` (goldenrod) to `#F59E0B` (correct amber from braindump) |
+| Idle dot color wrong | `2c6fe8f` | Idle state dot was green; should be neutral `var(--ink-muted)` |
+| Theme toggle + logout in sidebar | `776e614` | Task 3 added duplicate controls to sidebar header. Removed — they already exist in masthead |
+| Text op timeouts (skill timed out after 120s) | `776e614` | Two root causes: (1) `ThreadPoolExecutor` with `with` block was blocking HTTP thread after timeout fired; fixed with `shutdown(wait=False)`. (2) `--add-dir /data/spec-doc` was added to every CLI call including simple text ops, adding ~4s overhead and contributing to timeouts on large inputs. Now only added for chain-agent generation calls. Timeout bumped 120s → 300s. |
+| Green status motif | `776e614` | Running/active state changed from amber to green (`#22A66A` / `#1DB97A` dark). `poll-pulse` glow updated. `.sidebar-status--active` border/bg now uses `var(--status-running)` |
 
-- `services/section-taxonomy.service.ts` — No spec file. Unit tests for `sectionFor()` required.
-- `services/project-teaser.ts` — No spec file. `projectTeaser()`, `firstNonHeadingSentence()`, `countTasks()` untested.
-- `services/ai.service.ts` — Spec not updated. Now uses generated API client; mock+spec need to reflect new shape.
+### Partially addressed
 
-### Warnings (should fix)
-
-- `app.component.ts:574` — `mode = computed(() => this.statusMode())` trivial passthrough; reference `statusMode()` directly.
-- `app.component.ts:613` — `runOp(op as any)` — use proper union type.
-- `app.component.html:246` — `[style.bottom]="..."` inline style binding; replace with CSS class.
-- `app.component.ts` — `_syncElapsedTimer` setInterval has no `fakeAsync` spec for clearInterval.
-- `app.component.html` — New elements (section groups, file-dot, status bar states) missing `data-test` attrs.
+- `sidebar-status` row moved to correct position (below file nav) but `inline-gen-status` bar (full dark strip in `expanded-main` during spec gen) not yet restored
+- Theme toggle + logout in sidebar reverted; masthead versions still work
 
 ---
 
-## Braindump review — what was done vs what was asked
+## Remaining to-do
 
-### Colors
+### High priority
 
-| Token | Braindump said | Implemented | Status |
-|-------|---------------|-------------|--------|
-| Amber / in-progress | `#F59E0B` | `--status-running: #B8860B` (darker goldenrod) | ⚠ wrong shade — braindump specified brighter amber |
-| Green / success | `#2E7D32` forest green | `--status-success-bg: #2E7D32` | ✓ |
-| Red / failure | `var(--red)` | `var(--status-failure)` → `var(--red)` | ✓ |
-| Neutral / idle | default ink | `--status-idle` dark green text | ⚠ idle should be neutral ink, not green |
+1. **Restore `inline-gen-status`** — full dark bar at top of expanded-main during spec generation (existed before exec-guide run; removed by Task 4). The sidebar dot row handles text ops; this bar handles spec gen.
+2. **File switch warning** — switching files while an AI result is unsaved silently clears it (Problem #10 in braindump). Add a prompt or persist until dismissed.
+3. **Op chip icons** — each chip should have a Lucide icon (expand → `arrow-up-down`, compress → `minimize-2`, etc.).
 
-**Fix:** Change `--status-running` to `#F59E0B` (light) / `#D97706` (dark). Change `--status-idle` text color to `var(--ink-muted)` not green — idle means nothing is happening.
+### Pre-merge code quality (critical from original review)
 
-### Status bar location — CONFLICT
+4. Add `section-taxonomy.service.spec.ts` — unit tests for `sectionFor()`.
+5. Add `project-teaser.spec.ts` — unit tests for `projectTeaser()`, `firstNonHeadingSentence()`.
+6. Update `ai.service.spec.ts` — cover generated-client shape.
 
-Braindump explicitly said: **"The sidebar status row is the right home for live status. Keep sidebar-status below the file nav. Remove the fixed bottom viewport bar."**
+### Warnings (from original review)
 
-User also confirmed in session: *"i actually like the status bar just below the nav, we keep that one."*
+7. `app.component.ts:574` — `mode = computed(() => this.statusMode())` trivial passthrough; use `statusMode()` directly.
+8. `app.component.ts:613` — `runOp(op as any)` — use proper union type.
+9. `app.component.html` — `[style.bottom]` inline binding; replace with CSS class.
+10. `app.component.ts` — `_syncElapsedTimer` setInterval missing `fakeAsync` spec.
+11. `app.component.html` — New elements missing `data-test` attrs.
 
-What was implemented: **bottom fixed bar kept, sidebar-status row removed** (the epic reversed the user preference).
+### Medium priority (newspaper polish / braindump items)
 
-**Fix:** Add sidebar-status row back below the file nav. Show idle/active/failure state inline. Keep bottom bar as secondary (or remove it). This is a meaningful reversal of Task 4.
+12. Spec file ordering — canonical reading order: braindump → analysis → epic → architecture → timeline → implementation-guide.
+13. Dateline on spec files — `Generated 3 May 2026 · 94s · claude-sonnet-4-6`.
+14. Section headers all-caps — "ACTIVE", "SPECCED", "BRAINDUMPS" in section nav.
+15. Featured card — first card gets 2–3 sentence teaser.
+16. Breaking news banner — temporary top banner when spec gen completes in grid view.
+17. Undo prominence — Undo chip should be most visible element after Apply.
 
-### Button consolidation — what was done
+### Deployment
 
-| Location | Before | After | Status |
-|----------|--------|-------|--------|
-| Op chips (Expand/Compress/etc.) | Floating bottom toolbar | Sidebar ✓ | ✓ done |
-| Style presets | Top of expanded-main | Sidebar below Style chip ✓ | ✓ done |
-| Result toolbar | Chips + Apply/Copy/Dismiss mixed | Apply/Copy/Dismiss only ✓ | ✓ done |
-| Generate Specs / Generate Guide | Sidebar | Sidebar | ✓ unchanged |
-| Undo / Redo | Toolbar | Sidebar chip row | ✓ done |
-
-Op chips have no Lucide icons — just text labels. Braindump implied icons would match the app's icon language (now Lucide). Minor gap.
+18. **Remote VPS has no project data** — `data/projects/` volume on VPS is empty; need to push data or recreate projects there.
 
 ---
 
-## Things to do — from braindump, not yet implemented
+## Next step
 
-### High priority (breaks user expectations)
-
-1. **Status bar location** — restore sidebar-status row; it is the stated preference. The bottom bar was the one to remove, not the sidebar one.
-2. **Amber color** — change `--status-running` from `#B8860B` to `#F59E0B` (light) / `#D97706` (dark). Current value is too dark, reads as brown not amber.
-3. **Idle status color** — idle state should use `var(--ink-muted)` (neutral), not green. Green = success, not idle.
-4. **File switch warning** — switching files while an AI result is unsaved silently clears it (Problem #10 in braindump). Add a prompt or persist the result until explicitly dismissed.
-5. **Op chip icons** — each chip should have a Lucide icon matching its action (e.g. `expand` → `arrow-up-down`, `compress` → `minimize-2`, `list` → `list`, `zap` → `zap`, etc.).
-
-### Medium priority (newspaper analogy + polish)
-
-6. **Spec file ordering** — sidebar file list should show files in canonical reading order: braindump → analysis → epic → architecture → timeline → implementation-guide. Currently uses API return order.
-7. **Dateline on spec files** — small line at top of each spec: `Generated 3 May 2026 · 94s · claude-sonnet-4-6`. Metadata exists in git history; surface it.
-8. **Section headers all-caps** — newspaper style: "ACTIVE", "SPECCED", "BRAINDUMPS" etc. in the section nav tabs.
-9. **Featured card** — first card in each section gets larger teaser (2-3 sentences / first paragraph), not just 1 sentence.
-10. **Breaking news banner** — when spec generation completes while user is in the grid, temporary top banner: "✦ ProjectName — spec generation complete". Fades after 4s.
-11. **Undo prominence** — after Apply, the Undo chip/button should be the most visible element. Currently it appears in the chip row with the same weight as other ops.
-
-### Lower priority / second pass (explicitly deferred in epic)
-
-12. Thread/chain result model → `text-ops-thread-ui` epic (separate).
-13. Keyboard shortcuts (Escape=dismiss, Cmd+Enter=apply, J/K=files, /=search).
-14. In-file H2 section nav / TOC panel.
-15. Cross-project jump / command palette (Cmd+K).
-16. Brainstorm helper in new project modal.
-17. Op chips as a collapsed "AI ▾" menu for non-brainstorm files.
-18. Pull quotes in project cards (best sentence, not first sentence).
-
-### Pre-merge code quality
-
-19. Add `section-taxonomy.service.spec.ts` with unit tests for `sectionFor()`.
-20. Add `project-teaser.spec.ts` with unit tests for `projectTeaser()` and `firstNonHeadingSentence()`.
-21. Update `ai.service.spec.ts` to cover generated-client shape.
-22. Replace `[style.bottom]` inline binding with a CSS class.
-23. Fix `runOp(op as any)` — use explicit union type.
-24. Add `data-test` attrs to status bar states, section group headers, file-dot elements.
+Run `/dev-review` on all changed files, then open PR from `ux/reader-textops-navigation` → `master`.
