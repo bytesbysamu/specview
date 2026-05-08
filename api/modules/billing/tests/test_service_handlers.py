@@ -1,9 +1,9 @@
-from __future__ import annotations
 """Unit coverage for the six webhook handlers.
 
 Each handler is exercised through its registered key in service._HANDLERS so
 the dispatch table itself is also under test.
 """
+from __future__ import annotations
 from datetime import datetime
 from unittest.mock import patch
 

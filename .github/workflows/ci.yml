@@ -12,10 +12,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Stage 1 (parallel) ────────────────────────────────────────────────────
+  # ── Stage 1 (parallel) — lint ─────────────────────────────────────────────
+
+  lint-backend:
+    name: Python lint (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint
+        run: ruff check .
+
+  lint-frontend:
+    name: TypeScript lint (ng lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: web-ng
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web-ng/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Lint
+        run: npm run lint
+
+  # ── Stage 2 (parallel, gates on lint) ────────────────────────────────────
 
   backend:
     name: Backend tests
+    needs: [lint-backend]
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -66,6 +115,7 @@ jobs:
 
   frontend:
     name: Frontend tests
+    needs: [lint-frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -91,7 +141,7 @@ jobs:
       - name: Build (production)
         run: npm run build -- --configuration production
 
-  # ── Stage 2 (parallel, gates on stage 1) ─────────────────────────────────
+  # ── Stage 3 (parallel, gates on stage 2) ─────────────────────────────────
 
   docker:
     name: Docker build & smoke
