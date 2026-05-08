@@ -24,46 +24,70 @@ def resetUsage() -> None:
 def mockProvider_generateReturnsChainResult(monkeypatch):
     monkeypatch.setenv("CHAIN_PROVIDER", "mock")
     result = generate("system", "user prompt")
-    assert result.text.startswith("MOCK["), f"unexpected text: {result.text}"
+    # Mock returns valid JSON; verify the ChainResult wraps it correctly.
+    import json
+    parsed = json.loads(result.text)
+    assert "text" in parsed, f"expected 'text' key in mock JSON: {result.text}"
     assert result.latency_ms >= 0
     # Mock provider has no usage data — tokens stay None so the cost
-    # accumulator (Task 3) treats this call as zero-cost.
+    # accumulator treats this call as zero-cost.
     assert result.tokens_in is None
     assert result.tokens_out is None
 
 
-def customModel_generateEmbedsModelName(monkeypatch):
+def customModel_generatePassesModelToProvider(monkeypatch):
+    """generate() forwards the model param to create_message."""
     monkeypatch.setenv("CHAIN_PROVIDER", "mock")
-    result = generate("sys", "p", model="custom-model")
-    assert "custom-model" in result.text
-    assert result.tokens_in is None
-    assert result.tokens_out is None
+    captured = {}
+
+    def spy(system, prompt, *, model="mock", max_tokens=4096):
+        captured["model"] = model
+        from modules.runtime.chain.providers.mock import _MOCK_PAYLOAD
+        return _MOCK_PAYLOAD, None, None
+
+    monkeypatch.setattr(providers.mock, "create_message", spy)
+    generate("sys", "p", model="custom-model")
+    assert captured["model"] == "custom-model"
 
 
 def builderContext_generatePrependsToSystem(monkeypatch):
+    """with_context injects builder text before the system prompt."""
     monkeypatch.setenv("CHAIN_PROVIDER", "mock")
-    # with_context prepends "## BUILDER CONTEXT\n..." to system
-    # mock echoes sys[:20]; effective system starts with "base\n\n## BUILDER CO"
-    result = generate("base", "p", builder="BuilderText")
-    assert "BUILDER" in result.text, f"builder context not reflected: {result.text}"
-    assert result.tokens_in is None
-    assert result.tokens_out is None
+    captured = {}
+
+    def spy(system, prompt, *, model="mock", max_tokens=4096):
+        captured["system"] = system
+        from modules.runtime.chain.providers.mock import _MOCK_PAYLOAD
+        return _MOCK_PAYLOAD, None, None
+
+    monkeypatch.setattr(providers.mock, "create_message", spy)
+    generate("base", "p", builder="BuilderText")
+    assert "BUILDER" in captured["system"], f"builder not in system: {captured['system']}"
 
 
 def principles_generatePrependsToSystem(monkeypatch):
+    """with_context injects principles text before the system prompt."""
     monkeypatch.setenv("CHAIN_PROVIDER", "mock")
-    result = generate("sys", "p", principles="Keep it short")
-    assert "PRINCIPL" in result.text, f"principles not reflected: {result.text}"
-    assert result.tokens_in is None
-    assert result.tokens_out is None
+    captured = {}
+
+    def spy(system, prompt, *, model="mock", max_tokens=4096):
+        captured["system"] = system
+        from modules.runtime.chain.providers.mock import _MOCK_PAYLOAD
+        return _MOCK_PAYLOAD, None, None
+
+    monkeypatch.setattr(providers.mock, "create_message", spy)
+    generate("sys", "p", principles="Keep it short")
+    assert "PRINCIPL" in captured["system"], f"principles not in system: {captured['system']}"
 
 
-def mockProvider_streamYieldsMultipleChunks(monkeypatch):
+def mockProvider_streamYieldsChunks(monkeypatch):
     monkeypatch.setenv("CHAIN_PROVIDER", "mock")
     chunks = list(stream("sys", "p"))
-    assert len(chunks) >= 3, f"expected >=3 chunks, got {len(chunks)}"
+    assert len(chunks) >= 1, f"expected at least 1 chunk, got {len(chunks)}"
     full = "".join(chunks)
-    assert full.startswith("MOCK["), f"unexpected stream start: {full}"
+    import json
+    parsed = json.loads(full)
+    assert "text" in parsed, f"expected 'text' key in streamed mock JSON: {full}"
 
 
 def unknownProvider_selectProviderRaisesValueError(monkeypatch):
