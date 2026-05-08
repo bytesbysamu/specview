@@ -1,18 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { filter, map, timeout } from 'rxjs/operators';
-import { HttpResponse } from '@angular/common/http';
-
-import { ApiConfiguration } from '../api/api-configuration';
-import { brainstormText } from '../api/fn/operations/brainstorm-text';
-import { expandText } from '../api/fn/operations/expand-text';
-import { compressText } from '../api/fn/operations/compress-text';
-import { clarifyText } from '../api/fn/operations/clarify-text';
-import { simplifyText } from '../api/fn/operations/simplify-text';
-import { tldrText } from '../api/fn/operations/tldr-text';
-import { bulletsText } from '../api/fn/operations/bullets-text';
-import { rewriteAction } from '../api/fn/operations/rewrite-action';
+import { timeout } from 'rxjs/operators';
 
 const AI_TIMEOUT_MS = 1_800_000;
 
@@ -25,53 +14,49 @@ export interface TextOperationResponse {
 export class AiService {
   private readonly rootUrl = '';
 
-  constructor(
-    private http: HttpClient,
-    private apiConfig: ApiConfiguration,
-  ) {}
+  constructor(private http: HttpClient) {}
 
-  private call<T extends TextOperationResponse>(
-    fn: (http: HttpClient, rootUrl: string, params: any) => any,
-    body: object,
-  ): Promise<T> {
+  private call(endpoint: string, body: object): Promise<TextOperationResponse> {
     return firstValueFrom(
-      fn(this.http, this.rootUrl, { body }).pipe(
-        filter((r: any) => r instanceof HttpResponse),
-        map((r: any) => r.body as T),
-        timeout(AI_TIMEOUT_MS),
-      )
+      this.http.post<TextOperationResponse>(`${this.rootUrl}${endpoint}`, body, {
+        observe: 'body',
+      }).pipe(timeout(AI_TIMEOUT_MS))
     );
   }
 
   brainstorm(text: string, question?: string, context?: string): Promise<TextOperationResponse> {
-    return this.call(brainstormText, { text, ...(question ? { question } : {}), ...(context ? { context } : {}) });
+    return this.call('/api/operations/brainstorm-text', {
+      text,
+      ...(question ? { question } : {}),
+      ...(context ? { context } : {}),
+    });
   }
 
   expand(text: string): Promise<TextOperationResponse> {
-    return this.call(expandText, { text });
+    return this.call('/api/operations/expand-text', { text });
   }
 
   compress(text: string): Promise<TextOperationResponse> {
-    return this.call(compressText, { text });
+    return this.call('/api/operations/compress-text', { text });
   }
 
   clarify(text: string): Promise<TextOperationResponse> {
-    return this.call(clarifyText, { text });
+    return this.call('/api/operations/clarify-text', { text });
   }
 
   simplify(text: string): Promise<TextOperationResponse> {
-    return this.call(simplifyText, { text });
+    return this.call('/api/operations/simplify-text', { text });
   }
 
   tldr(text: string): Promise<TextOperationResponse> {
-    return this.call(tldrText, { text });
+    return this.call('/api/operations/tldr-text', { text });
   }
 
   bullets(text: string): Promise<TextOperationResponse> {
-    return this.call(bulletsText, { text });
+    return this.call('/api/operations/bullets-text', { text });
   }
 
   styleAs(text: string, style: string): Promise<TextOperationResponse> {
-    return this.call(rewriteAction, { text, style });
+    return this.call('/api/operations/rewrite-action', { text, style });
   }
 }

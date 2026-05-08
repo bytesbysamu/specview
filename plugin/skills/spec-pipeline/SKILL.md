@@ -20,13 +20,36 @@ Run the complete spec generation chain for a project from braindump to timeline.
 
 ## Procedure
 
+### Step 0 — Pre-analysis brainstorm
+
+Run brainstorm on the raw braindump to surface themes, open questions with options, and connections before the analysis step sees it.
+
+```
+POST /api/brainstorm
+Authorization: Bearer <token>
+{ "text": "<content of braindump.md>" }
+→ { "text": "<brainstorm markdown>" }
+```
+
+Construct the enriched braindump:
+```
+<content of braindump.md>
+
+---
+## Pre-Analysis Brainstorm
+
+<brainstorm result>
+```
+
+Use this enriched content as `braindump` in Step 1.
+
 ### Step 1 — Start bootstrap
 
 ```
 POST /api/ai/text/bootstrap-project
 {
   "project_name": "<name>",
-  "braindump": "<content of braindump.md>"
+  "braindump": "<enriched braindump from Step 0>"
 }
 → { "job_id": "..." }
 ```
@@ -92,8 +115,12 @@ invoke `chain-agent` directly via the Claude CLI. Each command produces one file
 Run them in order — each step's output feeds the next.
 
 ```
-# Step 1 — Analysis
-claude --agent chain-agent -p "Generate an analysis.md for project '<name>'. Braindump: <content of braindump.md>"
+# Step 0 — Brainstorm (pre-analysis context)
+POST /api/brainstorm with { "text": "<content of braindump.md>" }
+→ capture as <brainstorm_result>
+
+# Step 1 — Analysis (pass brainstorm as context)
+claude --agent chain-agent -p "Generate an analysis.md for project '<name>'. Braindump: <content of braindump.md>. Pre-analysis brainstorm: <brainstorm_result>"
 
 # Step 2 — Epic (pass analysis output)
 claude --agent chain-agent -p "Generate an epic.md for project '<name>'. Braindump: <braindump>. Analysis: <output of step 1>"

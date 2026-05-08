@@ -1,11 +1,14 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, signal, computed, inject, effect } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { trigger, transition, style, animate, query, group } from '@angular/animations';
 import { marked } from 'marked';
 
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile } from './services/projects.service';
 import { AiService } from './services/ai.service';
 import { LoginComponent } from './components/login/login.component';
+import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
+import { projectTeaser, countTasks } from './services/project-teaser';
 
 interface ParagraphDiff {
   type: 'keep' | 'add' | 'remove';
@@ -38,17 +41,14 @@ function computeParagraphDiff(original: string, result: string): ParagraphDiff[]
   return diffs;
 }
 
-const SECTIONS = [
-  { id: 'context',      label: 'Context',       icon: '📐' },
-  { id: 'all',          label: 'All',            icon: '' },
-  { id: 'products',     label: 'Products',       icon: '🚀' },
-  { id: 'platform',     label: 'Platform',       icon: '⚙️' },
-  { id: 'braindumps',   label: 'Braindumps',     icon: '🧠' },
-  { id: 'engineering',  label: 'Engineering',    icon: '🔧' },
-  { id: 'devex',        label: 'Dev Experience', icon: '🛠' },
-  { id: 'distribution', label: 'Distribution',   icon: '📣' },
-  { id: 'status',       label: 'Status',         icon: '📊' },
-  { id: 'misc',         label: 'Misc',           icon: '📁' },
+const NAV_SECTIONS = [
+  { id: 'context',        label: 'Context',        icon: 'ruler' },
+  { id: 'all',            label: 'All',             icon: '' },
+  { id: 'Active',         label: 'Active',          icon: 'zap' },
+  { id: 'Ready to build', label: 'Ready to build',  icon: 'hammer' },
+  { id: 'Specced',        label: 'Specced',         icon: 'check-circle' },
+  { id: 'Braindumps',     label: 'Braindumps',      icon: 'brain' },
+  { id: 'Archive',        label: 'Archive',         icon: 'archive' },
 ];
 
 const CONTEXT_FILES = [
@@ -62,18 +62,6 @@ const CONTEXT_FILES = [
 
 const REFRESH_INTERVAL = 30_000;
 const GEN_POLL_INTERVAL = 10_000;
-
-function categorise(id: string): string {
-  const s = id.toLowerCase();
-  if (/braindump/.test(s) || /phase\d+-.*braindump/.test(s)) return 'braindumps';
-  if (/^(bubls|trendfy|howdays|relateai|babyname|photoshoot|wardrobai|tennispartner|relationship|specdocv2|michi|portfolio|cold-dm-templates|voice|twitter-bio|linkedin|reddit|the-post|landing-copy|waitlist|github-readme)/.test(s)) return 'products';
-  if (/^(saas|v2-spec-doc|spec-doc-flask|spec-doc-api|spec-doc-self|aligning-spec-doc|deployment-stack|saas-feature|saas-port|spec-doc-improvements|status-|run-2026)/.test(s)) return 'platform';
-  if (/^(chain|workflow|pipeline|bootstrap|batch|text-chains|two-separate|parallel|iteration|generate-next|run-chain|raise-max|runtime-cancel|retry-recovery)/.test(s)) return 'engineering';
-  if (/^(dev-experience|e2e|test-|gherkin|codebase-cleanup|architecture-cleanup|apply-button|integration-test|express-retirement|modular-restructure|directory-listing|port-)/.test(s)) return 'devex';
-  if (/^(landing-page|distribution-experiment|the-post|waitlist|linkedin-update|twitter|reddit-post|cold-dm|voice-demo|voice-input|github-readme)/.test(s)) return 'distribution';
-  if (/^(status|phase2-|phase3-|phase4-|phase5-|saas-feature-roadmap|saas-port-roadmap|spec-doc-improvements|run-2026)/.test(s)) return 'status';
-  return 'misc';
-}
 
 function stripMarkdown(md = ''): string {
   return md
@@ -93,19 +81,47 @@ function teaser(content = '', len = 140): string {
   return plain.length > len ? plain.slice(0, len).trimEnd() + '…' : plain;
 }
 
+declare const lucide: { createIcons(): void };
+
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [LoginComponent],
   templateUrl: './app.component.html',
+  animations: [
+    trigger('panelEnter', [
+      transition(':enter', [
+        group([
+          query('.expanded-sidebar', [
+            style({ transform: 'translateX(-8px)', opacity: 0 }),
+            animate('250ms ease-out', style({ transform: 'translateX(0)', opacity: 1 })),
+          ], { optional: true }),
+          query('.expanded-main', [
+            style({ transform: 'translateY(8px)', opacity: 0 }),
+            animate('250ms 40ms ease-out', style({ transform: 'translateY(0)', opacity: 1 })),
+          ], { optional: true }),
+        ]),
+      ]),
+      transition(':leave', [
+        group([
+          query('.expanded-sidebar', [
+            animate('150ms ease-in', style({ transform: 'translateX(-8px)', opacity: 0 })),
+          ], { optional: true }),
+          query('.expanded-main', [
+            animate('150ms ease-in', style({ transform: 'translateY(8px)', opacity: 0 })),
+          ], { optional: true }),
+        ]),
+      ]),
+    ]),
+  ],
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
   private sanitizer = inject(DomSanitizer);
   private projectsSvc = inject(ProjectsService);
   private aiSvc = inject(AiService);
   auth = inject(AuthService);
 
-  readonly sections = SECTIONS;
+  readonly sections = NAV_SECTIONS;
   readonly contextFiles = CONTEXT_FILES;
 
   // ── State ────────────────────────────────────────
@@ -154,12 +170,34 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly POLL_INTERVAL_MS = 2000;
   private pollRetries = 0;
 
+  // Status bar: four-state mode
+  lastSyncAt = signal<number | null>(null);
+  lastSyncElapsed = signal<number>(0);
+  statusMode = signal<'idle' | 'active' | 'success-flash' | 'failure'>('idle');
+  statusFailureMsg = signal<string | null>(null);
+  private _syncElapsedTimer: ReturnType<typeof setInterval> | null = null;
+  private _successFlashTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Per-file dot tracking: filename of the file currently targeted by an AI op
+  activeOpFile = signal<string | null>(null);
+  fileOpState = signal<Record<string, 'running' | 'success' | 'failure'>>({});
+
+  // Pulse animation tracking for section count badges
+  pulsingSections = signal<Set<string>>(new Set());
+  private _prevSectionCounts: Record<string, number> = {};
+
   // ── Computed ──────────────────────────────────────
+
+  /** True if spec-gen is actively running for a given project id. */
+  private isActiveJob(projectId: string): boolean {
+    return this.specGenLoading() && this.specGenProjectName() === projectId;
+  }
+
   sectionCounts = computed(() => {
     const counts: Record<string, number> = {};
     this.projects().forEach(p => {
-      const cat = categorise(p.id);
-      counts[cat] = (counts[cat] || 0) + 1;
+      const sec = sectionFor(p, this.isActiveJob(p.id));
+      counts[sec] = (counts[sec] || 0) + 1;
       counts['all'] = (counts['all'] || 0) + 1;
     });
     return counts;
@@ -167,10 +205,34 @@ export class AppComponent implements OnInit, OnDestroy {
 
   filteredProjects = computed(() => {
     const section = this.activeSection();
-    let list = section === 'all' ? this.projects() : this.projects().filter(p => categorise(p.id) === section);
+    let list = section === 'all'
+      ? this.projects()
+      : this.projects().filter(p => sectionFor(p, this.isActiveJob(p.id)) === section);
     const q = this.searchQuery().toLowerCase();
     if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q));
     return list;
+  });
+
+  /**
+   * Projects grouped into the five taxonomy sections in canonical order,
+   * filtered by the current search query.
+   * Only sections with at least one project are included.
+   */
+  projectsBySection = computed((): { section: Section; projects: Project[] }[] => {
+    const q = this.searchQuery().toLowerCase();
+    let all = this.projects();
+    if (q) all = all.filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q));
+
+    const map = new Map<Section, Project[]>();
+    for (const sec of SECTION_ORDER) map.set(sec, []);
+    all.forEach(p => {
+      const sec = sectionFor(p, this.isActiveJob(p.id));
+      map.get(sec)!.push(p);
+    });
+
+    return SECTION_ORDER
+      .map(sec => ({ section: sec, projects: map.get(sec)! }))
+      .filter(g => g.projects.length > 0);
   });
 
   columns = computed(() => {
@@ -251,7 +313,7 @@ export class AppComponent implements OnInit, OnDestroy {
     return (this.redoStack()[`${proj.id}/${file}`]?.length ?? 0) > 0;
   });
 
-  sectionLabel = computed(() => SECTIONS.find(s => s.id === this.activeSection())?.label ?? 'Projects');
+  sectionLabel = computed(() => NAV_SECTIONS.find(s => s.id === this.activeSection())?.label ?? 'Projects');
 
   // True when project has no generated analysis yet (braindump.md not required)
   canGenerateSpecs = computed(() => {
@@ -292,6 +354,18 @@ export class AppComponent implements OnInit, OnDestroy {
     effect(() => {
       this.toolbarFloating.set(!!(this.activeProject() && this.currentSpec()));
     });
+
+    // Pulse section count badges when their count changes
+    effect(() => {
+      const counts = this.sectionCounts();
+      const prev = this._prevSectionCounts;
+      const changed = Object.keys(counts).filter(sec => counts[sec] !== prev[sec]);
+      if (changed.length > 0) {
+        this.pulsingSections.set(new Set(changed));
+        setTimeout(() => this.pulsingSections.set(new Set()), 250);
+      }
+      this._prevSectionCounts = { ...counts };
+    });
   }
 
   // ── Lifecycle ─────────────────────────────────────
@@ -304,6 +378,14 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.stopPolling();
     this._stopGenPoll();
+    this._stopSyncElapsedTimer();
+    if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
+  }
+
+  ngAfterViewChecked() {
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
   }
 
   private stopPolling() {
@@ -317,6 +399,84 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private _stopGenPoll() {
     if (this.genPollTimer) { clearInterval(this.genPollTimer); this.genPollTimer = null; }
+  }
+
+  // ── Status bar transitions ────────────────────
+  private _startSyncElapsedTimer() {
+    if (this._syncElapsedTimer) return;
+    this._syncElapsedTimer = setInterval(() => {
+      const at = this.lastSyncAt();
+      if (at !== null) {
+        this.lastSyncElapsed.set(Math.floor((Date.now() - at) / 1000));
+      }
+    }, 1000);
+  }
+
+  private _stopSyncElapsedTimer() {
+    if (this._syncElapsedTimer) { clearInterval(this._syncElapsedTimer); this._syncElapsedTimer = null; }
+  }
+
+  private _markSyncNow() {
+    this.lastSyncAt.set(Date.now());
+    this.lastSyncElapsed.set(0);
+    this._startSyncElapsedTimer();
+  }
+
+  private _setStatusActive() {
+    if (this._successFlashTimer) { clearTimeout(this._successFlashTimer); this._successFlashTimer = null; }
+    this.statusMode.set('active');
+  }
+
+  private _setStatusSuccess() {
+    this.statusMode.set('success-flash');
+    this._markSyncNow();
+    if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
+    this._successFlashTimer = setTimeout(() => {
+      this.statusMode.set('idle');
+      this._successFlashTimer = null;
+    }, 2000);
+  }
+
+  private _setStatusFailure(msg: string) {
+    this.statusMode.set('failure');
+    this.statusFailureMsg.set(msg);
+  }
+
+  retryLastOp() {
+    // Reset to idle from failure — user will re-trigger manually
+    this.statusMode.set('idle');
+    this.statusFailureMsg.set(null);
+  }
+
+  // ── Per-file dot helpers ──────────────────────
+  private _setFileRunning(filename: string | null) {
+    this.activeOpFile.set(filename);
+    if (filename) {
+      const s = { ...this.fileOpState() };
+      s[filename] = 'running';
+      this.fileOpState.set(s);
+    }
+  }
+
+  private _setFileSuccess(filename: string | null) {
+    if (!filename) return;
+    const s = { ...this.fileOpState() };
+    s[filename] = 'success';
+    this.fileOpState.set(s);
+    setTimeout(() => {
+      const cur = { ...this.fileOpState() };
+      if (cur[filename] === 'success') {
+        delete cur[filename];
+        this.fileOpState.set(cur);
+      }
+    }, 1500);
+  }
+
+  private _setFileFailure(filename: string | null) {
+    if (!filename) return;
+    const s = { ...this.fileOpState() };
+    s[filename] = 'failure';
+    this.fileOpState.set(s);
   }
 
   // ── Theme ─────────────────────────────────────────
@@ -333,6 +493,7 @@ export class AppComponent implements OnInit, OnDestroy {
       const list = await this.projectsSvc.listProjects();
       this.projects.set(list);
       this.knownCount = list.length;
+      this._markSyncNow();
     } catch { /* 401 handled by interceptor */ }
   }
 
@@ -347,6 +508,7 @@ export class AppComponent implements OnInit, OnDestroy {
     try {
       const fresh = await this.projectsSvc.listProjects();
       this.pollOk.set(true);
+      this._markSyncNow();
       if (fresh.length !== this.knownCount) {
         const diff = fresh.length - this.knownCount;
         this.projects.set(fresh);
@@ -410,8 +572,35 @@ export class AppComponent implements OnInit, OnDestroy {
     
   }
 
-  // Brainstorm available on any file
-  isBraindump = computed(() => !!this.currentSpec());
+  // True only when the open file is the braindump
+  isBraindump = computed(() => {
+    const spec = this.currentSpec();
+    return spec !== null && spec.filename === 'braindump.md';
+  });
+
+  // Status bar four-state mode, derived from statusMode signal
+  mode = computed(() => this.statusMode());
+
+  // Idle "last sync" text
+  lastSyncLabel = computed(() => {
+    const elapsed = this.lastSyncElapsed();
+    if (elapsed < 60) return `${elapsed}s ago`;
+    return `${Math.floor(elapsed / 60)}m ago`;
+  });
+
+  // Active step display
+  activeStepLabel = computed(() => {
+    if (this.specGenLoading()) return this.specGenStep() ?? 'starting…';
+    if (this.aiLoading()) return `${this.aiOpLabel()}…`;
+    return '';
+  });
+
+  // Short job id for display
+  activeJobId = computed(() => {
+    const name = this.specGenProjectName();
+    if (!name) return null;
+    return name.slice(0, 8);
+  });
 
   readonly STYLE_PRESETS = ['Concise', 'Technical', 'Executive', 'Narrative', 'Punchy'];
 
@@ -435,20 +624,29 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private async _runAi(fn: () => Promise<{ text: string; latencyMs: number }>) {
     if (this.aiLoading()) return;
+    const targetFile = this.activeFile();
     this.aiLoading.set(true);
     this.aiResult.set(null);
     this.aiLatencyMs.set(null);
     this.aiError.set(false);
     this.billingError.set(null);
+    this._setStatusActive();
+    this._setFileRunning(targetFile);
     try {
       const res = await fn();
       this.aiResult.set(res.text);
       this.aiLatencyMs.set(res.latencyMs);
+      this._setStatusSuccess();
+      this._setFileSuccess(targetFile);
     } catch (err: any) {
       if (err?.status === 429) {
         this.billingError.set('You have reached your daily limit. Upgrade to Pro to continue.');
+        this._setStatusFailure('Daily limit reached — upgrade to continue.');
+        this._setFileFailure(targetFile);
       } else {
         this.aiError.set(true);
+        this._setStatusFailure('Could not reach AI — check connection.');
+        this._setFileFailure(targetFile);
       }
     } finally {
       this.aiLoading.set(false);
@@ -491,6 +689,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(proj.name);
+    this._setStatusActive();
     this._startGenPoll();
     try {
       const remainingFiles = await this._runBootstrap(proj.name, enrichedBraindump, async (file) => {
@@ -504,8 +703,11 @@ export class AppComponent implements OnInit, OnDestroy {
       const final = await this.projectsSvc.getProject(proj.id);
       this.activeProject.set(final);
       this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
+      this._setStatusSuccess();
     } catch (err: any) {
-      this.specGenError.set(err?.message || 'Generation failed — check connection and try again.');
+      const msg = err?.message || 'Generation failed — check connection and try again.';
+      this.specGenError.set(msg);
+      this._setStatusFailure(msg);
     } finally {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
@@ -685,6 +887,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenProjectName.set(name);
     nameEl.value = '';
     braindumpEl.value = '';
+    this._setStatusActive();
     this._startGenPoll();
 
     try {
@@ -711,8 +914,11 @@ export class AppComponent implements OnInit, OnDestroy {
       const final = await this.projectsSvc.getProject(project.id);
       this.activeProject.set(final);
       this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
+      this._setStatusSuccess();
     } catch (err: any) {
-      this.specGenError.set(err?.message || 'Generation failed — check connection and try again.');
+      const msg = err?.message || 'Generation failed — check connection and try again.';
+      this.specGenError.set(msg);
+      this._setStatusFailure(msg);
     } finally {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
@@ -735,6 +941,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(proj.name);
+    this._setStatusActive();
     this._startGenPoll();
     try {
       const remainingFiles = await this._runBootstrap(proj.name, braindumpSpec.content, async (file) => {
@@ -748,8 +955,11 @@ export class AppComponent implements OnInit, OnDestroy {
       const final = await this.projectsSvc.getProject(proj.id);
       this.activeProject.set(final);
       this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
+      this._setStatusSuccess();
     } catch (err: any) {
-      this.specGenError.set(err?.message || 'Generation failed — check connection and try again.');
+      const msg = err?.message || 'Generation failed — check connection and try again.';
+      this.specGenError.set(msg);
+      this._setStatusFailure(msg);
     } finally {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
@@ -764,6 +974,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.epicGuideLoading.set(true);
     this.epicGuideError.set(null);
+    this._setStatusActive();
     try {
       await this.projectsSvc.startEpicGuide(proj.id);
       while (true) {
@@ -774,11 +985,14 @@ export class AppComponent implements OnInit, OnDestroy {
           const refreshed = await this.projectsSvc.getProject(proj.id);
           this.activeProject.set(refreshed);
           if (status.filename) this.activeFile.set(status.filename);
+          this._setStatusSuccess();
           break;
         }
       }
     } catch (err: any) {
-      this.epicGuideError.set(err?.message || 'Guide generation failed.');
+      const msg = err?.message || 'Guide generation failed.';
+      this.epicGuideError.set(msg);
+      this._setStatusFailure(msg);
     } finally {
       this.epicGuideLoading.set(false);
     }
@@ -789,6 +1003,37 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   // ── Helpers (used in template) ────────────────────
-  teaser = teaser;
-  categorise = categorise;
+
+  /** Section name for a project — used in card meta label. */
+  sectionForProject(p: Project): Section {
+    return sectionFor(p, this.isActiveJob(p.id));
+  }
+
+  /**
+   * Compute the teaser string for a project card.
+   * leadFileContent is taken from the most relevant spec for the section.
+   */
+  teaserFor(p: Project): string {
+    const hasJob = this.isActiveJob(p.id);
+    const sec = sectionFor(p, hasJob);
+    const activeStep = hasJob ? (this.specGenStep() ?? null) : null;
+
+    // Pick lead file by section
+    let leadContent: string | null = null;
+    if (sec === 'Specced') {
+      leadContent = p.specs.find(s => s.filename === 'implementation-guide.md')?.content ?? null;
+    } else if (sec === 'Ready to build') {
+      leadContent = p.specs.find(s => s.filename === 'architecture.md')?.content
+        ?? p.specs.find(s => s.filename === 'epic.md')?.content
+        ?? null;
+    } else if (sec === 'Braindumps') {
+      leadContent = p.specs.find(s => s.filename === 'braindump.md')?.content ?? null;
+    }
+
+    // Count tasks in implementation guide if present
+    const guideContent = p.specs.find(s => s.filename === 'implementation-guide.md')?.content;
+    const taskCount = guideContent != null ? countTasks(guideContent) : null;
+
+    return projectTeaser(sec, activeStep, leadContent, taskCount, null);
+  }
 }

@@ -58,9 +58,52 @@ def run_generation(
         # Empty system prompt is intentional: the CLI provider routes through
         # chain-agent (via CHAIN_AGENT env var) which supplies its own system
         # prompt from its agent definition. --add-dir grants /data/ access.
+        prompt = f"""Read epic.md and architecture.md from {project_dir}.
+Also read analysis.md from that directory if it exists.
+Return ONLY the markdown document below — do not write any files, do not add preamble.
+
+## Required structure (follow exactly)
+
+# Implementation Guide: {{epic title}}
+
+## Overview
+One paragraph: what this epic delivers and how tasks sequence.
+
+## Shared Pre-flight
+Bullet list of setup steps that apply across all tasks. No more than 8 bullets.
+
+---
+
+## Task {{N}}: {{Name}}  [Effort: {{X}}]
+
+### What
+One to three sentences: what this task accomplishes and why.
+
+### Files
+- **Create**: `path/to/new-file.ts` — one-line description
+- **Modify**: `path/to/existing.ts` — what changes and why
+
+### Steps
+Numbered prose steps. No code. Each step is one to two sentences.
+Reference file paths and function names, but do not write their bodies.
+
+### Verify
+Two to four bullet points confirming the task is done.
+Shell commands allowed (e.g. `ng build --configuration production`). No code logic.
+
+---
+
+## Hard rules — violations will cause a regeneration:
+- Document MUST begin with `#`. No preamble.
+- NO code blocks — no triple-backtick fences anywhere in the document.
+- NO placeholders (`<TBD>`, `...`, `TODO`). Use real workspace-relative file paths.
+- Cover EVERY task in the epic. Do not skip any.
+- Every task section must have exactly the four subsections: What, Files, Steps, Verify.
+- Steps prose only — describe what to do, not the code that does it.
+"""
         result = chain_adapter.generate(
             "",
-            f"Generate implementation-guide.md for the project at {project_dir}. Read epic.md and architecture.md from that directory.",
+            prompt,
             max_tokens=8192,
         )
 

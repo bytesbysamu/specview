@@ -13,9 +13,13 @@
         <div class="masthead-tagline">All the Specs Fit to Read</div>
       </div>
       <div class="masthead-actions">
-        <button class="new-project-btn" (click)="openCreateModal()" title="New project">＋ New</button>
+        <button class="new-project-btn" (click)="openCreateModal()" title="New project"><i data-lucide="plus"></i> New</button>
         <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
-          {{ isDark() ? '🌙' : '☀️' }}
+          @if (isDark()) {
+            <i data-lucide="moon"></i>
+          } @else {
+            <i data-lucide="sun"></i>
+          }
         </button>
         <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
       </div>
@@ -29,11 +33,16 @@
         class="section-link"
         [class.active]="activeSection() === s.id"
         (click)="selectSection(s.id)">
-        {{ s.icon }} {{ s.label }}
+        @if (s.icon) {
+          <i [attr.data-lucide]="s.icon"></i>
+        }
+        {{ s.label }}
         @if (s.id === 'context') {
-          <span class="section-count">{{ contextFiles.length }}</span>
-        } @else if (sectionCounts()[s.id] !== null) {
-          <span class="section-count">{{ sectionCounts()[s.id] }}</span>
+          <span class="section-count section-count-pulse"
+                [class.pulsing]="pulsingSections().has('context')">{{ contextFiles.length }}</span>
+        } @else if (sectionCounts()[s.id] != null) {
+          <span class="section-count section-count-pulse"
+                [class.pulsing]="pulsingSections().has(s.id)">{{ sectionCounts()[s.id] }}</span>
         }
       </button>
     }
@@ -85,13 +94,39 @@
         </div>
       } @else if (filteredProjects().length === 0) {
         <div class="empty-state">No projects in this section.</div>
+      } @else if (activeSection() === 'all') {
+        <!-- Grouped by taxonomy section in canonical order -->
+        @for (group of projectsBySection(); track group.section) {
+          <div class="section-group">
+            <div class="section-group-header">
+              <span class="section-group-title">{{ group.section }}</span>
+              <span class="section-group-count section-count-pulse" [attr.data-count]="group.projects.length">{{ group.projects.length }}</span>
+            </div>
+            <div class="section-group-cards">
+              @for (p of group.projects; track p.id; let pi = $index) {
+                <div
+                  class="file-item"
+                  [class.featured]="pi === 0"
+                  (click)="selectProject(p.id)">
+                  <div class="file-item-title">{{ p.name }}</div>
+                  <div class="file-item-teaser">{{ teaserFor(p) }}</div>
+                  <div class="file-item-meta">
+                    <span>{{ p.specs.length }} file{{ p.specs.length !== 1 ? 's' : '' }}</span>
+                    <span class="file-item-meta-sep"></span>
+                    <span>{{ sectionForProject(p) }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
       } @else {
         @for (col of columns(); track $index; let ci = $index) {
           <div class="file-column">
             <div class="file-header">
               <span class="col-title">{{ sectionLabel() }}</span>
               @if (ci === 0) {
-                <span class="col-badge">{{ filteredProjects().length }}</span>
+                <span class="col-badge section-count-pulse" [attr.data-count]="filteredProjects().length">{{ filteredProjects().length }}</span>
               }
             </div>
             @for (p of col; track p.id; let pi = $index) {
@@ -100,13 +135,11 @@
                 [class.featured]="pi === 0"
                 (click)="selectProject(p.id)">
                 <div class="file-item-title">{{ p.name }}</div>
-                @if (p.specs[0]) {
-                  <div class="file-item-teaser">{{ teaser(p.specs[0].teaser || p.specs[0].content || '') }}</div>
-                }
+                <div class="file-item-teaser">{{ teaserFor(p) }}</div>
                 <div class="file-item-meta">
                   <span>{{ p.specs.length }} file{{ p.specs.length !== 1 ? 's' : '' }}</span>
                   <span class="file-item-meta-sep"></span>
-                  <span>{{ categorise(p.id) }}</span>
+                  <span>{{ sectionForProject(p) }}</span>
                 </div>
               </div>
             }
@@ -118,7 +151,7 @@
 
   <!-- Expanded panel (project reader or context viewer) -->
   @if (showExpanded()) {
-    <div class="expanded-panel active">
+    <div class="expanded-panel active" [@panelEnter]>
 
       <!-- Sticky sidebar -->
       <aside class="expanded-sidebar">
@@ -133,6 +166,12 @@
                 [class.active]="activeFile() === s.filename"
                 (click)="selectFile(s.filename)">
                 {{ s.label }}
+                @if (fileOpState()[s.filename]) {
+                  <span class="file-dot"
+                        [class.file-dot--running]="fileOpState()[s.filename] === 'running'"
+                        [class.file-dot--success]="fileOpState()[s.filename] === 'success'"
+                        [class.file-dot--failure]="fileOpState()[s.filename] === 'failure'"></span>
+                }
               </button>
             }
           </nav>
@@ -148,7 +187,7 @@
                 <span class="thinking-dot"></span>
                 <span class="thinking-dot"></span>
               } @else {
-                ✦ Generate Specs
+                <i data-lucide="sparkles"></i> Generate Specs
               }
             </button>
           }
@@ -165,50 +204,17 @@
                 <span class="thinking-dot"></span>
                 <span class="thinking-dot"></span>
               } @else {
-                ✦ Generate Guide
+                <i data-lucide="sparkles"></i> Generate Guide
               }
             </button>
-            @if (epicGuideError()) {
-              <div class="sidebar-status sidebar-status--err">
-                <span class="sidebar-status-text">{{ epicGuideError() }}</span>
-              </div>
-            }
           }
 
-          <!-- Sidebar status: only visible when something is running or error -->
-          @if (specGenLoading() || aiLoading() || polling() || !pollOk()) {
-            <div class="sidebar-status"
-                 [class.sidebar-status--active]="specGenLoading() || aiLoading()"
-                 [class.sidebar-status--err]="!pollOk()">
-              <div class="sidebar-status-dot"
-                   [class.sidebar-status-dot--polling]="polling()"></div>
-              <span class="sidebar-status-text">
-                @if (specGenLoading()) {
-                  {{ specGenStep() ?? 'starting…' }} · {{ specGenProjectName() }}
-                } @else if (aiLoading()) {
-                  {{ aiOpLabel() }}…
-                } @else if (!pollOk()) {
-                  API unreachable
-                } @else if (polling()) {
-                  syncing…
-                }
-              </span>
-            </div>
-          }
-        }
-      </aside>
-
-      <!-- Main content -->
-      <div class="expanded-main">
-
-        <!-- Sticky editor toolbar (project files only) -->
-        @if (activeProject() && currentSpec()) {
-          <div class="editor-toolbar" [class.editor-toolbar--floating]="toolbarFloating()"
-               [style.bottom]="toolbarFloating() && (specGenLoading() || aiLoading()) ? '42px' : null">
-            <div class="editor-toolbar-chips">
+          <!-- Op chips in sidebar (only when a spec file is open) -->
+          @if (currentSpec()) {
+            <div class="sidebar-ops">
               <span class="text-ops-label">AI</span>
               @if (isBraindump()) {
-                <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')">✦ Brainstorm</button>
+                <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')"><i data-lucide="sparkles"></i> Brainstorm</button>
               }
               <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')">Expand</button>
               <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')">Compress</button>
@@ -224,25 +230,37 @@
                 <button class="op-chip editor-hist-btn" (click)="redoVersion()">↻ Redo</button>
               }
             </div>
-            @if (aiResult()) {
-              <div class="editor-toolbar-actions">
-                @if (aiLatencyMs()) {
-                  <span class="latency-badge">⚡ {{ (aiLatencyMs()! / 1000).toFixed(1) }}s</span>
+            <!-- Style preset chips — shown in sidebar below chip row when Style is active -->
+            @if (activeOp() === 'style' && !aiLoading() && !aiResult()) {
+              <div class="style-presets sidebar-style-presets">
+                <span class="style-presets-label">Style as</span>
+                @for (s of STYLE_PRESETS; track s) {
+                  <button class="style-chip" (click)="runStyle(s)">{{ s }}</button>
                 }
-                <button class="editor-apply-btn" (click)="applyResult()">✓ Apply</button>
-                <button (click)="copyResult()">{{ copied() ? '✓ Copied' : 'Copy' }}</button>
-                <button (click)="dismissResult()">✕</button>
               </div>
             }
-          </div>
+          }
+        }
+      </aside>
 
-          <!-- Style preset chips (no typing needed) -->
-          @if (activeOp() === 'style' && !aiLoading() && !aiResult()) {
-            <div class="style-presets">
-              <span class="style-presets-label">Style as</span>
-              @for (s of STYLE_PRESETS; track s) {
-                <button class="style-chip" (click)="runStyle(s)">{{ s }}</button>
-              }
+      <!-- Main content -->
+      <div class="expanded-main">
+
+        <!-- Result toolbar (project files only) — only renders when a result is active -->
+        @if (activeProject() && currentSpec()) {
+          @if (aiResult()) {
+            <div class="editor-toolbar editor-toolbar--floating"
+                 [style.bottom]="specGenLoading() || aiLoading() ? '42px' : null">
+              <div class="editor-toolbar-row">
+                <div class="editor-toolbar-actions">
+                  @if (aiLatencyMs()) {
+                    <span class="latency-badge"><i data-lucide="zap"></i> {{ (aiLatencyMs()! / 1000).toFixed(1) }}s</span>
+                  }
+                  <button class="editor-apply-btn" (click)="applyResult()"><i data-lucide="check"></i> Apply</button>
+                  <button (click)="copyResult()">@if (copied()) { <i data-lucide="check"></i> Copied } @else { Copy }</button>
+                  <button (click)="dismissResult()"><i data-lucide="x"></i></button>
+                </div>
+              </div>
             </div>
           }
 
@@ -309,7 +327,7 @@
               @if (canGenerateSpecs()) {
                 <div class="brainstorm-generate-row">
                   <button class="brainstorm-generate-btn" [disabled]="specGenLoading()" (click)="generateFromBrainstormResult()">
-                    ✦ Generate Specs from this brainstorm
+                    <i data-lucide="sparkles"></i> Generate Specs from this brainstorm
                   </button>
                 </div>
               }
@@ -334,33 +352,58 @@
 
 </div>
 
-<!-- Fixed status bar — always visible when logged in -->
-<!-- Fixed bottom bar: only when something is actively running -->
-@if (auth.isLoggedIn() && (specGenLoading() || aiLoading())) {
-  <div class="gen-status-bar" [class.gen-status-bar--ai]="aiLoading() && !specGenLoading()">
-    <div class="gen-status-track"></div>
-    <div class="gen-status-content">
-      <span class="thinking-dot gen-dot"></span>
-      <span class="thinking-dot gen-dot"></span>
-      <span class="thinking-dot gen-dot"></span>
-      @if (specGenLoading()) {
-        <span class="gen-status-project">{{ specGenProjectName() }}</span>
-        <span class="gen-status-sep">·</span>
-        <span class="gen-status-step">{{ specGenStep() ?? 'starting…' }}</span>
-      } @else {
-        <span class="gen-status-project">{{ currentSpec()?.label }}</span>
-        <span class="gen-status-sep">·</span>
-        <span class="gen-status-step">{{ aiOpLabel() }}…</span>
+<!-- Fixed status bar — always visible when logged in, single source of truth -->
+@if (auth.isLoggedIn()) {
+  <div class="gen-status-bar"
+       [class.gen-status-bar--active]="mode() === 'active'"
+       [class.gen-status-bar--success]="mode() === 'success-flash'"
+       [class.gen-status-bar--failure]="mode() === 'failure'"
+       [class.gen-status-bar--idle]="mode() === 'idle'">
+    @switch (mode()) {
+      @case ('active') {
+        <div class="gen-status-track"></div>
+        <div class="gen-status-content">
+          <span class="thinking-dot gen-dot"></span>
+          <span class="thinking-dot gen-dot"></span>
+          <span class="thinking-dot gen-dot"></span>
+          @if (specGenLoading()) {
+            <span class="gen-status-project">{{ specGenProjectName() }}</span>
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">{{ specGenStep() ?? 'starting…' }}</span>
+          } @else {
+            <span class="gen-status-project">{{ currentSpec()?.label }}</span>
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">{{ activeStepLabel() }}</span>
+          }
+        </div>
       }
-    </div>
-  </div>
-}
-@if (specGenError()) {
-  <div class="gen-status-bar gen-status-bar--error">
-    <div class="gen-status-content">
-      {{ specGenError() }}
-      <button (click)="specGenError.set(null)">✕</button>
-    </div>
+      @case ('success-flash') {
+        <div class="gen-status-content gen-status-content--success">
+          <span class="gen-status-icon"><i data-lucide="check"></i></span>
+          <span class="gen-status-step">done</span>
+          @if (lastSyncAt()) {
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-idle">last sync {{ lastSyncLabel() }}</span>
+          }
+        </div>
+      }
+      @case ('failure') {
+        <div class="gen-status-content gen-status-content--failure">
+          <span class="gen-status-icon"><i data-lucide="x"></i></span>
+          <span class="gen-status-step">{{ statusFailureMsg() }}</span>
+          <button class="gen-status-retry" (click)="retryLastOp()">dismiss</button>
+        </div>
+      }
+      @default {
+        <div class="gen-status-content gen-status-content--idle">
+          <span class="gen-status-idle"><i data-lucide="circle-dot"></i> connected · specview api</span>
+          @if (lastSyncAt()) {
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-idle">last sync {{ lastSyncLabel() }}</span>
+          }
+        </div>
+      }
+    }
   </div>
 }
 
@@ -370,7 +413,7 @@
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title">New Project</h2>
-        <button class="modal-close" (click)="closeCreateModal()">✕</button>
+        <button class="modal-close" (click)="closeCreateModal()"><i data-lucide="x"></i></button>
       </div>
 
       <div class="modal-body">
@@ -409,7 +452,7 @@
             <span class="thinking-dot"></span>
             Generating…
           } @else {
-            ✦ Generate Specs
+            <i data-lucide="sparkles"></i> Generate Specs
           }
         </button>
       </div>
