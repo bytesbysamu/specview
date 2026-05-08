@@ -20,7 +20,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY api/ ./
 
 RUN pip install --no-cache-dir datamodel-code-generator==0.45.0 \
- && make generate-dtos \
+ && python -m datamodel_code_generator \
+      --input openapi.yaml \
+      --output dtos/models.py \
+      --output-model-type pydantic_v2.BaseModel \
+      --input-file-type openapi \
+      --target-python-version 3.10 \
+      --disable-timestamp \
  && pip uninstall -y datamodel-code-generator
 COPY plugin/ ./plugin/
 COPY data/ /data/spec-doc/

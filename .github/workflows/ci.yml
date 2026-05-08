@@ -12,6 +12,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── Stage 0 — detect changed paths ───────────────────────────────────────
 
@@ -40,17 +43,17 @@ jobs:
               - 'docker-compose.yml'
               - '.github/workflows/ci.yml'
 
-  # ── Stage 0.5 — generate DTOs from api/openapi.yaml (single source) ──────
+  # ── Stage 0.5 — generate DTOs from api/openapi.yaml (split by layer) ─────
 
-  generate:
-    name: Generate DTOs
+  generate-backend:
+    name: Generate Python DTOs
     needs: [changes]
     if: >-
       needs.changes.outputs.backend == 'true' ||
       needs.changes.outputs.frontend == 'true' ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v6
@@ -63,7 +66,32 @@ jobs:
         working-directory: api
         run: |
           pip install datamodel-code-generator==0.45.0
-          make generate-dtos
+          python -m datamodel_code_generator \
+            --input openapi.yaml \
+            --output dtos/models.py \
+            --output-model-type pydantic_v2.BaseModel \
+            --input-file-type openapi \
+            --target-python-version 3.10 \
+            --disable-timestamp
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: generated-backend
+          path: api/dtos/models.py
+          retention-days: 1
+
+  generate-frontend:
+    name: Generate Angular API client
+    needs: [changes]
+    if: >-
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.frontend == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
@@ -79,15 +107,7 @@ jobs:
         working-directory: web-ng
         run: npm run generate:api
 
-      - name: Upload Python DTOs
-        uses: actions/upload-artifact@v7
-        with:
-          name: generated-backend
-          path: api/dtos/models.py
-          retention-days: 1
-
-      - name: Upload Angular API client
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
           name: generated-frontend
           path: web-ng/src/app/api/
@@ -97,7 +117,7 @@ jobs:
 
   lint-backend:
     name: Python lint (ruff)
-    needs: [changes, generate]
+    needs: [changes, generate-backend]
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -127,7 +147,7 @@ jobs:
 
   lint-frontend:
     name: TypeScript lint (ng lint)
-    needs: [changes, generate]
+    needs: [changes, generate-frontend]
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -161,10 +181,10 @@ jobs:
 
   backend:
     name: Backend tests
-    needs: [changes, generate, lint-backend]
+    needs: [changes, generate-backend, lint-backend]
     if: >-
       always() &&
-      (needs.generate.result == 'success' || needs.generate.result == 'skipped') &&
+      (needs.generate-backend.result == 'success' || needs.generate-backend.result == 'skipped') &&
       (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
       (needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -223,10 +243,10 @@ jobs:
 
   frontend:
     name: Frontend tests
-    needs: [changes, generate, lint-frontend]
+    needs: [changes, generate-frontend, lint-frontend]
     if: >-
       always() &&
-      (needs.generate.result == 'success' || needs.generate.result == 'skipped') &&
+      (needs.generate-frontend.result == 'success' || needs.generate-frontend.result == 'skipped') &&
       (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
       (needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -264,10 +284,11 @@ jobs:
 
   e2e:
     name: E2E tests
-    needs: [generate, backend, frontend]
+    needs: [generate-backend, generate-frontend, backend, frontend]
     if: >-
       always() &&
-      (needs.generate.result == 'success' || needs.generate.result == 'skipped') &&
+      (needs.generate-backend.result == 'success' || needs.generate-backend.result == 'skipped') &&
+      (needs.generate-frontend.result == 'success' || needs.generate-frontend.result == 'skipped') &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
       (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
       (needs.backend.result == 'success' || needs.frontend.result == 'success')
