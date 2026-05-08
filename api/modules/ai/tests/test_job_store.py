@@ -133,3 +133,32 @@ def test_concurrent_complete_and_fail_do_not_corrupt_store():
             assert job.status == "done"
         else:
             assert job.status == "failed"
+
+
+# ---------------------------------------------------------------------------
+# TTL eviction
+# ---------------------------------------------------------------------------
+
+class TestJobTTL:
+    def test_fresh_job_is_retrievable(self):
+        job = store.create_job("brainstorm", "1.0.0")
+        assert store.get_job(job.job_id) is not None
+
+    def test_expired_job_returns_none(self, monkeypatch):
+        job = store.create_job("brainstorm", "1.0.0")
+        original = time.monotonic
+        monkeypatch.setattr(
+            time, "monotonic",
+            lambda: original() + store.JOB_TTL_SECONDS + 1,
+        )
+        assert store.get_job(job.job_id) is None
+
+    def test_expired_job_is_evicted_from_dict(self, monkeypatch):
+        job = store.create_job("brainstorm", "1.0.0")
+        original = time.monotonic
+        monkeypatch.setattr(
+            time, "monotonic",
+            lambda: original() + store.JOB_TTL_SECONDS + 1,
+        )
+        store.get_job(job.job_id)  # triggers eviction
+        assert job.job_id not in store._JOBS
