@@ -25,7 +25,7 @@ export class AiService {
   }
 
   brainstorm(text: string, question?: string, context?: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/brainstorm-text', {
+    return this.call('/api/brainstorm', {
       text,
       ...(question ? { question } : {}),
       ...(context ? { context } : {}),
@@ -33,30 +33,30 @@ export class AiService {
   }
 
   expand(text: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/expand-text', { text });
+    return this.call('/api/expand', { text });
   }
 
   compress(text: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/compress-text', { text });
+    return this.call('/api/compress', { text });
   }
 
   clarify(text: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/clarify-text', { text });
+    return this.call('/api/clarify', { text });
   }
 
   simplify(text: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/simplify-text', { text });
+    return this.call('/api/simplify', { text });
   }
 
   tldr(text: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/tldr-text', { text });
+    return this.call('/api/tldr', { text });
   }
 
   bullets(text: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/bullets-text', { text });
+    return this.call('/api/bullets', { text });
   }
 
   styleAs(text: string, style: string): Promise<TextOperationResponse> {
-    return this.call('/api/operations/rewrite-action', { text, style });
+    return this.call('/api/rewrite', { text, style });
   }
 }
