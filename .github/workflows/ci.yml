@@ -7,6 +7,7 @@ on:
     branches: ["master"]
 
 jobs:
+  # ── Backend unit + integration + contract tests ───────────────────────────
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
@@ -55,8 +56,9 @@ jobs:
           path: api/pytest-output.txt
           retention-days: 7
 
+  # ── Frontend unit tests (Karma / Jasmine) ─────────────────────────────────
   frontend:
-    name: Frontend build check
+    name: Frontend tests
     runs-on: ubuntu-latest
 
     defaults:
@@ -75,5 +77,62 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Run unit tests (ChromeHeadlessCI)
+        run: npx ng test --watch=false --browsers=ChromeHeadlessCI
+
+      - name: Build (production)
         run: npm run build -- --configuration production
+
+  # ── E2E tests (pytest-bdd + Playwright, real Flask + Angular servers) ─────
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    # E2E is informational on PRs — failures don't block merge until the suite
+    # is stable. Remove continue-on-error once step defs are fully exercised.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Python for Flask + pytest
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies (API + E2E)
+        run: |
+          pip install -r api/requirements.txt
+          pip install -r e2e/requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      # Node for Angular dev server (conftest.py starts it as a subprocess)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web-ng/package-lock.json
+
+      - name: Install Node dependencies
+        working-directory: web-ng
+        run: npm ci
+
+      - name: Run E2E tests
+        env:
+          CHAIN_PROVIDER: mock
+          PYTHONPATH: .
+        run: |
+          python -m pytest e2e/ \
+            --tb=short \
+            -v \
+            2>&1 | tee e2e-output.txt
+
+      - name: Upload E2E output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-output
+          path: e2e-output.txt
+          retention-days: 7
