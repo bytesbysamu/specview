@@ -321,5 +321,5 @@ jobs:
             echo "No open PR found for this branch — skipping auto-merge"
             exit 0
           fi
-          echo "Enabling auto-merge for PR #$PR"
-          gh pr merge --squash --auto "$PR" --repo ${{ github.repository }}
+          echo "Merging PR #$PR"
+          gh pr merge --squash "$PR" --repo ${{ github.repository }}
