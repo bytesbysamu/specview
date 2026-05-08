@@ -7,7 +7,6 @@ on:
     branches: ["master"]
   workflow_dispatch:
 
-# Cancel in-progress runs on the same branch when a new push arrives.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -28,7 +27,6 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v6
-
       - uses: dorny/paths-filter@v4
         id: filter
         with:
@@ -44,27 +42,23 @@ jobs:
               - 'docker-compose.yml'
               - '.github/workflows/ci.yml'
 
-  # ── Stage 0.5 — generate DTOs from api/openapi.yaml (split by layer) ─────
+  # ── Stage 1 (parallel) — lint ─────────────────────────────────────────────
 
-  generate-backend:
-    name: Generate Python DTOs
+  lint-backend:
+    name: Python lint (ruff)
     needs: [changes]
-    if: >-
-      needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.frontend == 'true' ||
-      github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
+    defaults:
+      run:
+        working-directory: api
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-
       - name: Generate Python DTOs
-        working-directory: api
         run: |
           pip install datamodel-code-generator==0.45.0
           python -m datamodel_code_generator \
@@ -74,107 +68,29 @@ jobs:
             --input-file-type openapi \
             --target-python-version 3.10 \
             --disable-timestamp
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: generated-backend
-          path: api/dtos/models.py
-          retention-days: 1
-
-  generate-frontend:
-    name: Generate Angular API client
-    needs: [changes]
-    if: >-
-      needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.frontend == 'true' ||
-      github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web-ng/package-lock.json
-
-      - name: Install Node dependencies
-        working-directory: web-ng
-        run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
-
-      - name: Generate Angular API client
-        working-directory: web-ng
-        run: npm run generate:api
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: generated-frontend
-          path: web-ng/src/app/api/
-          retention-days: 1
-
-  # ── Stage 1 (parallel) — lint ─────────────────────────────────────────────
-
-  lint-backend:
-    name: Python lint (ruff)
-    needs: [changes, generate-backend]
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    defaults:
-      run:
-        working-directory: api
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - name: Download Python DTOs
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-backend
-          path: api/dtos/
-
-      - name: Install ruff
-        run: pip install ruff
-
       - name: Lint
-        run: ruff check .
+        run: pip install ruff && ruff check .
 
   lint-frontend:
     name: TypeScript lint (ng lint)
-    needs: [changes, generate-frontend]
+    needs: [changes]
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     defaults:
       run:
         working-directory: web-ng
-
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: web-ng/package-lock.json
-
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
-
-      - name: Download Angular API client
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-frontend
-          path: web-ng/src/app/api/
-
+      - name: Generate Angular API client
+        run: npm run generate:api
       - name: Lint
         run: npm run lint
 
@@ -182,37 +98,34 @@ jobs:
 
   backend:
     name: Backend tests
-    needs: [changes, generate-backend, lint-backend]
+    needs: [changes, lint-backend]
     if: >-
       always() &&
-      (needs.generate-backend.result == 'success' || needs.generate-backend.result == 'skipped') &&
       (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
       (needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     defaults:
       run:
         working-directory: api
-
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: api/requirements.txt
-
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-cov
-
-      - name: Download Python DTOs
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-backend
-          path: api/dtos/
-
+        run: pip install -r requirements.txt pytest pytest-cov datamodel-code-generator==0.45.0
+      - name: Generate Python DTOs
+        run: |
+          python -m datamodel_code_generator \
+            --input openapi.yaml \
+            --output dtos/models.py \
+            --output-model-type pydantic_v2.BaseModel \
+            --input-file-type openapi \
+            --target-python-version 3.10 \
+            --disable-timestamp
       - name: Run tests with coverage
         env:
           CHAIN_PROVIDER: mock
@@ -223,7 +136,6 @@ jobs:
             --cov-report=html:htmlcov \
             --cov-report=term-missing \
             -v 2>&1 | tee pytest-output.txt
-
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         if: always()
@@ -233,7 +145,6 @@ jobs:
             api/coverage.xml
             api/htmlcov/
           retention-days: 14
-
       - name: Upload test output
         uses: actions/upload-artifact@v7
         if: always()
@@ -244,97 +155,78 @@ jobs:
 
   frontend:
     name: Frontend tests
-    needs: [changes, generate-frontend, lint-frontend]
+    needs: [changes, lint-frontend]
     if: >-
       always() &&
-      (needs.generate-frontend.result == 'success' || needs.generate-frontend.result == 'skipped') &&
       (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
       (needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     defaults:
       run:
         working-directory: web-ng
-
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: web-ng/package-lock.json
-
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
-
-      - name: Download Angular API client
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-frontend
-          path: web-ng/src/app/api/
-
+      - name: Generate Angular API client
+        run: npm run generate:api
       - name: Unit tests (ChromeHeadlessCI)
         run: npx ng test --watch=false --browsers=ChromeHeadlessCI
-
       - name: Build (production)
         run: npm run build -- --configuration production
 
-  # ── Stage 3 (parallel, skip-aware gates) ─────────────────────────────────
+  # ── Stage 3 — integration ────────────────────────────────────────────────
 
   e2e:
     name: E2E tests
-    needs: [generate-backend, generate-frontend, backend, frontend]
+    needs: [backend, frontend]
     if: >-
       always() &&
-      (needs.generate-backend.result == 'success' || needs.generate-backend.result == 'skipped') &&
-      (needs.generate-frontend.result == 'success' || needs.generate-frontend.result == 'skipped') &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
       (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
       (needs.backend.result == 'success' || needs.frontend.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: api/requirements.txt
-
       - name: Install Python dependencies (API + E2E)
         run: |
-          pip install -r api/requirements.txt
-          pip install -r e2e/requirements.txt
-
-      - name: Download Python DTOs
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-backend
-          path: api/dtos/
-
+          pip install -r api/requirements.txt \
+                      -r e2e/requirements.txt \
+                      datamodel-code-generator==0.45.0
+      - name: Generate Python DTOs
+        run: |
+          python -m datamodel_code_generator \
+            --input api/openapi.yaml \
+            --output api/dtos/models.py \
+            --output-model-type pydantic_v2.BaseModel \
+            --input-file-type openapi \
+            --target-python-version 3.10 \
+            --disable-timestamp
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
-
       - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: web-ng/package-lock.json
-
       - name: Install Node dependencies
         working-directory: web-ng
         run: npm ci --prefer-offline --no-audit --progress=false --legacy-peer-deps
-
-      - name: Download Angular API client
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-frontend
-          path: web-ng/src/app/api/
-
+      - name: Generate Angular API client
+        working-directory: web-ng
+        run: npm run generate:api
       - name: Run E2E tests
         env:
           CHAIN_PROVIDER: mock
@@ -344,7 +236,6 @@ jobs:
             --tb=short \
             -v \
             2>&1 | tee e2e-output.txt
-
       - name: Upload E2E output
         uses: actions/upload-artifact@v7
         if: always()
@@ -361,16 +252,12 @@ jobs:
     timeout-minutes: 20
     env:
       CHAIN_PROVIDER: mock
-
     steps:
       - uses: actions/checkout@v6
-
       - name: Build images
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
-
       - name: Start stack
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
-
       - name: Wait — API health (host→port 3101)
         run: |
           for i in $(seq 1 24); do
@@ -383,28 +270,24 @@ jobs:
           echo "API health check failed after 120s"
           docker compose -f docker-compose.yml -f docker-compose.ci.yml logs api
           exit 1
-
       - name: Smoke — /api/health returns status field
         run: |
           BODY=$(curl -sf http://localhost:3101/api/health)
           echo "$BODY"
           echo "$BODY" | grep -q '"status"' \
             || (echo "FAIL: missing status field" && exit 1)
-
       - name: Smoke — nginx proxies /api/health (host→port 8080)
         run: |
           BODY=$(curl -sf http://localhost:8080/api/health)
           echo "$BODY"
           echo "$BODY" | grep -q '"status"' \
             || (echo "FAIL: nginx→Flask proxy failed" && exit 1)
-
       - name: Smoke — GET / serves Angular SPA
         run: |
           BODY=$(curl -sf http://localhost:8080/)
           echo "$BODY" | head -3
           echo "$BODY" | grep -qi "<!doctype html>" \
             || (echo "FAIL: / did not serve Angular HTML" && exit 1)
-
       - name: Tear down
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
@@ -430,5 +313,3 @@ jobs:
         run: |
           gh pr merge --squash --auto ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }}
-
-  # deploy job — add here when ready; trigger on master push, needs: [auto-merge]
