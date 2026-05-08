@@ -22,3 +22,6 @@ htmlcov/
 # Claude Code / MCP local config
 .claude/
 .mcp.json
+
+# Generated DTOs (source: openapi.yaml, regenerated in CI via make generate-dtos)
+dtos/models.py

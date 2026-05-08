@@ -60,8 +60,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install ruff
-        run: pip install ruff
+      - name: Install ruff + codegen
+        run: pip install ruff datamodel-code-generator==0.45.0
+
+      - name: Generate Python DTOs
+        run: make generate-dtos
 
       - name: Lint
         run: ruff check .
@@ -121,7 +124,10 @@ jobs:
           cache-dependency-path: api/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-cov
+        run: pip install -r requirements.txt pytest pytest-cov datamodel-code-generator==0.45.0
+
+      - name: Generate Python DTOs
+        run: make generate-dtos
 
       - name: Run tests with coverage
         env:
