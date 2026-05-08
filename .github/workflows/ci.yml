@@ -195,18 +195,4 @@ jobs:
           path: e2e-output.txt
           retention-days: 7
 
-  # ── Stage 3 (master only) ─────────────────────────────────────────────────
-
-  deploy:
-    name: Deploy (master)
-    needs: [docker, e2e]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - name: Trigger Coolify deploy
-        run: |
-          curl -sf -X GET "${{ secrets.COOLIFY_WEBHOOK }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            || (echo "Deploy webhook failed" && exit 1)
+  # deploy job — add here when ready; trigger on master push, needs: [docker, e2e]
