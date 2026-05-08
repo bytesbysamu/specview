@@ -10,12 +10,19 @@
   --accent: #567B95;
   --red: #C41E3A;
   --code-bg: #F5F5F5;
+  --serif: 'Playfair Display', Georgia, serif;
+  --body: 'Source Serif 4', Georgia, serif;
+  --sans: 'Source Sans 3', system-ui, sans-serif;
 
   /* Status bar four-state colors */
   --status-idle:    #1a6b30;
   --status-active:  #7a5800;
   --status-success: #1a6b30;
   --status-failure: #C41E3A;
+
+  /* Semantic status indicator tokens */
+  --status-running:    #B8860B;
+  --status-success-bg: #2E7D32;
 }
 
 [data-theme="dark"] {
@@ -34,6 +41,10 @@
   --status-active:  #5a4000;
   --status-success: #1a4d25;
   --status-failure: #8B0000;
+
+  /* Semantic status indicator tokens — dark mode */
+  --status-running:    #C9960E;
+  --status-success-bg: #1B5E20;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -420,14 +431,14 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #28a745;
+  background: var(--status-success-bg);
   flex-shrink: 0;
 }
 .sidebar-status--err .sidebar-status-dot { background: var(--red); }
 .sidebar-status-dot--polling { animation: poll-pulse 0.7s ease-out; }
 @keyframes poll-pulse {
-  0%   { box-shadow: 0 0 0 0   rgba(40,167,69,0.55); }
-  100% { box-shadow: 0 0 0 7px rgba(40,167,69,0); }
+  0%   { box-shadow: 0 0 0 0   rgba(46,125,50,0.55); }
+  100% { box-shadow: 0 0 0 7px rgba(46,125,50,0); }
 }
 
 .sidebar-status-text {
@@ -454,11 +465,11 @@ body {
   vertical-align: middle;
 }
 .file-dot--running {
-  background: #d4a017;
+  background: var(--status-running);
   animation: dot-pulse 1s ease-in-out infinite;
 }
 .file-dot--success {
-  background: #28a745;
+  background: var(--status-success-bg);
 }
 .file-dot--failure {
   background: var(--red);
@@ -920,13 +931,13 @@ body {
   opacity: 0.65;
 }
 .diff-block-add {
-  background: rgba(40, 167, 69, 0.06);
-  border-left: 3px solid #28a745;
+  background: rgba(46, 125, 50, 0.06);
+  border-left: 3px solid var(--status-success-bg);
   padding: 4px 16px;
   margin: 12px -16px 12px 0;
 }
 [data-theme="dark"] .diff-block-remove { background: rgba(224, 90, 114, 0.1); }
-[data-theme="dark"] .diff-block-add    { background: rgba(40, 167, 69, 0.1); }
+[data-theme="dark"] .diff-block-add    { background: rgba(27, 94, 32, 0.1); }
 
 /* ── Brainstorm result view ──────────────────── */
 .brainstorm-result {
@@ -994,8 +1005,8 @@ body {
 .gen-status-bar--failure { background: var(--status-failure); }
 
 @keyframes status-success-flash {
-  0%   { background: #28a745; }
-  40%  { background: #28a745; }
+  0%   { background: var(--status-success-bg); }
+  40%  { background: var(--status-success-bg); }
   100% { background: var(--status-success); }
 }
 
