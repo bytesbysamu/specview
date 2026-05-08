@@ -366,12 +366,18 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
     this._stopGenPoll();
     this._stopSyncElapsedTimer();
     if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
+    _lucideScheduled = false;
   }
 
   ngAfterViewChecked() {
     if (typeof lucide !== 'undefined' && !_lucideScheduled) {
       _lucideScheduled = true;
-      setTimeout(() => { lucide.createIcons(); _lucideScheduled = false; }, 0);
+      setTimeout(() => {
+        // Remove stale SVGs left behind by @if block re-renders before re-scanning.
+        document.querySelectorAll('[data-lucide] ~ svg').forEach(el => el.remove());
+        lucide.createIcons();
+        _lucideScheduled = false;
+      }, 0);
     }
   }
 
@@ -497,7 +503,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.pollOk.set(true);
       this._markSyncNow();
       // Always update on count change, OR if projects is empty (initial load may have failed)
-      if (fresh.length !== this.knownCount || this.projects().length === 0) {
+      if (fresh.length !== this.knownCount || this.knownCount === 0) {
         const diff = fresh.length - this.knownCount;
         this.projects.set(fresh);
         this.knownCount = fresh.length;

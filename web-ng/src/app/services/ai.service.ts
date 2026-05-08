@@ -12,6 +12,7 @@ import { tldrText } from '../api/fn/operations/tldr-text';
 import { bulletsText } from '../api/fn/operations/bullets-text';
 import { rewriteAction } from '../api/fn/operations/rewrite-action';
 import { TextResponse } from '../api/models/text-response';
+import type { RewriteActionRequest } from '../api/models/rewrite-action-request';
 
 
 @Injectable({ providedIn: 'root' })
@@ -55,7 +56,7 @@ export class AiService {
   styleAs(text: string, style: string): Promise<TextResponse> {
     return firstValueFrom(
       rewriteAction(this.http, this.rootUrl, {
-        body: { text, style: style as 'Concise' | 'Technical' | 'Executive' | 'Narrative' | 'Punchy' },
+        body: { text, style: style as RewriteActionRequest['style'] },
       }).pipe(map(r => r.body!))
     );
   }

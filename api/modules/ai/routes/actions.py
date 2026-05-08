@@ -64,7 +64,7 @@ def _make_handler(verb: str):
             return jsonify({"error": str(exc)}), 500
         latency_ms = int((time.monotonic() - t0) * 1000)
         if "text" not in result:
-            logger.exception("skill %r returned unexpected output shape: %r", verb, result)
+            logger.error("skill %r returned unexpected output shape: %r", verb, result)
             return jsonify({"error": "skill returned unexpected output shape"}), 500
         return jsonify({"text": result["text"], "latencyMs": latency_ms})
 
@@ -105,7 +105,7 @@ def brainstorm():
         return jsonify({"error": str(exc)}), 500
     latency_ms = int((time.monotonic() - t0) * 1000)
     if "text" not in result:
-        logger.exception("skill 'brainstorm' returned unexpected output shape: %r", result)
+        logger.error("skill 'brainstorm' returned unexpected output shape: %r", result)
         return jsonify({"error": "skill returned unexpected output shape"}), 500
     return jsonify({"text": result["text"], "latencyMs": latency_ms})
 
@@ -137,6 +137,6 @@ def rewrite():
         return jsonify({"error": str(exc)}), 500
     latency_ms = int((time.monotonic() - t0) * 1000)
     if "text" not in result:
-        logger.exception("skill 'rewrite' returned unexpected output shape: %r", result)
+        logger.error("skill 'rewrite' returned unexpected output shape: %r", result)
         return jsonify({"error": "skill returned unexpected output shape"}), 500
     return jsonify({"text": result["text"], "latencyMs": latency_ms})
