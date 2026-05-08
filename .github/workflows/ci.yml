@@ -300,8 +300,7 @@ jobs:
     if: >-
       always() &&
       needs.docker.result == 'success' &&
-      github.event_name == 'pull_request' &&
-      github.base_ref == 'master'
+      github.ref != 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -311,5 +310,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge --squash --auto ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }}
+          PR=$(gh pr list \
+            --repo ${{ github.repository }} \
+            --head ${{ github.ref_name }} \
+            --base master \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+          if [ -z "$PR" ] || [ "$PR" = "null" ]; then
+            echo "No open PR found for this branch — skipping auto-merge"
+            exit 0
+          fi
+          echo "Enabling auto-merge for PR #$PR"
+          gh pr merge --squash --auto "$PR" --repo ${{ github.repository }}
