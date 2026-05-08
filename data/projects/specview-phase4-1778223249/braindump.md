@@ -8,7 +8,7 @@ Phase 4 is about making the product genuinely reliable and explicitly correct. N
 
 This is a housekeeping + hardening phase. No new AI capabilities. No new user-visible features. Just: kill dead code, define the product contract, write the tests that prove the contract is met.
 
-## The four problems
+## The five problems
 
 ### 1. Dead code is lying to us
 
@@ -36,18 +36,24 @@ These aren't hypothetical. The brainstorm 500 we just fixed was exactly this pat
 
 ### 3. Test coverage has large blind spots
 
-701 tests pass. But the coverage map has white space:
+701 tests pass. But the coverage map has white space.
+
+**The test pyramid is incomplete.** Based on prior lessons building this exact stack, the failure modes that actually hit production are integration-level failures, not unit-level failures: a silent template fallback on AI error, a cross-test module leak in full-suite ordering, a route that exists in the code but not in CORS configuration. Unit tests cannot catch these. A three-layer pyramid is required: unit → contract integration → E2E.
 
 **Uncovered backend modules:**
-- `api/modules/runtime/chain/` — zero tests. The adapter boundary is the most critical code in the system (every AI call goes through it) and it has no test coverage.
+- `api/modules/runtime/chain/` — zero tests. The adapter boundary is the most critical code in the system (every AI call goes through it) and it has no test coverage. The `CHAIN_PROVIDER=mock` path is never exercised; neither is the CLI provider path end-to-end.
 - `api/modules/data/` — no tests for the file loading utilities the bootstrap chain depends on.
 - `api/modules/ai/routes/actions.py` — the 8 new action routes added in Phase 3 have no dedicated tests. They're covered implicitly by manual testing only.
 - Skill layer integration — no test exercises the full path from HTTP request → `run_skill()` → SKILL.md execution. The skill runner is tested as a black box.
+
+**Missing contract integration tests:**
+The existing test suite bypasses WSGI serialisation via Flask's test client and runs entirely against `CHAIN_PROVIDER=mock`. This means: CORS headers are never verified, error envelope shape (`{"error": "..."}`) is never checked across all routes systematically, OpenAPI response schemas are never validated against actual route output, and the `CHAIN_PROVIDER=cli` path has zero test coverage. Any of these could be broken silently. A parametrized contract matrix — one test class per concern, all registered routes as the parametrize input — would catch every new route that violates the envelope or CORS policy automatically.
 
 **Uncovered frontend:**
 - `web-ng/src/app/` has exactly one spec file: `app.component.spec.ts`, which tests that the app title is "specview". That's it. Every service, every component, every signal — untested.
 - The polling logic in `ProjectEditorComponent` (epic guide status polling with `setInterval`) is a known source of bugs. No test catches a missing `clearInterval`.
 - `ai.service.ts` — the facade that bridges the generated HTTP client — has no tests. Its error handling path (what happens when the API returns 500) is untested.
+- No per-service mock factory files exist. Without mock factories, writing component tests requires duplicating spy setup inline — every component test reinvents the same stubs independently and they drift apart.
 
 **Missing integration tests:**
 - No test verifies that the skills in `plugin/skills/` are syntactically valid and can be loaded by the skill runner.
@@ -65,7 +71,19 @@ What are the actual product behaviors we care about?
 - The billing gate: free users hit a usage limit. Which actions are limited? Which are not? What does the limit error look like in the UI?
 - Pro users get unlimited usage. What defines "Pro"? Is the check synchronous or cached?
 
-None of this is written down. It lives in the code and in someone's head. Phase 4 should produce a `product-behavior.md` that defines each of these flows explicitly, and the test suite should prove the contract is met.
+None of this is written down. It lives in the code and in someone's head. Phase 4 should produce a `product-behavior.md` that defines each of these flows explicitly. The E2E test suite should then prove the contract is met — five Gherkin feature files covering the five core workflows, each seeded via API before the browser step begins.
+
+### 5. No E2E layer — the highest-risk surface is unprotected
+
+The bootstrap workflow (braindump → spec pipeline) is the core value loop of the product. It is also the most complex path: it involves the Angular UI, the HTTP layer, background jobs, polling, and file writes. It has never been exercised by an automated test. Manual smoke testing is the current safety net.
+
+Prior experience building this stack produced specific lessons about E2E:
+- Assertions written without a live runner are claims, not measurements.
+- Route renames, template changes, and broken API contracts are integration failures — they do not appear under filesystem interaction or a mocked layer.
+- Browser tests must use real servers (Angular dev + Flask). A stub that bypasses HTTP is testing the step definitions, not the product.
+- `[data-test]` attributes are the only selector contract. Class names, element IDs, and tag structures change when the product is redesigned; they are visual implementation details, not behavioral contracts.
+- Page objects are the single place where selectors live. Step definitions call methods, not selectors.
+- E2E scenarios seed state via API before the browser step begins — UI tests start at the assertion-relevant moment, not the beginning of the flow.
 
 ## What we're not doing
 
@@ -75,16 +93,38 @@ None of this is written down. It lives in the code and in someone's head. Phase 
 - No infrastructure changes
 - No streaming improvements (Phase 5 territory)
 
+## Lessons from prior work on this stack
+
+**ELA's documented lesson on coverage thresholds:** Hard local thresholds produce gamed line coverage — empty branches and trivial assertions added to hit numbers, not meaningful behavioral coverage. Coverage is surfaced as CI artifacts, not enforced as fail-fast gates.
+
+**Factory fixtures over inline data:** Named factory functions that return fully-formed request dicts replace repeated inline JSON strings. When a route's required field names change, one factory function update propagates to every test. Without factories, a field rename requires a search-and-replace across all test files.
+
+**Parametrize over duplicate:** One test class covers all eight action routes for missing-field and malformed-output cases — per-route duplication is replaced by a single parametrized matrix. Adding a new route means adding one entry to the parametrize list.
+
+**Default isolation, not opt-in:** `tmp_path` is the conftest default for all filesystem-touching tests. Isolation is automatic, not a per-test opt-in that individual tests can forget.
+
+**pytest classes for organization:** `pytest tests/test_project.py::GetProject -v` runs a focused slice. Grouping by HTTP verb and scenario makes the test's concern legible at a glance.
+
+**Syrupy for prompt snapshots:** Any change to a prompt function or system message produces a visible diff in the PR, not a silently passing test. `--snapshot-update` regenerates all goldens in one command.
+
+**Session-scoped server fixture for E2E:** Function-scoped setup makes a 5-feature suite 5× slower for no isolation benefit, since state is reset by API calls inside the tests, not by server restarts.
+
+**Mock factories for frontend services:** Per-service mock factory files (`ai.service.mock.ts`) export a `createMockAiService()` function returning a typed Jasmine spy. Component tests import the factory and receive a consistent mock without duplicating setup. Without factories, component tests reinvent the same stubs and drift.
+
 ## The outcome
 
 After Phase 4:
-- `openapi.yaml` matches `flask routes` exactly. No dead routes, no generated dead files.
+- `openapi.yaml` matches Flask routes exactly. No dead routes, no generated dead files.
 - Every HTTP request to `actions.py` has a timeout ceiling of 120s. Malformed skill output returns a 500 with a structured error, not a Python traceback.
 - Epic guide polling has max retries (frontend) and job TTL (backend). The infinite poll loop is impossible.
 - `runtime/chain/`, `data/`, and `ai/routes/actions.py` have unit test coverage.
+- A parametrized contract integration test matrix covers CORS, error envelope, and OpenAPI response shape across all registered routes.
 - Angular services and the polling component have meaningful spec coverage — not just "it compiles."
+- Per-service mock factory files exist for `ai.service.ts` and `projects.service.ts`.
+- Five Gherkin feature files cover the five core workflows end-to-end.
 - A `product-behavior.md` document exists and is referenced from CLAUDE.md.
 - The skill integration test runs in CI: load each SKILL.md, validate `skill.json`, confirm the skill runner can instantiate the skill without an AI call.
+- Coverage is surfaced as a CI artifact — not a build gate.
 
 The product doesn't change. The confidence does.
 
@@ -94,6 +134,6 @@ How do we test the skill runner without making a real Claude call? Mock provider
 
 What is the right timeout per action? Brainstorm might need 60s, expand probably needs 15s. Is a single ceiling OK or do we need per-skill configuration in `skill.json`?
 
-Frontend testing: do we write Jasmine specs for every component, or is a subset of critical paths enough? The polling component and the billing gate are non-negotiable. Everything else is a judgment call.
+Should the E2E suite run against the Angular dev server on localhost, or against the Docker-compose stack? Dev server is faster; Docker is closer to production. The prior lesson: real servers, not mocks — Docker is the safer default.
 
-Should `product-behavior.md` be a living document maintained manually, or should it be auto-generated from the test descriptions? The latter is more sustainable but requires the tests to be written as specifications, not just assertions.
+Should `product-behavior.md` be a living document maintained manually, or should it be auto-generated from Gherkin feature files? The latter is more sustainable but requires the tests to be written as specifications, not just assertions.

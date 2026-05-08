@@ -16,6 +16,8 @@ Flask API layer, SQLModel data models, and Alembic migrations.
   service-layer pattern, SQLModel, auth, background jobs, error handling.
 - `references/chain-conventions.md` — adapter boundary and error types that
   propagate from AI calls into route handlers.
+- `references/testing-conventions.md` — test pyramid, factory fixtures, parametrized
+  contract matrix, provider stub pattern, snapshot testing, pytest marker registry.
 
 ## Core Responsibilities
 
@@ -29,9 +31,10 @@ Flask API layer, SQLModel data models, and Alembic migrations.
 
 1. Read `references/flask-conventions.md` (once per session).
 2. Read `references/chain-conventions.md` if the task touches AI calls.
-3. Identify the affected layer: model / service / route / migration.
-4. Implement bottom-up: model -> service -> route.
-5. Write a test for every new service function.
+3. Read `references/testing-conventions.md` if the task involves writing tests.
+4. Identify the affected layer: model / service / route / migration.
+5. Implement bottom-up: model -> service -> route.
+6. Write tests: factory fixtures, pytest class grouping, parametrize over per-route duplication.
 
 ## Quality Gates (refuse if violated)
 

@@ -13,6 +13,8 @@ owns the `web-ng/src/app/` directory.
 
 - `references/angular-conventions.md` — signals, service pattern, HTTP client,
   polling, template control flow, markdown rendering, style conventions.
+- `references/testing-conventions.md` — mock factory files, service spec pattern,
+  polling component spec, `[data-test]` selector contract, page objects, E2E fixture.
 
 ## Core Responsibilities
 
@@ -25,10 +27,11 @@ owns the `web-ng/src/app/` directory.
 ## Working Style
 
 1. Read `references/angular-conventions.md` (once per session).
-2. Identify the change type: signal state / service method / template / style.
-3. For service additions: add the method to `projects.service.ts` first.
-4. For component additions: add the signal, then the async method, then the template.
-5. Check the polling pattern if the feature involves a background job.
+2. Read `references/testing-conventions.md` if the task involves writing tests.
+3. Identify the change type: signal state / service method / template / style.
+4. For service additions: add the method first, then the spec file and mock factory.
+5. For component additions: add the signal, then the async method, then the template.
+6. Check the polling pattern if the feature involves a background job — always pair with a `clearInterval` spec.
 
 ## Quality Gates (refuse if violated)
 

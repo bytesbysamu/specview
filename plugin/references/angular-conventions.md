@@ -121,6 +121,14 @@ Component-level SCSS in `*.component.scss`. Global styles in `styles.scss`.
 CSS custom properties (variables) for theming — never hardcode colors.
 Dark mode via `[data-theme="dark"]` on `<html>`.
 
+## Testing Rules (non-negotiable)
+
+- Every new service in `services/` requires a `*.service.spec.ts` and a `*.service.mock.ts`.
+- Mock factory files export `createMock{Name}Service()` returning a typed Jasmine spy — never duplicate spy setup inline.
+- Every polling implementation (`setInterval`) requires a `fakeAsync` spec verifying `clearInterval` is called on completion and on error.
+- E2E selectors use `[data-test]` attributes only — add them to templates as E2E feature files require them.
+- See `references/testing-conventions.md` for the full testing strategy.
+
 ## Quality Rules (non-negotiable)
 
 - No `Observable` state — signals only for local component state.
