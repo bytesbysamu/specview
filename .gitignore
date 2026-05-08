@@ -29,6 +29,5 @@ node_modules/
 .vscode/
 *.swp
 
-# Data — user project files (runtime data, not source)
-data/projects/
+# Data — archive only
 data/archive/
