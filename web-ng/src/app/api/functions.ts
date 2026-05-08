@@ -33,14 +33,10 @@ export type { BrainstormText$Params as BrainstormText$Params } from './fn/operat
 export { brainstormText as brainstormText } from './fn/operations/brainstorm-text';
 export type { RewriteAction$Params as RewriteAction$Params } from './fn/operations/rewrite-action';
 export { rewriteAction as rewriteAction } from './fn/operations/rewrite-action';
-export type { RewriteText$Params as RewriteText$Params } from './fn/operations/rewrite-text';
-export { rewriteText as rewriteText } from './fn/operations/rewrite-text';
 export type { GenerateSpec$Params as GenerateSpec$Params } from './fn/operations/generate-spec';
 export { generateSpec as generateSpec } from './fn/operations/generate-spec';
 export type { IterateText$Params as IterateText$Params } from './fn/operations/iterate-text';
 export { iterateText as iterateText } from './fn/operations/iterate-text';
-export type { LintBraindump$Params as LintBraindump$Params } from './fn/operations/lint-braindump';
-export { lintBraindump as lintBraindump } from './fn/operations/lint-braindump';
 export type { RunProjectCoherence$Params as RunProjectCoherence$Params } from './fn/quality/run-project-coherence';
 export { runProjectCoherence as runProjectCoherence } from './fn/quality/run-project-coherence';
 export type { GetFileHistory$Params as GetFileHistory$Params } from './fn/projects/get-file-history';
@@ -59,10 +55,6 @@ export type { CancelTaskGen$Params as CancelTaskGen$Params } from './fn/task-gen
 export { cancelTaskGen as cancelTaskGen } from './fn/task-gen/cancel-task-gen';
 export type { RegenerateTask$Params as RegenerateTask$Params } from './fn/task-gen/regenerate-task';
 export { regenerateTask as regenerateTask } from './fn/task-gen/regenerate-task';
-export type { GenerateText$Params as GenerateText$Params } from './fn/ai/generate-text';
-export { generateText as generateText } from './fn/ai/generate-text';
-export type { ReviewDocuments$Params as ReviewDocuments$Params } from './fn/ai/review-documents';
-export { reviewDocuments as reviewDocuments } from './fn/ai/review-documents';
 export type { BootstrapProject$Params as BootstrapProject$Params } from './fn/ai/bootstrap-project';
 export { bootstrapProject as bootstrapProject } from './fn/ai/bootstrap-project';
 export type { GetBootstrapProjectStatus$Params as GetBootstrapProjectStatus$Params } from './fn/ai/get-bootstrap-project-status';

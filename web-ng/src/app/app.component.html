@@ -32,7 +32,7 @@
         {{ s.icon }} {{ s.label }}
         @if (s.id === 'context') {
           <span class="section-count">{{ contextFiles.length }}</span>
-        } @else if (sectionCounts()[s.id] != null) {
+        } @else if (sectionCounts()[s.id] !== null) {
           <span class="section-count">{{ sectionCounts()[s.id] }}</span>
         }
       </button>
@@ -44,6 +44,10 @@
     <div class="update-banner">
       {{ updateBanner() }} · <button (click)="updateBanner.set('')">dismiss</button>
     </div>
+  }
+
+  @if (pollingError()) {
+    <div data-test="polling-error" class="error-state">{{ pollingError() }}</div>
   }
 
 
@@ -136,6 +140,7 @@
           @if (canGenerateSpecs()) {
             <button
               class="sidebar-generate"
+              data-test="pipeline-trigger"
               [disabled]="specGenLoading()"
               (click)="generateFromBraindump()">
               @if (specGenLoading()) {
@@ -151,6 +156,7 @@
           @if (canGenerateEpicGuide()) {
             <button
               class="sidebar-generate"
+              data-test="epic-guide-trigger"
               [disabled]="epicGuideLoading()"
               (click)="generateEpicGuide()"
               title="Generate a single implementation guide covering all epic tasks">
@@ -202,7 +208,7 @@
             <div class="editor-toolbar-chips">
               <span class="text-ops-label">AI</span>
               @if (isBraindump()) {
-                <button class="op-chip op-chip--accent" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')">✦ Brainstorm</button>
+                <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')">✦ Brainstorm</button>
               }
               <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')">Expand</button>
               <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')">Compress</button>
@@ -241,11 +247,17 @@
           }
 
           @if (aiLoading()) {
-            <div class="text-ops-thinking">
+            <div class="text-ops-thinking" data-test="polling-spinner">
               <span class="thinking-dot"></span>
               <span class="thinking-dot"></span>
               <span class="thinking-dot"></span>
               Thinking…
+            </div>
+          }
+
+          @if (billingError()) {
+            <div data-test="billing-gate-message" class="text-ops-error text-ops-billing">
+              {{ billingError() }}
             </div>
           }
 
@@ -281,7 +293,7 @@
         @if (activeProject() && aiResult()) {
           @if (isAdditivOp()) {
             <!-- Brainstorm / TL;DR: render result as rich markdown, no diff -->
-            <div class="brainstorm-result markdown-content" [innerHTML]="parsedAiResult()"></div>
+            <div class="brainstorm-result markdown-content" data-test="brainstorm-result" [innerHTML]="parsedAiResult()"></div>
             @if (activeOp() === 'brainstorm') {
               <div class="brainstorm-followup">
                 <input
@@ -375,6 +387,7 @@
         <textarea
           #braindumpEl
           id="braindump"
+          data-test="braindump-input"
           class="modal-textarea"
           placeholder="Paste your brain dump here — everything you know about this project, unfiltered. The AI will generate analysis, epic, and architecture docs from it."
           rows="14"></textarea>

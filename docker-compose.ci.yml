@@ -1,0 +1,9 @@
+# CI override — exposes ports to the runner host for smoke testing.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+services:
+  web:
+    ports:
+      - "8080:80"
+  api:
+    ports:
+      - "3101:3101"

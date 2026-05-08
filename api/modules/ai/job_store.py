@@ -13,6 +13,7 @@ from typing import Any
 
 _LOCK = threading.Lock()
 _JOBS: dict[str, "SkillJob"] = {}
+JOB_TTL_SECONDS = 3600
 
 
 @dataclass
@@ -40,7 +41,13 @@ def create_job(skill_name: str, skill_version: str) -> SkillJob:
 
 def get_job(job_id: str) -> SkillJob | None:
     with _LOCK:
-        return _JOBS.get(job_id)
+        job = _JOBS.get(job_id)
+        if job is None:
+            return None
+        if time.monotonic() - job.started_at > JOB_TTL_SECONDS:
+            del _JOBS[job_id]
+            return None
+        return job
 
 
 def complete_job(job_id: str, result: Any) -> None:

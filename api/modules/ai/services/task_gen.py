@@ -450,8 +450,8 @@ def run_generation(
                     _EXECUTIONS[numbered_key] = execution
         resolved_num = task["num"]
 
-        # Step 5: extract task description block
-        task_desc = extract_task_desc(epic, task["num"])
+        # Step 5: extract task description block (currently unused; kept for future prompt injection)
+        extract_task_desc(epic, task["num"])
 
         # Step 6: collect prior task contracts (structured file declarations)
         contracts = collect_prior_task_contracts(specs, task["num"])

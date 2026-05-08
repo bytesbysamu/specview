@@ -9,7 +9,6 @@ Tests verify:
 from __future__ import annotations
 
 import os
-import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,7 +16,7 @@ import pytest
 # Force mock provider before create_app imports the chain module.
 os.environ.setdefault("CHAIN_PROVIDER", "mock")
 
-from modules.runtime.workflows.execution import WorkflowExecution, ExecutionStatus
+from modules.runtime.workflows.execution import WorkflowExecution
 
 
 # ---------------------------------------------------------------------------

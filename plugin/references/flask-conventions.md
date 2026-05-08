@@ -99,6 +99,17 @@ Poll endpoints are `GET` routes with no body.
 `CORS_ORIGINS` env var controls allowed origins. Set to `"*"` in development.
 Never hardcode an origin — always read from env.
 
+## Testing Rules (non-negotiable)
+
+- Every new route requires a test in `modules/{name}/tests/test_{name}.py`.
+- Use factory functions from `tests/fixtures/payloads.py` — never inline JSON in test bodies.
+- Group test functions in pytest classes by HTTP verb and scenario (`class TestGetProject`).
+- Parametrize over per-route duplication — one class covers all N routes for a shared contract.
+- Use `pytest-httpserver` to test the `CHAIN_PROVIDER=claude` SDK path, not SDK-internal mocking.
+- Use `syrupy` for snapshot assertions on prompt functions.
+- Default to `tmp_path` for filesystem isolation — do not set your own temp dir.
+- See `references/testing-conventions.md` for the full testing strategy.
+
 ## Quality Rules (non-negotiable)
 
 - No raw SQL in route handlers.

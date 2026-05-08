@@ -38,10 +38,6 @@ function computeParagraphDiff(original: string, result: string): ParagraphDiff[]
   return diffs;
 }
 
-function escHtml(s: string): string {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 const SECTIONS = [
   { id: 'context',      label: 'Context',       icon: '📐' },
   { id: 'all',          label: 'All',            icon: '' },
@@ -150,8 +146,13 @@ export class AppComponent implements OnInit, OnDestroy {
   toolbarFloating = signal(false);
   polling = signal(false);
   pollOk = signal(true);
+  pollingError = signal<string | null>(null);
+  billingError = signal<string | null>(null);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private genPollTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly POLL_MAX_RETRIES = 30;
+  private readonly POLL_INTERVAL_MS = 2000;
+  private pollRetries = 0;
 
   // ── Computed ──────────────────────────────────────
   sectionCounts = computed(() => {
@@ -278,11 +279,12 @@ export class AppComponent implements OnInit, OnDestroy {
       if (this.auth.isLoggedIn()) {
         this.loadProjects().then(() => {
           if (!this.pollTimer) {
+            this.pollRetries = 0;
             this.pollTimer = setInterval(() => this.checkForUpdates(), REFRESH_INTERVAL);
           }
         });
       } else {
-        if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+        this.stopPolling();
       }
     });
 
@@ -300,8 +302,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    this.stopPolling();
     this._stopGenPoll();
+  }
+
+  private stopPolling() {
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
   }
 
   private _startGenPoll() {
@@ -331,6 +337,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async checkForUpdates() {
+    this.pollRetries++;
+    if (this.pollRetries > this.POLL_MAX_RETRIES) {
+      this.stopPolling();
+      this.pollingError.set('Polling stopped after too many retries. Refresh to resume.');
+      return;
+    }
     this.polling.set(true);
     try {
       const fresh = await this.projectsSvc.listProjects();
@@ -427,12 +439,17 @@ export class AppComponent implements OnInit, OnDestroy {
     this.aiResult.set(null);
     this.aiLatencyMs.set(null);
     this.aiError.set(false);
+    this.billingError.set(null);
     try {
       const res = await fn();
       this.aiResult.set(res.text);
       this.aiLatencyMs.set(res.latencyMs);
-    } catch {
-      this.aiError.set(true);
+    } catch (err: any) {
+      if (err?.status === 429) {
+        this.billingError.set('You have reached your daily limit. Upgrade to Pro to continue.');
+      } else {
+        this.aiError.set(true);
+      }
     } finally {
       this.aiLoading.set(false);
     }

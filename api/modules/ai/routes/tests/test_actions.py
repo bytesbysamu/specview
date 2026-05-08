@@ -6,7 +6,7 @@ Covers:
 - rewrite with invalid style → 400
 - missing text → 400
 - FileNotFoundError → 503
-- RuntimeError → 502
+- RuntimeError → 500
 """
 from __future__ import annotations
 
@@ -77,11 +77,11 @@ def test_uniform_verb_503_on_file_not_found(client, verb):
 
 
 @pytest.mark.parametrize("verb", ["expand", "compress", "clarify", "simplify", "tldr", "bullets"])
-def test_uniform_verb_502_on_runtime_error(client, verb):
+def test_uniform_verb_500_on_runtime_error(client, verb):
     with patch(f"{_MODULE}.load_skill_registry", return_value=_REGISTRY), \
          patch(f"{_MODULE}.run_skill", side_effect=RuntimeError("ai down")):
         r = client.post(f"/api/{verb}", headers=AUTH, json={"text": "x"})
-    assert r.status_code == 502
+    assert r.status_code == 500
 
 
 # ---------------------------------------------------------------------------
@@ -173,9 +173,48 @@ def test_rewrite_503_on_file_not_found(client):
     assert r.status_code == 503
 
 
-def test_rewrite_502_on_runtime_error(client):
+def test_rewrite_500_on_runtime_error(client):
     with patch(f"{_MODULE}.load_skill_registry", return_value=_REGISTRY), \
          patch(f"{_MODULE}.run_skill", side_effect=RuntimeError("ai down")):
         r = client.post("/api/rewrite", headers=AUTH,
                         json={"text": "hello", "style": "Concise"})
-    assert r.status_code == 502
+    assert r.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# Rail 1: timeout ceiling
+# ---------------------------------------------------------------------------
+
+class TestActionTimeout:
+    """Rail 1: 120s ceiling — timeout returns envelope + 500."""
+
+    @pytest.mark.parametrize("route", [
+        "/api/brainstorm", "/api/expand", "/api/compress", "/api/clarify",
+        "/api/simplify", "/api/tldr", "/api/bullets",
+    ])
+    def test_timeout_returns_500_envelope(self, client, monkeypatch, route):
+        def _timeout(*a, **kw):
+            raise RuntimeError("skill timed out after 120s")
+        monkeypatch.setattr(f"{_MODULE}.load_skill_registry", lambda *a: _REGISTRY)
+        monkeypatch.setattr(f"{_MODULE}._run_with_timeout", _timeout)
+        resp = client.post(route, json={"text": "hello"}, headers=AUTH)
+        assert resp.status_code == 500
+        assert "error" in resp.get_json()
+
+
+# ---------------------------------------------------------------------------
+# Rail 2: missing 'text' key in skill output
+# ---------------------------------------------------------------------------
+
+class TestActionMalformedOutput:
+    """Rail 2: missing 'text' key returns envelope + 500."""
+
+    def test_missing_text_key_returns_500_envelope(self, client, monkeypatch):
+        monkeypatch.setattr(f"{_MODULE}.load_skill_registry", lambda *a: _REGISTRY)
+        monkeypatch.setattr(
+            f"{_MODULE}._run_with_timeout",
+            lambda *a, **kw: {"wrong_key": "value"},
+        )
+        resp = client.post("/api/brainstorm", json={"text": "hello"}, headers=AUTH)
+        assert resp.status_code == 500
+        assert "error" in resp.get_json()

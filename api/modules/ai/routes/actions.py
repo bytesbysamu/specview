@@ -4,7 +4,9 @@ Eight focused handlers: expand, compress, clarify, simplify, tldr, bullets,
 brainstorm, rewrite. Each delegates to the skill service (load_skill_registry
 + run_skill) and returns {"text": ..., "latencyMs": ...}.
 """
+import concurrent.futures
 import json
+import logging
 import time
 
 from flask import Blueprint, jsonify, request
@@ -12,6 +14,19 @@ from flask import Blueprint, jsonify, request
 from modules.ai.routes.generic_skill_service import load_skill_registry, run_skill
 from modules.auth.decorators import require_auth
 from modules.usage.decorators import check_usage_limit
+
+logger = logging.getLogger(__name__)
+
+SKILL_TIMEOUT_SECONDS = 120
+
+
+def _run_with_timeout(skill_name: str, user_input: str, registry: dict):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(run_skill, skill_name, user_input, registry)
+        try:
+            return future.result(timeout=SKILL_TIMEOUT_SECONDS)
+        except concurrent.futures.TimeoutError:
+            raise RuntimeError(f"skill timed out after {SKILL_TIMEOUT_SECONDS}s")
 
 actions_bp = Blueprint("actions", __name__, url_prefix="/api")
 
@@ -40,10 +55,14 @@ def _make_handler(verb: str):
             return jsonify({"error": f"skill unavailable: {verb}"}), 503
         t0 = time.monotonic()
         try:
-            result = run_skill(verb, json.dumps({"text": text}), registry)
+            result = _run_with_timeout(verb, json.dumps({"text": text}), registry)
         except RuntimeError as exc:
-            return jsonify({"error": str(exc)}), 502
+            logger.exception("skill %r failed", verb)
+            return jsonify({"error": str(exc)}), 500
         latency_ms = int((time.monotonic() - t0) * 1000)
+        if "text" not in result:
+            logger.exception("skill %r returned unexpected output shape: %r", verb, result)
+            return jsonify({"error": "skill returned unexpected output shape"}), 500
         return jsonify({"text": result["text"], "latencyMs": latency_ms})
 
     # Give each generated function a unique name so Flask doesn't complain
@@ -73,14 +92,18 @@ def brainstorm():
         return jsonify({"error": "skill unavailable: brainstorm"}), 503
     t0 = time.monotonic()
     try:
-        result = run_skill(
+        result = _run_with_timeout(
             "brainstorm",
             json.dumps({"text": text, "question": question, "context": context}),
             registry,
         )
     except RuntimeError as exc:
-        return jsonify({"error": str(exc)}), 502
+        logger.exception("skill 'brainstorm' failed")
+        return jsonify({"error": str(exc)}), 500
     latency_ms = int((time.monotonic() - t0) * 1000)
+    if "text" not in result:
+        logger.exception("skill 'brainstorm' returned unexpected output shape: %r", result)
+        return jsonify({"error": "skill returned unexpected output shape"}), 500
     return jsonify({"text": result["text"], "latencyMs": latency_ms})
 
 
@@ -101,12 +124,16 @@ def rewrite():
         return jsonify({"error": "skill unavailable: rewrite"}), 503
     t0 = time.monotonic()
     try:
-        result = run_skill(
+        result = _run_with_timeout(
             "rewrite",
             json.dumps({"text": text, "style": style}),
             registry,
         )
     except RuntimeError as exc:
-        return jsonify({"error": str(exc)}), 502
+        logger.exception("skill 'rewrite' failed")
+        return jsonify({"error": str(exc)}), 500
     latency_ms = int((time.monotonic() - t0) * 1000)
+    if "text" not in result:
+        logger.exception("skill 'rewrite' returned unexpected output shape: %r", result)
+        return jsonify({"error": "skill returned unexpected output shape"}), 500
     return jsonify({"text": result["text"], "latencyMs": latency_ms})

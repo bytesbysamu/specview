@@ -12,7 +12,6 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
 from modules.runtime.chain.types import ChainResult
 from modules.runtime.chain.errors import ProviderError

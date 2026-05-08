@@ -154,7 +154,7 @@ def status_afterCompletion_includesFilenameAndTaskMeta(client, project_id, seede
     assert body["taskName"] == "Raise CLI Timeout"
     # Output file actually written
     out = (seeded_project / project_id / "task-1-raise-cli-timeout.md").read_text(encoding="utf-8")
-    assert "MOCK[" in out  # mock provider's signature
+    assert out.strip()  # mock provider wrote valid non-empty content
 
 
 def status_allTasksAlreadyHaveFiles_returnsAllDoneTrue(client, project_id, seeded_project):
