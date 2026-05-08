@@ -49,7 +49,7 @@ def angular_server():
         ["npx", "ng", "serve", "--port", "4201", "--poll", "0"],
         cwd=str(os.path.join(os.path.dirname(__file__), "..", "web-ng")),
     )
-    _wait_for_port("127.0.0.1", 4201, timeout=60.0)
+    _wait_for_port("127.0.0.1", 4201, timeout=120.0)
     yield "http://localhost:4201"
     proc.terminate()
     proc.wait()

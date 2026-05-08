@@ -6,11 +6,18 @@ on:
   pull_request:
     branches: ["master"]
 
+# Cancel in-progress runs on the same branch when a new push arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  # ── Backend unit + integration + contract tests ───────────────────────────
+  # ── Stage 1 (parallel) ────────────────────────────────────────────────────
+
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     defaults:
       run:
@@ -23,6 +30,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: api/requirements.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt pytest pytest-cov
@@ -56,10 +64,10 @@ jobs:
           path: api/pytest-output.txt
           retention-days: 7
 
-  # ── Frontend unit tests (Karma / Jasmine) ─────────────────────────────────
   frontend:
     name: Frontend tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -75,63 +83,81 @@ jobs:
           cache-dependency-path: web-ng/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --progress=false
 
-      - name: Run unit tests (ChromeHeadlessCI)
+      - name: Unit tests (ChromeHeadlessCI)
         run: npx ng test --watch=false --browsers=ChromeHeadlessCI
 
       - name: Build (production)
         run: npm run build -- --configuration production
 
-  # ── Docker build + compose smoke test ────────────────────────────────────
+  # ── Stage 2 (parallel, gates on stage 1) ─────────────────────────────────
+
   docker:
-    name: Docker build & health check
+    name: Docker build & smoke
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Build images
+        env:
+          CHAIN_PROVIDER: mock
         run: docker compose build
 
       - name: Start stack
-        run: |
-          docker compose up -d
-          # Give gunicorn time to bind
-          sleep 5
+        env:
+          CHAIN_PROVIDER: mock
+        run: docker compose up -d
 
-      - name: Health check — API
+      - name: Wait — API health via nginx→Flask proxy
         run: |
-          for i in $(seq 1 12); do
-            STATUS=$(docker compose exec -T api curl -sf http://localhost:3101/api/health -o /dev/null -w "%{http_code}" 2>/dev/null || echo "000")
-            echo "attempt $i: $STATUS"
-            [ "$STATUS" = "200" ] && exit 0
+          for i in $(seq 1 24); do
+            CODE=$(docker compose exec -T web \
+              wget -qO- --server-response http://localhost/api/health 2>&1 \
+              | awk '/HTTP\//{print $2}' | tail -1)
+            echo "attempt $i/24: HTTP $CODE"
+            [ "$CODE" = "200" ] && exit 0
             sleep 5
           done
-          echo "API health check failed after 60s"
+          echo "Health check failed after 120s"
           docker compose logs api
           exit 1
 
+      - name: Smoke — GET /api/health returns status field
+        run: |
+          BODY=$(docker compose exec -T web wget -qO- http://localhost/api/health)
+          echo "$BODY"
+          echo "$BODY" | grep -q '"status"' \
+            || (echo "FAIL: missing status field" && exit 1)
+
+      - name: Smoke — GET / serves Angular SPA
+        run: |
+          BODY=$(docker compose exec -T web wget -qO- http://localhost/)
+          echo "$BODY" | head -3
+          echo "$BODY" | grep -qi "<!doctype html>" \
+            || (echo "FAIL: / did not serve Angular HTML" && exit 1)
+
       - name: Tear down
         if: always()
-        run: docker compose down
+        run: docker compose down -v
 
-  # ── E2E tests (pytest-bdd + Playwright, real Flask + Angular servers) ─────
   e2e:
     name: E2E tests
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
-    # E2E is informational on PRs — failures don't block merge until the suite
-    # is stable. Remove continue-on-error once step defs are fully exercised.
-    continue-on-error: true
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
-      # Python for Flask + pytest
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: api/requirements.txt
 
       - name: Install Python dependencies (API + E2E)
         run: |
@@ -141,7 +167,6 @@ jobs:
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
 
-      # Node for Angular dev server (conftest.py starts it as a subprocess)
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -150,7 +175,7 @@ jobs:
 
       - name: Install Node dependencies
         working-directory: web-ng
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --progress=false
 
       - name: Run E2E tests
         env:
@@ -169,3 +194,19 @@ jobs:
           name: e2e-output
           path: e2e-output.txt
           retention-days: 7
+
+  # ── Stage 3 (master only) ─────────────────────────────────────────────────
+
+  deploy:
+    name: Deploy (master)
+    needs: [docker, e2e]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger Coolify deploy
+        run: |
+          curl -sf -X GET "${{ secrets.COOLIFY_WEBHOOK }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            || (echo "Deploy webhook failed" && exit 1)
