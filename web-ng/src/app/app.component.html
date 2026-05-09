@@ -13,12 +13,12 @@
         <div class="masthead-tagline">All the Specs Fit to Read</div>
       </div>
       <div class="masthead-actions">
-        <button class="new-project-btn" (click)="openCreateModal()" title="New project"><i data-lucide="plus"></i> New</button>
+        <button class="new-project-btn" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
         <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
           @if (isDark()) {
-            <i data-lucide="moon"></i>
+            <span class="btn-icon">☀</span>
           } @else {
-            <i data-lucide="sun"></i>
+            <span class="btn-icon">☾</span>
           }
         </button>
         <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
@@ -33,9 +33,6 @@
         class="section-link"
         [class.active]="activeSection() === s.id"
         (click)="selectSection(s.id)">
-        @if (s.icon) {
-          <i [attr.data-lucide]="s.icon"></i>
-        }
         {{ s.label }}
         @if (s.id === 'context') {
           <span class="section-count section-count-pulse"
@@ -56,7 +53,10 @@
   }
 
   @if (pollingError()) {
-    <div data-test="polling-error" class="error-state">{{ pollingError() }}</div>
+    <div data-test="polling-error" class="error-state">
+      <span class="overline">Error</span>
+      {{ pollingError() }}
+    </div>
   }
 
 
@@ -99,7 +99,7 @@
         @for (group of projectsBySection(); track group.section) {
           <div class="section-group">
             <div class="section-group-header">
-              <span class="section-group-title">{{ group.section }}</span>
+              <span class="section-group-title overline">{{ group.section }}</span>
               <span class="section-group-count section-count-pulse" [attr.data-count]="group.projects.length">{{ group.projects.length }}</span>
             </div>
             <div class="section-group-cards">
@@ -156,7 +156,7 @@
       <!-- Sticky sidebar -->
       <aside class="expanded-sidebar">
         <div class="sidebar-header">
-          <button class="sidebar-back" (click)="closeExpanded()"><i data-lucide="arrow-left"></i> All</button>
+          <button class="sidebar-back" (click)="closeExpanded()"><span class="btn-icon">←</span> All</button>
         </div>
         <div class="sidebar-project">{{ expandedProject() }}</div>
 
@@ -221,7 +221,7 @@
                 <span class="thinking-dot"></span>
                 <span class="thinking-dot"></span>
               } @else {
-                <i data-lucide="sparkles"></i> Generate Specs
+                <span class="btn-icon">✦</span> Generate Specs
               }
             </button>
           }
@@ -238,7 +238,7 @@
                 <span class="thinking-dot"></span>
                 <span class="thinking-dot"></span>
               } @else {
-                <i data-lucide="sparkles"></i> Generate Guide
+                <span class="btn-icon">✦</span> Generate Guide
               }
             </button>
           }
@@ -248,7 +248,7 @@
             <div class="sidebar-ops">
               <span class="text-ops-label">AI</span>
               @if (isBraindump()) {
-                <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')"><i data-lucide="sparkles"></i> Brainstorm</button>
+                <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')"><span class="btn-icon">✦</span> Brainstorm</button>
               }
               <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')">Expand</button>
               <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')">Compress</button>
@@ -288,11 +288,11 @@
               <div class="editor-toolbar-row">
                 <div class="editor-toolbar-actions">
                   @if (aiLatencyMs()) {
-                    <span class="latency-badge"><i data-lucide="zap"></i> {{ (aiLatencyMs()! / 1000).toFixed(1) }}s</span>
+                    <span class="latency-badge"><span class="btn-icon">⚡</span> {{ (aiLatencyMs()! / 1000).toFixed(1) }}s</span>
                   }
-                  <button class="editor-apply-btn" (click)="applyResult()"><i data-lucide="check"></i> Apply</button>
-                  <button (click)="copyResult()">@if (copied()) { <i data-lucide="check"></i> Copied } @else { Copy }</button>
-                  <button (click)="dismissResult()"><i data-lucide="x"></i></button>
+                  <button class="editor-apply-btn" (click)="applyResult()"><span class="btn-icon">✓</span> Apply</button>
+                  <button (click)="copyResult()">@if (copied()) { <span class="btn-icon">✓</span> Copied } @else { Copy }</button>
+                  <button (click)="dismissResult()"><span class="btn-icon">×</span></button>
                 </div>
               </div>
             </div>
@@ -309,12 +309,16 @@
 
           @if (billingError()) {
             <div data-test="billing-gate-message" class="text-ops-error text-ops-billing">
+              <span class="overline">Billing</span>
               {{ billingError() }}
             </div>
           }
 
           @if (aiError()) {
-            <div class="text-ops-error">Could not reach AI — check connection.</div>
+            <div class="text-ops-error">
+              <span class="overline">Error</span>
+              Could not reach AI — check connection.
+            </div>
           }
         }
 
@@ -336,9 +340,15 @@
         }
 
         @if (specGenError() && activeProject()) {
-          <div class="text-ops-error">{{ specGenError() }}</div>
+          <div class="text-ops-error">
+            <span class="overline">Error</span>
+            {{ specGenError() }}
+          </div>
         }
 
+        @if (activeFileType()) {
+          <span class="overline">{{ activeFileType() }}</span>
+        }
         <h2 class="expanded-title">{{ expandedTitle() }}</h2>
 
         <!-- AI result / diff view -->
@@ -361,7 +371,7 @@
               @if (canGenerateSpecs()) {
                 <div class="brainstorm-generate-row">
                   <button class="brainstorm-generate-btn" [disabled]="specGenLoading()" (click)="generateFromBrainstormResult()">
-                    <i data-lucide="sparkles"></i> Generate Specs from this brainstorm
+                    <span class="btn-icon">✦</span> Generate Specs from this brainstorm
                   </button>
                 </div>
               }
@@ -393,7 +403,7 @@
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title">New Project</h2>
-        <button class="modal-close" (click)="closeCreateModal()"><i data-lucide="x"></i></button>
+        <button class="modal-close" (click)="closeCreateModal()"><span class="btn-icon">×</span></button>
       </div>
 
       <div class="modal-body">
@@ -416,7 +426,10 @@
           rows="14"></textarea>
 
         @if (specGenError()) {
-          <div class="text-ops-error">{{ specGenError() }}</div>
+          <div class="text-ops-error">
+            <span class="overline">Error</span>
+            {{ specGenError() }}
+          </div>
         }
       </div>
 
@@ -432,7 +445,7 @@
             <span class="thinking-dot"></span>
             Generating…
           } @else {
-            <i data-lucide="sparkles"></i> Generate Specs
+            <span class="btn-icon">✦</span> Generate Specs
           }
         </button>
       </div>

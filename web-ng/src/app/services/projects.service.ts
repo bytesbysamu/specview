@@ -21,16 +21,43 @@ export interface GeneratedFile {
   content: string;
 }
 
+const CANONICAL_ORDER = [
+  'braindump',
+  'analysis',
+  'epic',
+  'architecture',
+  'timeline',
+  'implementation-guide',
+];
+
+function sortSpecs(specs: Spec[]): Spec[] {
+  return [...specs].sort((a, b) => {
+    const nameA = a.filename.replace(/\.md$/i, '');
+    const nameB = b.filename.replace(/\.md$/i, '');
+    const idxA = CANONICAL_ORDER.indexOf(nameA);
+    const idxB = CANONICAL_ORDER.indexOf(nameB);
+    const rankA = idxA === -1 ? CANONICAL_ORDER.length : idxA;
+    const rankB = idxB === -1 ? CANONICAL_ORDER.length : idxB;
+    if (rankA !== rankB) return rankA - rankB;
+    // Both unknown — sort alphabetically by filename
+    return a.filename.localeCompare(b.filename);
+  });
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjectsService {
   constructor(private http: HttpClient) {}
 
   listProjects(): Promise<Project[]> {
-    return firstValueFrom(this.http.get<Project[]>('/api/projects'));
+    return firstValueFrom(this.http.get<Project[]>('/api/projects')).then(
+      projects => projects.map(p => ({ ...p, specs: sortSpecs(p.specs) }))
+    );
   }
 
   getProject(id: string): Promise<Project> {
-    return firstValueFrom(this.http.get<Project>(`/api/projects/${id}`));
+    return firstValueFrom(this.http.get<Project>(`/api/projects/${id}`)).then(
+      p => ({ ...p, specs: sortSpecs(p.specs) })
+    );
   }
 
   getContext(key: string): Promise<{ content: string; text?: string }> {

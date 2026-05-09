@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, signal, computed, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { trigger, transition, style, animate, query, group } from '@angular/animations';
 import { marked } from 'marked';
@@ -66,9 +66,6 @@ const GEN_POLL_INTERVAL = 10_000;
 
 
 
-declare const lucide: { createIcons(): void };
-let _lucideScheduled = false;
-
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -101,7 +98,7 @@ let _lucideScheduled = false;
     ]),
   ],
 })
-export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class AppComponent implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private projectsSvc = inject(ProjectsService);
   private aiSvc = inject(AiService);
@@ -366,19 +363,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
     this._stopGenPoll();
     this._stopSyncElapsedTimer();
     if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
-    _lucideScheduled = false;
-  }
-
-  ngAfterViewChecked() {
-    if (typeof lucide !== 'undefined' && !_lucideScheduled) {
-      _lucideScheduled = true;
-      setTimeout(() => {
-        // Remove stale SVGs left behind by @if block re-renders before re-scanning.
-        document.querySelectorAll('[data-lucide] ~ svg').forEach(el => el.remove());
-        lucide.createIcons();
-        _lucideScheduled = false;
-      }, 0);
-    }
   }
 
   private stopPolling() {
@@ -567,6 +551,20 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.aiResult.set(null);
     
   }
+
+  /**
+   * Derives a display label from the active filename for the reader overline.
+   * e.g. "architecture.md" → "ARCHITECTURE", "implementation-guide.md" → "IMPLEMENTATION GUIDE"
+   * Returns null when no project file is open.
+   */
+  activeFileType = computed((): string | null => {
+    const file = this.activeFile();
+    if (!file || !this.activeProject()) return null;
+    return file
+      .replace(/\.md$/i, '')
+      .replace(/-/g, ' ')
+      .toUpperCase();
+  });
 
   // True only when the open file is the braindump
   isBraindump = computed(() => {
