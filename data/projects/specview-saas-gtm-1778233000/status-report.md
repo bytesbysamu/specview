@@ -59,7 +59,7 @@ Specview went from zero to a fully deployed, AI-powered spec generation tool in 
 - **Node.js 24** — opted in via CI
 - **`impl-guide` fix** — write permission issue resolved; `epic_guide` prompt enforced `impl-guide` output structure
 - **UX reader overhaul (PRs #27, #28)** — sidebar-first layout, taxonomy tabs, status bar, animations, Lucide icons, text ops and navigation
-- **All projects baked into Docker image** — `data/projects/` committed; no volume needed
+- **All projects committed to `data/projects/`** — baked into production image; local dev uses volume mount via override
 - Dependabot grouped into one PR per ecosystem; GitHub Actions bumped
 
 ---
@@ -89,8 +89,8 @@ Specview went from zero to a fully deployed, AI-powered spec generation tool in 
 
 ## Current State
 
-- Live on VPS: Flask API port 8095, Angular SPA + nginx landing port 8096
-- Local dev: `docker compose up -d` (override maps 8095 web, 8096 landing)
+- Live on VPS: Coolify/Traefik handles routing — no fixed host ports; Flask API internal on port 3101
+- Local dev: `docker compose up -d` (override maps 8095 → nginx web proxy, 8096 → landing)
 - CI: GitHub Actions — pytest suite (701 tests, 0 failures as of Phase 4)
 - All AI calls route via `CHAIN_PROVIDER=cli` + `chain-agent`
 
