@@ -49,20 +49,6 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* ── Lucide icons ────────────────────────────────────────────────────────── */
-
-svg {
-  display: inline-block;
-  vertical-align: middle;
-  stroke: currentColor;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  width: 1em;
-  height: 1em;
-  stroke-width: 2;
-}
-
 body {
   font-family: 'Source Serif 4', Georgia, serif;
   background: var(--bg);
@@ -159,6 +145,9 @@ body {
   background: var(--bg);
   z-index: 10;
   transition: background 0.2s ease;
+}
+[data-theme="dark"] .section-nav {
+  border-bottom: 1px solid var(--border-dark);
 }
 
 .section-link {
@@ -700,14 +689,7 @@ body {
   padding-bottom: 4px;
   margin-bottom: 12px;
 }
-.section-group-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-muted);
-}
+/* .section-group-title styling is supplied entirely by .overline */
 .section-group-count {
   font-size: 9px;
   color: var(--ink-muted);
@@ -851,6 +833,7 @@ body {
   z-index: 100;
   transition: background 0.2s;
 }
+[data-theme="dark"] .editor-toolbar { border-bottom: 3px solid var(--border-dark); }
 [data-theme="dark"] .editor-toolbar--floating { box-shadow: 0 -4px 20px rgba(0,0,0,0.3); }
 
 /* Style presets as a toolbar sub-row */
@@ -1236,6 +1219,7 @@ body {
   color: var(--ink-muted);
   letter-spacing: 0.04em;
 }
+[data-theme="dark"] .latency-badge { color: var(--ink-light); }
 
 /* ── Fixed generation status bar ─────────────── */
 .gen-status-bar {
@@ -1330,6 +1314,13 @@ body {
 }
 .new-project-btn:hover { background: var(--accent); color: var(--bg); }
 
+/* ── Button icon (Unicode glyph in place of Lucide SVG) ──────────────────── */
+.btn-icon {
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1;
+  vertical-align: middle;
+}
 
 /* ── Modal ───────────────────────────────────── */
 .modal-backdrop {
@@ -1352,6 +1343,9 @@ body {
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 48px rgba(0,0,0,0.18);
+}
+[data-theme="dark"] .modal {
+  box-shadow: 0 8px 48px rgba(0,0,0,0.6);
 }
 
 .modal-header {
@@ -1378,6 +1372,7 @@ body {
   transition: color 0.15s;
 }
 .modal-close:hover { color: var(--ink); }
+[data-theme="dark"] .modal-close { color: var(--ink-light); }
 
 .modal-body {
   padding: 20px 24px;

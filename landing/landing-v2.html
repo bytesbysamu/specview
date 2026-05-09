@@ -42,6 +42,7 @@
     <a href="#how">What ships</a>
     <a href="#see">See it</a>
     <a href="#start">Start</a>
+    <a href="#faq">FAQ</a>
   </nav>
 
   <!-- 1. Hero -->
@@ -90,6 +91,26 @@
       </div>
     </aside>
   </section>
+
+  <!-- Stat strip -->
+  <div class="stat-strip">
+    <div class="stat-item">
+      <div class="stat-value">44.5s</div>
+      <div class="stat-label">avg generation</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">5</div>
+      <div class="stat-label">files per run</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">0</div>
+      <div class="stat-label">human code lines</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">Free</div>
+      <div class="stat-label">to start</div>
+    </div>
+  </div>
 
   <!-- 2. What ships -->
   <div class="section-heading">What ships &nbsp;<span style="background:var(--border);border-radius:2px;font-family:var(--sans);font-size:10px;padding:1px 6px;color:var(--ink-light);vertical-align:middle">5</span></div>
@@ -144,7 +165,47 @@
     </div>
   </section>
 
-  <!-- 3. See it -->
+  <!-- 3. How it works -->
+  <div class="section-heading">How it works</div>
+  <section class="steps" id="howworks">
+
+    <div class="step">
+      <span class="step-num">1</span>
+      <div class="step-title">Braindump</div>
+      <p class="step-body">Write everything you know about the feature — raw, unfiltered, unstructured. Three paragraphs is enough. The messier the better.</p>
+      <div class="step-code">We need a billing system. Stripe.
+Free tier = 3 projects/month,
+Pro = unlimited at $29/mo.
+Usage tracking per user.
+Don't overbuild — just works.</div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">2</span>
+      <div class="step-title">Generate</div>
+      <p class="step-body">One click. The AI chain runs: analysis → epic → architecture → timeline → implementation guide. Each file appears as it completes.</p>
+      <div class="step-code">✦ analysis.md    done  (12.3s)
+✦ epic.md        done  (18.1s)
+✦ architecture   done  (31.7s)
+✦ timeline       done  ( 2.1s)
+✦ impl-guide     done  (44.5s)
+5 files · claude-sonnet · done</div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">3</span>
+      <div class="step-title">Read &amp; Build</div>
+      <p class="step-body">Open the specs. Read them like a newspaper. Hand the implementation guide to your agent — every task has file paths, tests, and a commit plan.</p>
+      <div class="step-code">Task 1: Wire Stripe Adapter
+├─ Files: billing/adapter.py
+├─ Tests: 7 assertions, full bodies
+├─ Commit: feat(billing): wire checkout
+└─ Verify: pytest — 7 passed</div>
+    </div>
+
+  </section>
+
+  <!-- 4. See it -->
   <div class="section-heading">See it</div>
   <section class="section-page" id="see">
 
@@ -204,6 +265,54 @@
   </section>
 
   <!-- 4. Start -->
+  <!-- Comparison table -->
+  <div class="section-heading">Specview vs AI app builders</div>
+  <section class="section-page" id="compare" style="min-height:auto;padding:40px;">
+    <div class="compare-table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="col-them">Lovable / Bolt / Kiro</th>
+          <th>Specview</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Input</td>
+          <td class="col-them">Chat prompt</td>
+          <td>Braindump — 3 paragraphs</td>
+        </tr>
+        <tr>
+          <td>Output</td>
+          <td class="col-them">Code you didn't write</td>
+          <td>Specs you review, then code that matches</td>
+        </tr>
+        <tr>
+          <td>Architecture</td>
+          <td class="col-them">AI decides</td>
+          <td>You review before a line is written</td>
+        </tr>
+        <tr>
+          <td>Docs</td>
+          <td class="col-them">None</td>
+          <td>Built-in — every feature is documented</td>
+        </tr>
+        <tr>
+          <td>Quality</td>
+          <td class="col-them">Hope it works</td>
+          <td>Spec → implement → verify loop</td>
+        </tr>
+        <tr>
+          <td>Pricing</td>
+          <td class="col-them">$20–550/mo credits</td>
+          <td>$29/mo flat, unlimited</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
   <div class="section-heading">Start building</div>
   <section class="section-page pricing" id="start">
     <div class="pricing-grid">
@@ -247,11 +356,46 @@
     </div>
   </section>
 
+  <!-- FAQ -->
+  <div class="section-heading">Questions</div>
+  <section class="section-page" id="faq" style="min-height:auto;padding:40px;">
+    <div class="faq-list">
+
+      <details class="faq-item">
+        <summary>What do I need to use Specview?</summary>
+        <p class="faq-answer">A browser. Sign up, paste a braindump, click generate. The hosted version runs everything — no CLI, no local setup, no API key required.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Is this like Lovable or Bolt?</summary>
+        <p class="faq-answer">No. Lovable generates code from prompts. Specview generates specs from braindumps. You review the architecture before any code is written. The specs become the documentation — they don't disappear after deploy.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>What if the generated specs are wrong?</summary>
+        <p class="faq-answer">Edit the braindump and regenerate. Or edit the markdown directly. The specs are files you own — not locked in a platform. Wrong architecture before you build beats wrong code after you ship.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Can I self-host?</summary>
+        <p class="faq-answer">Yes. Specview is open-source. <code>git clone</code>, <code>docker compose up</code>, done. The hosted version at app.specview.io saves you the setup and keeps you on the latest model.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Why $29/month?</summary>
+        <p class="faq-answer">Unlimited spec generation. No credits. No per-request charges. Kiro costs $20–550/month in credits. Cursor is $20/month for code suggestions. $29/month for full architecture documents that your whole team reads is a different category of value.</p>
+      </details>
+
+    </div>
+  </section>
+
   <footer class="footer">
     <div class="footer-brand">Spec Doc</div>
     <div class="footer-copy">Built by Sam · Powered by Claude</div>
     <nav class="footer-links">
       <a href="https://github.com/bytesbysamu/specview">GitHub</a>
+      <a href="https://x.com/bytesbysamu">Twitter/X</a>
+      <a href="mailto:sam@specview.io">Contact</a>
     </nav>
   </footer>
 
