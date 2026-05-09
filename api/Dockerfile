@@ -33,11 +33,15 @@ COPY data/ /data/spec-doc/
 
 RUN chown -R appuser:appgroup /data/spec-doc/
 
+COPY api/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER appuser
 ENV HOME=/home/appuser
 
 EXPOSE 3101
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", \
      "--bind", "0.0.0.0:3101", \
      "--worker-class", "gthread", \

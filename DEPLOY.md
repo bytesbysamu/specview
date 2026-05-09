@@ -15,6 +15,23 @@ docker compose build
 docker compose up -d
 ```
 
+## Claude credentials (Coolify)
+
+The API uses your Claude Max OAuth credentials for CLI calls. Set `CLAUDE_CREDENTIALS_JSON`
+as an environment variable in Coolify — the container writes it to `~/.claude/.credentials.json`
+at startup and auto-refreshes from there.
+
+Get the value to paste into Coolify from your Mac:
+
+```bash
+security find-generic-password -s "Claude Code-credentials" -w
+```
+
+Copy the JSON output → Coolify service → Environment Variables → `CLAUDE_CREDENTIALS_JSON`.
+
+The refresh token inside the JSON is long-lived. You only need to update this if you explicitly
+log out of your Claude Max session.
+
 App runs on port 80.
 
 ## Update

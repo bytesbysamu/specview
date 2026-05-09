@@ -22,6 +22,12 @@ services:
       DATABASE_URL: "postgresql://neondb_owner:npg_7koHUOnPFp3E@ep-lively-feather-agg1dzjp-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
       JWT_SECRET: "ef65adfbc50572d85b346a0cb5791ccc577fd4ec6a91a018a5b994a92ff40405"
       CORS_ORIGINS: "*"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3101/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
     networks:
       - specview

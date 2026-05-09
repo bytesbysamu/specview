@@ -11,11 +11,10 @@ services:
     environment:
       CHAIN_PROVIDER: cli
       CHAIN_AGENT: chain-agent
-      # ANTHROPIC_CLI_KEY: ""  # unset — container uses ~/.claude/.credentials.json for OAuth
       SPEC_DOC_DIR: /data/spec-doc
       PLUGIN_DIR: /app/plugin
+      CLAUDE_CREDENTIALS_JSON: ${CLAUDE_CREDENTIALS_JSON}
     volumes:
-      - /Users/sam/Projects/specview/.claude-docker:/home/appuser/.claude
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw
       - /Users/sam/Projects/specview/data:/data/spec-doc
       - /Users/sam/Projects/specview/plugin:/app/plugin:ro
