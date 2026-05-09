@@ -12,16 +12,11 @@
     /* Wireframe annotation layer — not for production */
     .wf {
       position: relative;
-      box-shadow:
-        3px 3px 0 var(--border),
-        6px 6px 0 rgba(0,0,0,0.04);
-      transition: box-shadow 0.2s;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 0 0 4px rgba(0,0,0,0.02);
+      transition: box-shadow 0.25s;
     }
     .wf:hover {
-      box-shadow:
-        3px 3px 0 var(--border),
-        6px 6px 0 var(--border),
-        9px 9px 0 rgba(0,0,0,0.04);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.10), 0 0 0 6px rgba(0,0,0,0.04);
     }
     .wf::before {
       content: attr(data-wf);
@@ -34,11 +29,11 @@
       top: 5px;
       right: 8px;
       opacity: 0;
-      transition: opacity 0.2s;
+      transition: opacity 0.25s;
       pointer-events: none;
     }
     .wf:hover::before {
-      opacity: 1;
+      opacity: 0.5;
     }
   </style>
 </head>
@@ -88,9 +83,10 @@
   </section>
 
   <!-- ── WHAT GETS GENERATED ───────────────────────────────────────────── -->
-  <div class="section-heading" id="how">What gets generated</div>
+  <div class="section-heading">What gets generated</div>
 
-  <div class="output-grid wf" data-wf="output-grid — 4-column, full width">
+  <section class="section-page wf" id="how" data-wf="output-grid — 4-column, full width">
+  <div class="output-grid">
     <div class="output-card">
       <span class="output-card__icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -131,12 +127,12 @@
       <div class="output-card__filename">implementation-guide.md</div>
       <div class="output-card__body">Hands each task to an agent with the exact steps, files, and verify criteria needed to ship it.</div>
     </div>
-  </div>
+  </section>
 
   <!-- ── SEE IT ─────────────────────────────────────────────────────────── -->
-  <div class="section-heading" id="see">See it</div>
+  <div class="section-heading">See it</div>
 
-  <section class="wf" data-wf="demo strip">
+  <section class="section-page wf" id="see" data-wf="demo strip">
     <div class="demo-strip">
       <div class="demo-strip-inner">
         <div class="demo-masthead">
@@ -175,9 +171,9 @@
   </section>
 
   <!-- ── START BUILDING ─────────────────────────────────────────────────── -->
-  <div class="section-heading" id="start">Start building</div>
+  <div class="section-heading">Start building</div>
 
-  <section class="pricing wf" data-wf="pricing-grid — 2 tiers">
+  <section class="section-page pricing wf" id="start" data-wf="pricing-grid — 2 tiers">
     <div class="pricing-grid">
 
       <div class="pricing-tier">
