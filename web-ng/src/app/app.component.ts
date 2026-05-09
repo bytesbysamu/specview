@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { trigger, transition, style, animate, query, group } from '@angular/animations';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile } from './services/projects.service';
@@ -9,6 +10,7 @@ import { AiService } from './services/ai.service';
 import { LoginComponent } from './components/login/login.component';
 import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
 import { projectTeaser, countTasks } from './services/project-teaser';
+import { WordCountPipe } from './word-count.pipe';
 
 interface ParagraphDiff {
   type: 'keep' | 'add' | 'remove';
@@ -69,7 +71,7 @@ const GEN_POLL_INTERVAL = 10_000;
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [LoginComponent],
+  imports: [LoginComponent, WordCountPipe],
   templateUrl: './app.component.html',
   animations: [
     trigger('panelEnter', [
@@ -116,7 +118,7 @@ export class AppComponent implements OnInit, OnDestroy {
   isDark = signal(false);
   today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   updateBanner = signal('');
-  knownCount = 0;
+  knownCount = signal(0);
 
   // AI text ops state
   aiLoading = signal(false);
@@ -142,7 +144,7 @@ export class AppComponent implements OnInit, OnDestroy {
   epicGuideError = signal<string | null>(null);
 
 
-  toolbarFloating = signal(false);
+  toolbarFloating = computed(() => !!(this.activeProject() && this.currentSpec()));
   polling = signal(false);
   pollOk = signal(true);
   pollingError = signal<string | null>(null);
@@ -238,7 +240,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const ctx = this.contextContent();
     const content = spec?.content ?? ctx ?? '';
     if (!content) return '';
-    return this.sanitizer.bypassSecurityTrustHtml(marked.parse(content) as string);
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(marked.parse(content) as string));
   });
 
   // Undo / redo stacks keyed by "projectId/filename"
@@ -260,18 +262,18 @@ export class AppComponent implements OnInit, OnDestroy {
       if (d.type === 'add')    return `<div class="diff-block-add">${rendered}</div>`;
       return rendered;
     });
-    return this.sanitizer.bypassSecurityTrustHtml(parts.join(''));
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(parts.join('')));
   });
 
   // For brainstorm and TL;DR — render result as plain markdown (no diff)
   parsedAiResult = computed((): SafeHtml => {
     const result = this.aiResult();
     if (!result) return '';
-    return this.sanitizer.bypassSecurityTrustHtml(marked.parse(result) as string);
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(marked.parse(result) as string));
   });
 
   // True for ops where diff view doesn't make sense (brainstorm is additive)
-  isAdditivOp = computed(() => ['brainstorm', 'tldr'].includes(this.activeOp() ?? ''));
+  isAdditiveOp = computed(() => ['brainstorm', 'tldr'].includes(this.activeOp() ?? ''));
 
   aiOpLabel = computed(() => {
     const labels: Record<string, string> = {
@@ -333,11 +335,6 @@ export class AppComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Toolbar is always fixed at bottom when a project file is open
-    effect(() => {
-      this.toolbarFloating.set(!!(this.activeProject() && this.currentSpec()));
-    });
-
     // Pulse section count badges when their count changes
     effect(() => {
       const counts = this.sectionCounts();
@@ -348,7 +345,7 @@ export class AppComponent implements OnInit, OnDestroy {
         setTimeout(() => this.pulsingSections.set(new Set()), 250);
       }
       this._prevSectionCounts = { ...counts };
-    });
+    }, { allowSignalWrites: true });
   }
 
   // ── Lifecycle ─────────────────────────────────────
@@ -469,7 +466,7 @@ export class AppComponent implements OnInit, OnDestroy {
     try {
       const list = await this.projectsSvc.listProjects();
       this.projects.set(list);
-      this.knownCount = list.length;
+      this.knownCount.set(list.length);
       this._markSyncNow();
     } catch { /* 401 handled by interceptor */ }
   }
@@ -487,11 +484,11 @@ export class AppComponent implements OnInit, OnDestroy {
       this.pollOk.set(true);
       this._markSyncNow();
       // Always update on count change, OR if projects is empty (initial load may have failed)
-      if (fresh.length !== this.knownCount || this.knownCount === 0) {
-        const diff = fresh.length - this.knownCount;
+      if (fresh.length !== this.knownCount() || this.knownCount() === 0) {
+        const diff = fresh.length - this.knownCount();
         this.projects.set(fresh);
-        this.knownCount = fresh.length;
-        if (diff > 0 && this.knownCount > 0) {
+        this.knownCount.set(fresh.length);
+        if (diff > 0 && this.knownCount() > 0) {
           this.updateBanner.set(`+${diff} new`);
           setTimeout(() => this.updateBanner.set(''), 5000);
         }
@@ -599,7 +596,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly STYLE_PRESETS = ['Concise', 'Technical', 'Executive', 'Narrative', 'Punchy'];
 
   // ── AI text ops ───────────────────────────────────
-  toggleOp(op: string) {
+  toggleOp(op: 'expand' | 'compress' | 'clarify' | 'simplify' | 'tldr' | 'bullets' | 'brainstorm' | 'style') {
     if (this.activeOp() === op) {
       this.activeOp.set(null);
       this.aiResult.set(null);
@@ -612,7 +609,7 @@ export class AppComponent implements OnInit, OnDestroy {
     // 'style' shows preset chips (no immediate call); 'rewrite' kept as alias for style
     const immediateOps = ['expand', 'compress', 'clarify', 'simplify', 'tldr', 'bullets', 'brainstorm'];
     if (immediateOps.includes(op)) {
-      this.runOp(op as any);
+      this.runOp(op as 'expand' | 'compress' | 'clarify' | 'simplify' | 'tldr' | 'bullets' | 'brainstorm');
     }
   }
 

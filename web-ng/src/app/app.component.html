@@ -250,18 +250,18 @@
               @if (isBraindump()) {
                 <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')"><span class="btn-icon">✦</span> Brainstorm</button>
               }
-              <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')">Expand</button>
-              <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')">Compress</button>
-              <button class="op-chip" [class.active]="activeOp() === 'clarify'"   (click)="toggleOp('clarify')">Clarify</button>
-              <button class="op-chip" [class.active]="activeOp() === 'simplify'"  (click)="toggleOp('simplify')">Simplify</button>
-              <button class="op-chip" [class.active]="activeOp() === 'tldr'"      (click)="toggleOp('tldr')">TL;DR</button>
-              <button class="op-chip" [class.active]="activeOp() === 'bullets'"   (click)="toggleOp('bullets')">Bullets</button>
-              <button class="op-chip" [class.active]="activeOp() === 'style'"     (click)="toggleOp('style')">Style…</button>
+              <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')"><span class="btn-icon">↕</span> Expand</button>
+              <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')"><span class="btn-icon">⊡</span> Compress</button>
+              <button class="op-chip" [class.active]="activeOp() === 'clarify'"   (click)="toggleOp('clarify')"><span class="btn-icon">?</span> Clarify</button>
+              <button class="op-chip" [class.active]="activeOp() === 'simplify'"  (click)="toggleOp('simplify')"><span class="btn-icon">◁</span> Simplify</button>
+              <button class="op-chip" [class.active]="activeOp() === 'tldr'"      (click)="toggleOp('tldr')"><span class="btn-icon">≡</span> TL;DR</button>
+              <button class="op-chip" [class.active]="activeOp() === 'bullets'"   (click)="toggleOp('bullets')"><span class="btn-icon">≔</span> Bullets</button>
+              <button class="op-chip" [class.active]="activeOp() === 'style'"     (click)="toggleOp('style')"><span class="btn-icon">◈</span> Style…</button>
               @if (canRevert()) {
-                <button class="op-chip editor-hist-btn" (click)="undoVersion()">↩ Undo</button>
+                <button class="op-chip editor-hist-btn" (click)="undoVersion()"><span class="btn-icon">↩</span> Undo</button>
               }
               @if (canRedo()) {
-                <button class="op-chip editor-hist-btn" (click)="redoVersion()">↻ Redo</button>
+                <button class="op-chip editor-hist-btn" (click)="redoVersion()"><span class="btn-icon">↻</span> Redo</button>
               }
             </div>
             <!-- Style preset chips — shown in sidebar below chip row when Style is active -->
@@ -324,7 +324,7 @@
 
         <!-- Inline generation status for this project -->
         @if (specGenLoading() && activeProject()) {
-          <div class="inline-gen-status">
+          <div class="gen-status-bar gen-status-bar--active">
             <div class="gen-status-track"></div>
             <div class="gen-status-content">
               <span class="thinking-dot gen-dot"></span>
@@ -349,11 +349,18 @@
         @if (activeFileType()) {
           <span class="overline">{{ activeFileType() }}</span>
         }
+        @if (activeProject() && currentSpec()) {
+          <div class="expanded-meta">
+            <span>{{ activeProject()?.name }}</span>
+            <span>·</span>
+            <span>{{ currentSpec()?.content | wordCount }} words</span>
+          </div>
+        }
         <h2 class="expanded-title">{{ expandedTitle() }}</h2>
 
         <!-- AI result / diff view -->
         @if (activeProject() && aiResult()) {
-          @if (isAdditivOp()) {
+          @if (isAdditiveOp()) {
             <!-- Brainstorm / TL;DR: render result as rich markdown, no diff -->
             <div class="brainstorm-result markdown-content" data-test="brainstorm-result" [innerHTML]="parsedAiResult()"></div>
             @if (activeOp() === 'brainstorm') {

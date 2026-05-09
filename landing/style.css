@@ -686,6 +686,7 @@ svg {
   gap: 8px;
   padding: 8px 16px;
 }
+.gen-status-name { font-weight: 700; }
 .gen-status-dot {
   width: 5px;
   height: 5px;
@@ -717,6 +718,11 @@ svg {
   font-size: 13px;
   color: var(--ink-muted);
   line-height: 1.5;
+}
+
+.context-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 /* ── Markdown content (2-column newspaper) ───────────────────────────────── */
@@ -819,6 +825,8 @@ svg {
   padding: 80px 40px;
   border-bottom: 1px solid var(--border);
 }
+
+.section-page--compact { min-height: auto; padding: 40px; }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
@@ -1170,3 +1178,47 @@ details.faq-item[open] summary::after {
   .compare-table-wrap { overflow-x: auto; }
   details.faq-item summary { font-size: 16px; }
 }
+
+/* ── Update banner ──────────────────────────────────────────────────────────── */
+.update-banner {
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--sans);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.update-banner button {
+  border: 1px solid var(--bg);
+  border-radius: 2px;
+  background: none;
+  color: var(--bg);
+  font-family: var(--sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.update-banner button:hover { background: var(--bg); color: var(--ink); }
+.update-banner a {
+  background: none;
+  border: 1px solid var(--bg);
+  border-radius: 2px;
+  color: var(--bg);
+  font-family: var(--sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.update-banner a:hover { background: var(--bg); color: var(--ink); }
