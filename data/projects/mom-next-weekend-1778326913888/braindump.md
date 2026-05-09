@@ -1,0 +1,1 @@
+Give me ideas for activities in zurich with my mom next weekend
