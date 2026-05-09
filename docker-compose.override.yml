@@ -14,6 +14,7 @@ services:
       SPEC_DOC_DIR: /data/spec-doc
       PLUGIN_DIR: /app/plugin
       CLAUDE_CREDENTIALS_JSON: ${CLAUDE_CREDENTIALS_JSON}
+      CLAUDE_CONFIG_DIR: /home/appuser/.claude-openclaw
     volumes:
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw
       - /Users/sam/Projects/specview/data:/data/spec-doc
