@@ -42,6 +42,22 @@ jobs:
               - 'docker-compose.yml'
               - '.github/workflows/ci.yml'
 
+  compose-lint:
+    name: Compose config lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: No localhost in healthchecks
+        run: |
+          # localhost in a container resolves to ::1 (IPv6), but gunicorn/nginx
+          # bind to 0.0.0.0 (IPv4 only) — healthchecks silently fail. Use 127.0.0.1.
+          if grep -n 'test:' docker-compose.yml | grep -q 'localhost'; then
+            echo "ERROR: healthcheck uses 'localhost' — use '127.0.0.1' instead (IPv6 resolution breaks in-container checks)"
+            grep -n 'test:' docker-compose.yml | grep 'localhost'
+            exit 1
+          fi
+          echo "OK: no localhost in healthchecks"
+
   # ── Stage 1 — backend and frontend tracks run in parallel, independently ──
 
   backend:
@@ -194,8 +210,8 @@ jobs:
 
   docker:
     name: Docker build & smoke
-    needs: [e2e]
-    if: always() && needs.e2e.result == 'success'
+    needs: [e2e, compose-lint]
+    if: always() && needs.e2e.result == 'success' && needs.compose-lint.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -217,6 +233,25 @@ jobs:
           done
           echo "API health check failed after 120s"
           docker compose -f docker-compose.yml -f docker-compose.ci.yml logs api
+          exit 1
+      - name: Verify container health status
+        run: |
+          # Confirm each container's built-in healthcheck reports 'healthy'.
+          # This catches IPv6/IPv4 mismatches and other in-container failures
+          # that host-side port checks can't detect.
+          for i in $(seq 1 18); do
+            ALL_HEALTHY=true
+            for svc in api web landing; do
+              CID=$(docker compose -f docker-compose.yml -f docker-compose.ci.yml ps -q "$svc" 2>/dev/null)
+              STATUS=$(docker inspect "$CID" --format '{{.State.Health.Status}}' 2>/dev/null || echo "missing")
+              echo "${svc}: ${STATUS}"
+              [ "$STATUS" = "healthy" ] || ALL_HEALTHY=false
+            done
+            $ALL_HEALTHY && echo "All containers healthy" && exit 0
+            sleep 5
+          done
+          echo "FAIL: not all containers healthy after 90s"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
           exit 1
       - name: Smoke — /api/health returns status field
         run: |
