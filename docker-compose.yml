@@ -8,7 +8,7 @@ services:
     depends_on:
       - api
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,7 +29,7 @@ services:
       JWT_SECRET: "ef65adfbc50572d85b346a0cb5791ccc577fd4ec6a91a018a5b994a92ff40405"
       CORS_ORIGINS: "*"
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:3101/api/health"]
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3101/api/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -45,7 +45,7 @@ services:
     expose:
       - "80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
