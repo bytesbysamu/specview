@@ -130,7 +130,7 @@ svg {
 }
 
 .masthead-tagline {
-  font-family: var(--sans);
+  font-family: var(--body);
   font-size: 13px;
   font-style: italic;
   color: var(--ink-light);
