@@ -4,7 +4,7 @@
 
 Specview is a self-hosted spec generation tool and its own Claude Code plugin system. Users paste a braindump; an AI chain generates analysis, epic, architecture, timeline, and implementation guide. It also ships a Claude Code plugin (`plugin/`) that encodes Flask/Angular/chain conventions once so every dev session auto-loads the right reference files and skill/agent routing.
 
-Stack: Flask API (Python 3.11) + Angular 17 SPA (signals, no NgRx) + static nginx landing page. Deployed via Docker Compose on Coolify VPS. AI runs exclusively through `CHAIN_PROVIDER=cli` — the Claude CLI routed through an agent named `chain-agent`.
+Stack: Flask API (Python 3.11) + Angular 19 SPA (signals, no NgRx) + static nginx landing page. Deployed via Docker Compose on Coolify VPS. AI runs exclusively through `CHAIN_PROVIDER=cli` — the Claude CLI routed through an agent named `chain-agent`.
 
 ## The problem it solves
 
@@ -12,7 +12,7 @@ Two problems in one repo. First: braindump → structured spec set is slow and c
 
 ## Current state
 
-Live in production on VPS. Flask API on port 8095, Angular SPA and nginx landing co-deployed. Local dev via `docker compose up -d` with override (port 8095 web, 8096 landing). API container mounts `~/.claude` and `~/.claude-openclaw` for CLI credentials. Plugin is fully wired in `.claude/` with 7 skills and 4 agents.
+Live in production on VPS. nginx web proxy on port 8095 (local dev), Flask API internal on port 3101, nginx landing on port 8096. On VPS, Coolify/Traefik handles routing — no fixed host ports. Local dev via `docker compose up -d` with override. API container mounts `~/.claude-openclaw`; Claude credentials injected via `CLAUDE_CREDENTIALS_JSON` env var. Plugin is fully wired in `.claude/` with 9 skills and 4 agents.
 
 ## Key decisions made
 
@@ -27,13 +27,12 @@ Live in production on VPS. Flask API on port 8095, Angular SPA and nginx landing
 
 ## Plugin architecture
 
-7 skills: `dev-build`, `dev-test`, `dev-migrate`, `dev-review`, `spec-pipeline`, `impl-guide`, `exec-guide`. 4 agents: `chain-agent` (AI workflow layer), `spec-backend` (Flask specialist), `spec-frontend` (Angular specialist), `chain-developer` (cross-layer coordinator). The `spec-pipeline` skill calls the bootstrap API to generate the full spec set from a braindump. `impl-guide` turns epic + architecture into a high-level implementation guide. `exec-guide` dispatches tasks from the implementation guide to specialist agents.
+9 skills: `brainstorm`, `dev-build`, `dev-test`, `dev-migrate`, `dev-review`, `spec-pipeline`, `impl-guide`, `exec-guide`, `triage-projects`. 4 agents: `chain-agent` (AI workflow layer), `spec-backend` (Flask specialist), `spec-frontend` (Angular specialist), `chain-developer` (cross-layer coordinator). The `spec-pipeline` skill calls the bootstrap API to generate the full spec set from a braindump. `impl-guide` turns epic + architecture into a high-level implementation guide. `exec-guide` dispatches tasks from the implementation guide to specialist agents.
 
 `dev-review` fans out to all three specialist agents in parallel. Agents auto-load their reference files at dispatch time — no manual context injection.
 
 ## Open questions
 
-- Whether to extract `server.js` (legacy Express path) fully in favor of Flask, or keep it as a dev-only utility.
 - Whether to modularize `api/modules/ai/` further as the number of AI workflow types grows.
 - Deployment automation: currently manual `git pull + docker compose build` on VPS; no CI-triggered deploy.
 
