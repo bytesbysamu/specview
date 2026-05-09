@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spec Doc — Engineering Specs from Braindumps</title>
 
-  <meta name="description" content="Turn your raw ideas into structured engineering specs. Analysis, Epic, Architecture, Timeline, Implementation Guide — generated in minutes by AI.">
+  <meta name="description" content="Turn your braindump into a full engineering spec set in under a minute.">
   <meta property="og:title" content="Spec Doc — Engineering Specs from Braindumps">
-  <meta property="og:description" content="Turn your raw ideas into structured engineering specs. Analysis, Epic, Architecture, Timeline, Implementation Guide — generated in minutes.">
+  <meta property="og:description" content="Turn your braindump into a full engineering spec set in under a minute.">
   <meta property="og:type" content="website">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,111 +39,125 @@
   <!-- Section nav -->
   <nav class="section-bar">
     <a href="#what" class="active">What</a>
-    <a href="#how">How it works</a>
+    <a href="#how">What ships</a>
     <a href="#see">See it</a>
     <a href="#start">Start</a>
   </nav>
 
-  <!-- Hero — full-width single-column, no lede grid -->
-  <section id="what">
-    <span class="overline">Introducing Spec Doc</span>
-    <h2 class="headline">From raw braindump to a five-document engineering spec in under a minute.</h2>
-    <p class="deck">
-      Write what you know — messy, incomplete, half-formed. Spec Doc runs five
-      analytical passes and returns the structured artefacts your team needs to
-      move from idea to implementation without a single meeting.
-    </p>
-    <div class="cta-row">
-      <a href="#start" class="btn-primary">Start building</a>
-      <a href="#how" class="btn-secondary">How it works</a>
+  <!-- 1. Hero -->
+  <section class="lede" id="what">
+    <div class="lede-main">
+      <span class="overline">Engineering Specs</span>
+      <h2 class="headline">Write messy.<br>Ship clean.</h2>
+      <p class="deck">Paste your braindump. Five engineering documents back in under a minute.</p>
+      <div class="cta-row">
+        <a href="https://app.specview.io/signup" class="btn-primary">Try it free</a>
+        <a href="#how" class="btn-secondary">What ships</a>
+      </div>
+    </div>
+
+    <div class="lede-divider"></div>
+
+    <aside class="lede-aside">
+      <div class="aside-label">In under a minute</div>
+      <div class="gen-status-bar gen-status-bar--active">
+        <div class="gen-status-track"></div>
+        <div class="gen-status-content">
+          <div class="gen-status-dot"></div>
+          <span style="font-weight:700">spec-doc</span>
+          <span style="opacity:0.5">·</span>
+          <span style="font-style:italic;opacity:0.85">generating architecture…</span>
+          <span style="margin-left:auto;opacity:0.6;font-size:11px">47s</span>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:11px;color:var(--ink-muted);">
+          <span style="color:var(--status-idle)">✓</span> analysis.md
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:11px;color:var(--ink-muted);">
+          <span style="color:var(--status-idle)">✓</span> epic.md
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:11px;color:var(--ink-light);">
+          <span style="display:flex;gap:3px">
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0s"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.2s"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.4s"></span>
+          </span>
+          architecture.md
+        </div>
+        <div style="font-family:var(--sans);font-size:11px;color:var(--border);">timeline.md</div>
+        <div style="font-family:var(--sans);font-size:11px;color:var(--border);">implementation-guide.md</div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 2. What ships -->
+  <div class="section-heading">What ships &nbsp;<span style="background:var(--border);border-radius:2px;font-family:var(--sans);font-size:10px;padding:1px 6px;color:var(--ink-light);vertical-align:middle">5</span></div>
+  <section class="section-page" id="how">
+    <div class="output-grid">
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <div class="output-card__title">Analysis</div>
+        <div class="output-card__filename">analysis.md</div>
+        <div class="output-card__body">Surfaces the real problem, constraints, and scope before a single line of code is written.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </span>
+        <div class="output-card__title">Epic</div>
+        <div class="output-card__filename">epic.md</div>
+        <div class="output-card__body">Breaks the feature into tasks with effort estimates and explicit dependency ordering.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </span>
+        <div class="output-card__title">Architecture</div>
+        <div class="output-card__filename">architecture.md</div>
+        <div class="output-card__body">Documents component design, data flow, and the key decisions that shape every implementation choice.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </span>
+        <div class="output-card__title">Timeline</div>
+        <div class="output-card__filename">timeline.md</div>
+        <div class="output-card__body">Maps each task to a delivery window so the team can track progress and spot slippage early.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
+        </span>
+        <div class="output-card__title">Implementation Guide</div>
+        <div class="output-card__filename">implementation-guide.md</div>
+        <div class="output-card__body">Hands each task to an agent with exact steps, files, and verify criteria needed to ship it.</div>
+      </div>
+
     </div>
   </section>
 
-  <!-- How it works -->
-  <div class="section-heading" id="how">How it works</div>
+  <!-- 3. See it -->
+  <div class="section-heading">See it</div>
+  <section class="section-page" id="see">
 
-  <section>
-    <span class="overline">The Methodology</span>
-    <h2 class="headline">Three passes from raw thought to a shippable task list.</h2>
-    <p class="deck">No templates, no prompts to fill in. Write what you know and let the pipeline do the analytical work that usually takes a day of meetings.</p>
-
-    <div class="steps">
-      <div class="step">
-        <span class="step-num">1</span>
-        <h3 class="step-title">Braindump</h3>
-        <p class="step-body">Write everything you know — constraints, hunches, prior art, open questions — exactly as it comes out of your head, without editing for clarity or completeness.</p>
-      </div>
-      <div class="step">
-        <span class="step-num">2</span>
-        <h3 class="step-title">Spec Set</h3>
-        <p class="step-body">Five analytical passes run in sequence — analysis, epic, architecture, timeline, and implementation guide — each document grounded in the one before it.</p>
-      </div>
-      <div class="step">
-        <span class="step-num">3</span>
-        <h3 class="step-title">Implementation</h3>
-        <p class="step-body">The implementation guide hands each task to a coding agent with exact steps, target files, and verify criteria so the work ships without ambiguity or back-and-forth.</p>
+    <!-- Status: done -->
+    <div class="gen-status-bar gen-status-bar--success" style="animation:status-success-flash 2s ease-out forwards;margin-bottom:24px;">
+      <div class="gen-status-content">
+        <div class="gen-status-dot"></div>
+        <span style="font-weight:700">spec-doc</span>
+        <span style="opacity:0.5">·</span>
+        <span style="font-style:italic;opacity:0.85">done — 5 files generated</span>
+        <span style="margin-left:auto;opacity:0.6;font-size:11px">47s</span>
       </div>
     </div>
-  </section>
-
-  <!-- What gets generated — own full-width section, after How it works -->
-  <div class="section-heading">What gets generated</div>
-  <div class="output-grid">
-
-    <div class="output-card">
-      <span class="output-card__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </span>
-      <div class="output-card__title">Analysis</div>
-      <div class="output-card__filename">analysis.md</div>
-      <div class="output-card__body">Surfaces the real problem, constraints, and scope before a single line of code is written.</div>
-    </div>
-
-    <div class="output-card">
-      <span class="output-card__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-      </span>
-      <div class="output-card__title">Epic</div>
-      <div class="output-card__filename">epic.md</div>
-      <div class="output-card__body">Breaks the feature into tasks with effort estimates and explicit dependency ordering.</div>
-    </div>
-
-    <div class="output-card">
-      <span class="output-card__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-      </span>
-      <div class="output-card__title">Architecture</div>
-      <div class="output-card__filename">architecture.md</div>
-      <div class="output-card__body">Documents component design, data flow, and the key decisions that shape every implementation choice.</div>
-    </div>
-
-    <div class="output-card">
-      <span class="output-card__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      </span>
-      <div class="output-card__title">Timeline</div>
-      <div class="output-card__filename">timeline.md</div>
-      <div class="output-card__body">Maps each task to a delivery window so the team can track progress and spot slippage early.</div>
-    </div>
-
-    <div class="output-card">
-      <span class="output-card__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
-      </span>
-      <div class="output-card__title">Implementation Guide</div>
-      <div class="output-card__filename">implementation-guide.md</div>
-      <div class="output-card__body">Hands each task to an agent with the exact steps, files, and verify criteria needed to ship it.</div>
-    </div>
-
-  </div>
-
-  <!-- See it in action -->
-  <div class="section-heading" id="see">See it in action</div>
-
-  <section>
-    <span class="overline">Live Output</span>
-    <h2 class="headline">A real spec, generated from a real braindump in under a minute.</h2>
-    <p class="deck">Every document below was produced by the pipeline without human editing. The architecture section shown is the one that guided the construction of this very page.</p>
 
     <div class="demo-strip">
       <div class="demo-strip-inner">
@@ -166,9 +180,13 @@
           <div class="demo-sidebar-divider"></div>
           <div class="demo-content">
             <span class="demo-tag">architecture</span>
-            <h3>Component Design &amp; Boundaries</h3>
-            <p>The chain adapter is the single AI call boundary. Feature modules import only from <code>chain/adapter.py</code> and never reach into provider implementations directly — this keeps the provider swappable without touching any feature code.</p>
-            <p>Flask blueprints are registered with a versioned prefix, services own all transaction boundaries, and background jobs are coordinated through a module-level state dict so route handlers remain stateless.</p>
+            <div class="markdown-content">
+              <h1>Component Design &amp; Boundaries</h1>
+              <p>The chain adapter is the single AI call boundary. Feature modules import only from <code>chain/adapter.py</code> and never reach into provider implementations directly — this keeps the provider swappable without touching any feature code.</p>
+              <p>Flask blueprints are registered with a versioned prefix, services own all transaction boundaries, and background jobs are coordinated through a module-level state dict so route handlers remain stateless.</p>
+              <h2>Data Flow</h2>
+              <p>Every spec generation request follows a single path: route → service → chain adapter → provider. The route validates auth, the service owns the transaction, the adapter calls the model.</p>
+            </div>
           </div>
         </div>
 
@@ -176,26 +194,18 @@
     </div>
   </section>
 
+  <!-- Pull quote -->
   <section class="pullquote-row pullquote-single">
     <div class="pullquote">
       <div class="pullquote-mark">"</div>
-      <p class="pullquote-text">
-        I wrote 3 paragraphs about a feature. 47 seconds later I had an analysis,
-        an epic, an architecture doc, and an implementation guide with test bodies.
-        Human code lines written: 0.
-      </p>
+      <p class="pullquote-text">3 paragraphs in. 47 seconds later — analysis, epic, architecture, implementation guide. Human code lines written: 0.</p>
       <div class="pullquote-attr">What using Spec Doc feels like</div>
     </div>
   </section>
 
-  <!-- Start building -->
-  <div class="section-heading" id="start">Start building</div>
-
-  <section class="pricing">
-    <span class="overline">Get Access</span>
-    <h2 class="headline">One braindump is all it takes to find out if this changes how you work.</h2>
-    <p class="deck">The free tier gives you three full spec generations — no credit card required. Upgrade when the pipeline becomes part of how you work every day.</p>
-
+  <!-- 4. Start -->
+  <div class="section-heading">Start building</div>
+  <section class="section-page pricing" id="start">
     <div class="pricing-grid">
 
       <div class="pricing-tier">
@@ -204,11 +214,10 @@
           <span class="pricing-amount">$0</span>
           <span class="pricing-period">/ month</span>
         </p>
-        <p class="pricing-desc">Three projects a month to evaluate before committing.</p>
+        <p class="pricing-desc">Three full spec generations to evaluate.</p>
         <ul class="pricing-features">
           <li>3 projects / month</li>
-          <li>Full spec generation pipeline</li>
-          <li>Analysis, epic, architecture &amp; timeline</li>
+          <li>Full spec pipeline</li>
           <li>No credit card required</li>
         </ul>
         <div class="pricing-cta">
@@ -224,11 +233,10 @@
           <span class="pricing-amount">$29</span>
           <span class="pricing-period">/ month</span>
         </p>
-        <p class="pricing-desc">Unlimited spec generation. One seat, one decision.</p>
+        <p class="pricing-desc">Unlimited. One seat, one decision.</p>
         <ul class="pricing-features">
           <li>Unlimited projects</li>
-          <li>Full spec generation pipeline</li>
-          <li>Analysis, epic, architecture &amp; timeline</li>
+          <li>Full spec pipeline</li>
           <li>Priority support</li>
         </ul>
         <div class="pricing-cta">
@@ -250,7 +258,6 @@
 </div><!-- .page -->
 
   <script>
-    // Set date
     document.getElementById('date-label').textContent =
       new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -267,8 +274,6 @@
     }
 
     document.getElementById('theme-btn').addEventListener('click', toggleTheme);
-
-    // Restore theme
     applyTheme(localStorage.getItem('theme') || 'light');
   </script>
 </body>
