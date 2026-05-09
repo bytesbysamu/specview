@@ -11,22 +11,34 @@
   <style>
     /* Wireframe annotation layer — not for production */
     .wf {
-      outline: 1px dashed var(--accent);
       position: relative;
+      box-shadow:
+        3px 3px 0 var(--border),
+        6px 6px 0 rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s;
+    }
+    .wf:hover {
+      box-shadow:
+        3px 3px 0 var(--border),
+        6px 6px 0 var(--border),
+        9px 9px 0 rgba(0,0,0,0.04);
     }
     .wf::before {
       content: attr(data-wf);
       font-family: var(--sans);
       font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--accent);
+      color: var(--ink-muted);
       position: absolute;
-      top: 4px;
-      left: 6px;
-      opacity: 0.6;
+      top: 5px;
+      right: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
       pointer-events: none;
+    }
+    .wf:hover::before {
+      opacity: 1;
     }
   </style>
 </head>
