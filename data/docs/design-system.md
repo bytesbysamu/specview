@@ -102,10 +102,17 @@ grid-template-columns: repeat(3, 1fr);
 /* columns separated by border-right: 1px solid var(--border) */
 ```
 
-**Hero/Lede** (Specview landing):
+**Hero/Lede** (Specview landing — two-column only):
 ```css
-grid-template-columns: 1fr 1px 340px; /* main | divider | aside */
+/* .lede — always two-column: main | 1px divider | aside */
+grid-template-columns: 1fr 1px 340px;
+/* Children: .lede-main (padding-right: 40px) + .lede-divider + .lede-aside (padding-left: 40px) */
+/* min-height: calc(100vh - 100px); align-items: center */
 ```
+
+**Single-column hero** — no class exists for this. Use a plain `<section>` and place
+`.overline` + `.headline` + `.deck` + `.cta-row` directly inside. Do NOT use `.lede`
+with only `.lede-main` — it will leave the right 40% of the grid empty.
 
 **Output cards** (Specview landing):
 ```css
@@ -235,8 +242,17 @@ padding: 32px 60px;
 
 .pull-quote-text: 24px Playfair italic, line-height 1.4
 
-/* Specview — 2-column grid */
-grid-template-columns: 1fr 1px 1fr;
+/* Specview — two variants, both use .pullquote-row as base */
+
+/* Two-column (2 quotes side by side): */
+<section class="pullquote-row">
+
+/* Single centered quote: MUST use BOTH classes */
+<section class="pullquote-row pullquote-single">
+/* .pullquote-single overrides the grid to a centered single column */
+/* Using .pullquote-row alone with one quote leaves the right column empty */
+
+/* Inner structure (same for both variants): */
 .pullquote-mark: 56px Playfair 700, color: var(--border)
 .pullquote-text: 22px Playfair italic
 .pullquote-attr: 11px Source Sans uppercase, var(--ink-muted)
@@ -274,6 +290,55 @@ column-gap: 32–48px;
 column-rule: 1px solid var(--border);
 ```
 Authentic newspaper column layout for long-form content.
+
+### Section Heading Label vs. Overline — Critical Distinction
+
+These are two different things. Do not confuse them.
+
+| Class | Font | Role | Placement |
+|-------|------|------|-----------|
+| `.section-heading` | 11px Source Sans, uppercase | Full-width structural divider bar between sections | Block-level, outside `<section>` |
+| `.overline` | 11px Source Sans, uppercase, `color: var(--red)` | Editorial opener inside a section, above the headline | Inside `<section>`, before `<h2 class="headline">` |
+
+Correct pattern:
+```html
+<div class="section-heading" id="how">How it works</div>
+<section>
+  <span class="overline">The Methodology</span>
+  <h2 class="headline">...</h2>
+```
+
+### Demo Strip (Specview landing)
+
+Miniaturized newspaper layout used as a live product preview. Exact nesting is required —
+skipping any wrapper breaks the CSS grid layout.
+
+```html
+<div class="demo-strip">
+  <div class="demo-strip-inner">                          <!-- required wrapper -->
+    <div class="demo-masthead">                           <!-- newspaper nameplate -->
+      <div class="demo-title">Project Spec</div>
+      <div class="demo-tagline">...</div>
+    </div>
+    <div class="demo-body">                               <!-- 3-col grid: 200px 1px 1fr -->
+      <div class="demo-sidebar">
+        <div class="demo-sidebar-label">Artifacts</div>
+        <div class="demo-sidebar-item">analysis</div>
+        <div class="demo-sidebar-item active">architecture</div>
+        <!-- etc. -->
+      </div>
+      <div class="demo-sidebar-divider"></div>            <!-- 1px column rule -->
+      <div class="demo-content">
+        <span class="demo-tag">architecture</span>
+        <h3>...</h3>
+        <p>...</p>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+**Nesting rule:** `.demo-strip` → `.demo-strip-inner` → `.demo-masthead` + `.demo-body` → `.demo-sidebar` + `.demo-sidebar-divider` + `.demo-content`. No shortcuts.
 
 ### Step Numbers (Specview landing)
 
@@ -348,7 +413,7 @@ H3 deliberately uses sans — signals a sub-label, not a headline.
 | Chat panel | Floating bottom-right | Not present |
 | 2-col body text | Yes (lead + expanded) | Not present |
 | Expanded panel | Inline frameless | Not present |
-| Icons | Emoji (chat mode toggles) | Lucide SVG (added 2026-05) |
+| Icons | Emoji (chat mode toggles) | Inline SVGs (Lucide CDN removed 2026-05) |
 
 ---
 
@@ -371,8 +436,9 @@ H3 deliberately uses sans — signals a sub-label, not a headline.
 - **`section-badge`** count pattern on section headings (ClawBoi: gray pill `border-radius: 2px`)
 - **Inline expansion** pattern for output cards (click → expand in place, no modal)
 - **Time-labeled grids** ("This Week" / "Earlier") for any chronological content
-- **Lucide icons** replacing remaining emoji in ClawBoi (chat mode toggles, chat button)
+- **Inline SVG set** — create a shared SVG sprite or include file so icons don't need to be copy-pasted per page (currently duplicated across `index.html`, `playground.html`, `landing-v2.html`)
+- **Single-column hero class** — `.lede` is two-column only; a `.hero` or `.lede--full` variant would be a genuine design system addition when needed
 
 ---
 
-*Snapshot taken: 2026-05-07. Last aligned: Specview landing ← ClawBoi patterns.*
+*Snapshot taken: 2026-05-07. Last updated: 2026-05-09 — landing-v2 audit: Lucide CDN removed, pullquote-single variant documented, demo strip nesting documented, single-column hero gap noted, overline vs. section-heading distinction added.*
