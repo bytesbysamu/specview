@@ -602,3 +602,53 @@ The playground uses color for **state** (running / success / failure / idle). Th
 
 #### Result
 Color in the overview now means the same thing as in the playground: **state, not category.** Category is communicated by section grouping + header. State is communicated by card-level color (border, badge, dot).
+
+---
+
+## Playground + UX Audit — Improvement Plan (2026-05-10)
+
+### Problem: grey fill on empty grid space
+
+**Root cause:** `section-group-cards` uses `gap: 1px; background: var(--border)` — a CSS trick that creates hairline separators by showing the container's background through 1px grid gaps. When a section has fewer cards than columns, empty columns fill with grey.
+
+**Sections affected:**
+- Ready to build: 1 card → 3 empty grey columns on 1400px viewport
+- Specced: 2 cards → 2 empty grey columns
+- Braindumps: 4 cards → may fill, depends on viewport width
+
+**Fix applied:** Switched to `column-gap: 24px; row-gap: 0; background: none`. Cards use `border-bottom: 1px solid var(--border)` for separation instead. Empty columns now show page background (`--bg`), not grey. Also added ClawBoi hover bleed: `margin: 0 -8px; padding: 16px 8px` on hover.
+
+**Before → After:**
+```
+Before:                          After:
+┌──────┬──────┬██████┬██████┐   ┌──────┐
+│ Card │ Card │ GREY │ GREY │   │ Card │  24px  │ Card │
+└──────┴──────┴██████┴██████┘   └──────┘        └──────┘
+```
+
+### Playground patterns NOT yet in overview — ranked by value
+
+| Priority | Pattern | Playground § | What it adds |
+|---|---|---|---|
+| **HIGH** | Button hover fills | 5.11 | `+ New` button: accent border → hover fills with accent bg + white text. More interactive, matches playground. |
+| **MEDIUM** | Search count | 5.15 | Show "9 projects" count next to search input — `font-size: 11px; color: var(--ink-muted); text-transform: uppercase`. |
+| **MEDIUM** | Update banner | 5.13 | Dark ink-colored banner: "New specs ready — 3 files updated. [Reload]". Could sit between nav and search when updates are available. |
+| **LOW** | Context card hover | 5.14 | `border-color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.06)` — only place shadows are intentional. Could apply to file-item hover for richer feedback. |
+| **LOW** | Generation status bar | 5.7 | Full-width bar below nav with shimmer animation. Already have status dot in hero cards — bar would be redundant unless we show global generation state. |
+| **N/A** | Diff blocks, modal, toolbar, pullquote, steps, markdown | 5.6–5.12, 5.17 | Not applicable to overview page — these belong in expanded panel / reader. |
+
+### Button hover improvement (applied)
+
+Playground shows `+ New` button hover as: `background: var(--accent); color: var(--bg)` — accent fill replaces transparent. Applied to mock.
+
+### Hover bleed on standard cards (applied)
+
+ClawBoi pattern: at rest, `padding: 16px 0`. On hover, `margin: 0 -8px; padding: 16px 8px; background: rgba(0,0,0,0.02)`. Cards visually expand into surrounding space on hover — satisfying tactile feedback. Applied to mock.
+
+### Remaining improvements (not yet applied)
+
+1. **Search count**: add `<span class="search-count">9 projects</span>` after search input
+2. **Update banner**: add between nav and search, initially hidden, JS toggleable
+3. **Sidebar status dot size**: mock uses 6px, app uses 7px — standardize to 7px
+4. **Featured card distinction**: currently `:first-child` gets 17px title — could also get a subtle `border-top: 2px solid var(--ink)` to mark it as the lead story
+5. **Empty section handling**: Archive shows "No archived projects." — could also show a subtle `+ Create` action link in the empty state

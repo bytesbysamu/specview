@@ -51,8 +51,8 @@
     .masthead-title { font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 700; letter-spacing: -0.02em; }
     .masthead-tagline { font-size: 13px; font-style: italic; color: var(--ink-light); }
     .masthead-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-    .btn-new { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 6px 12px; border: 1px solid var(--border); border-radius: 2px; background: none; color: var(--ink); }
-    .btn-new:hover { border-color: var(--ink); }
+    .btn-new { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 2px; background: none; color: var(--accent); transition: background 0.15s, color 0.15s; }
+    .btn-new:hover { background: var(--accent); color: var(--bg); }
     .btn-theme { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 5px 9px; font-size: 15px; color: var(--ink); line-height: 1; }
     .btn-theme:hover { border-color: var(--ink); }
     .btn-signout { background: none; border: none; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); padding: 4px; }
@@ -100,11 +100,12 @@
       padding: 2px 8px; border-radius: 2px;
     }
 
-    /* ── Standard grid cards ── */
-    .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
-    .file-item { background: var(--bg); padding: 20px; cursor: pointer; transition: background 0.12s; }
-    .file-item:hover { background: rgba(0,0,0,0.025); }
-    [data-theme="dark"] .file-item:hover { background: rgba(255,255,255,0.04); }
+    /* ── Standard grid cards — no grey fill on empty columns ── */
+    .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); column-gap: 24px; row-gap: 0; }
+    .file-item { padding: 16px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+    .file-item:last-child { border-bottom: none; }
+    .file-item:hover { background: rgba(0,0,0,0.02); margin: 0 -8px; padding: 16px 8px; }
+    [data-theme="dark"] .file-item:hover { background: rgba(255,255,255,0.03); }
 
     /* E7: featured first card per section */
     .section-group-cards .file-item:first-child .file-item-title { font-size: 17px; }
@@ -176,24 +177,24 @@
     /* ── Iteration label (reference) ── */
     .iter-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); border-top: 1px dashed currentColor; padding-top: 6px; margin: 40px 0 20px; opacity: 0.6; }
 
-    /* ── Iter A ── */
+    /* ── Iter A — keeps old grey-gap grid for comparison ── */
     .iter-a .section-group { margin-bottom: 24px; border-bottom: none; padding-bottom: 0; }
     .iter-a .section-group-header { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 12px; }
     .iter-a .section-group-title { border-bottom: none; padding-bottom: 0; color: var(--ink-muted); }
     .iter-a .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1px; background: var(--border); }
-    .iter-a .file-item { background: var(--bg); padding: 12px; border-left: none; cursor: pointer; transition: background 0.15s; }
-    .iter-a .file-item:hover { background: rgba(0,0,0,0.025); }
+    .iter-a .file-item { background: var(--bg); padding: 12px; border-bottom: none; cursor: pointer; transition: background 0.15s; }
+    .iter-a .file-item:hover { background: rgba(0,0,0,0.025); margin: 0; padding: 12px; }
     .iter-a .section-group-cards .file-item:first-child .file-item-title { font-size: 15px; }
     .iter-a .section-group-cards .file-item:first-child .file-item-teaser { -webkit-line-clamp: 2; }
     .iter-a .file-item-teaser { font-family: 'Source Sans 3', sans-serif; font-size: 13px; }
 
-    /* ── Iter B ── */
+    /* ── Iter B — keeps old grey-gap grid for comparison ── */
     .iter-b .section-group { margin-bottom: 32px; border-bottom: none; padding-bottom: 0; }
     .iter-b .section-group-header { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 16px; }
     .iter-b .section-group-title { border-bottom: none; padding-bottom: 0; color: var(--ink-muted); }
     .iter-b .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
-    .iter-b .file-item { background: var(--bg); padding: 20px; border-left: none; cursor: pointer; transition: background 0.15s; }
-    .iter-b .file-item:hover { background: rgba(0,0,0,0.025); }
+    .iter-b .file-item { background: var(--bg); padding: 20px; border-bottom: none; cursor: pointer; transition: background 0.15s; }
+    .iter-b .file-item:hover { background: rgba(0,0,0,0.025); margin: 0; padding: 20px; }
     .iter-b .section-group-cards .file-item:first-child .file-item-title { font-size: 15px; }
     .iter-b .section-group-cards .file-item:first-child .file-item-teaser { -webkit-line-clamp: 2; }
     .iter-b .file-item-teaser { font-family: 'Source Sans 3', sans-serif; font-size: 13px; }
