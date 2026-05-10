@@ -1014,7 +1014,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Pick lead file by section
     let leadContent: string | null = null;
-    if (sec === 'Specced') {
+    if (sec === 'Active') {
+      leadContent = p.specs.find(s => s.filename === 'braindump.md')?.content
+        ?? p.specs.find(s => s.filename === 'epic.md')?.content
+        ?? null;
+    } else if (sec === 'Specced') {
       leadContent = p.specs.find(s => s.filename === 'implementation-guide.md')?.content ?? null;
     } else if (sec === 'Ready to build') {
       leadContent = p.specs.find(s => s.filename === 'architecture.md')?.content
