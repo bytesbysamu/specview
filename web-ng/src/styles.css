@@ -1271,13 +1271,9 @@ body {
 }
 [data-theme="dark"] .latency-badge { color: var(--ink-light); }
 
-/* ── Fixed generation status bar (playground 5.7 colors) ── */
+/* ── Inline generation status bar (playground 5.7 colors) ── */
 .gen-status-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2000;
+  position: relative;
   color: #fff;
   font-family: 'Source Sans 3', sans-serif;
   font-size: 12px;
@@ -1515,11 +1511,11 @@ body {
 /* ── Overline utility ────────────────────────── */
 .overline {
   font-family: var(--sans);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--red);
+  color: var(--ink-muted);
   margin-bottom: 14px;
   display: block;
 }

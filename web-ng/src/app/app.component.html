@@ -45,6 +45,49 @@
     }
   </nav>
 
+  <!-- Generation status bar — always visible, positioned between nav and search -->
+  <div class="gen-status-bar"
+       [class.gen-status-bar--idle]="mode() === 'idle'"
+       [class.gen-status-bar--active]="mode() === 'active'"
+       [class.gen-status-bar--success]="mode() === 'success-flash'"
+       [class.gen-status-bar--failure]="mode() === 'failure'">
+    @switch (mode()) {
+      @case ('active') {
+        <div class="gen-status-track"></div>
+        <div class="gen-status-content">
+          <span class="thinking-dot gen-dot"></span>
+          <span class="thinking-dot gen-dot"></span>
+          <span class="thinking-dot gen-dot"></span>
+          <span class="gen-status-project">{{ specGenProjectName() }}</span>
+          @if (specGenStep()) {
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">{{ specGenStep() }}</span>
+          }
+        </div>
+      }
+      @case ('success-flash') {
+        <div class="gen-status-content">
+          <span class="gen-status-project">{{ specGenProjectName() ?? 'done' }}</span>
+          <span class="gen-status-sep">·</span>
+          <span class="gen-status-step">done</span>
+        </div>
+      }
+      @case ('failure') {
+        <div class="gen-status-content">
+          <span class="gen-status-project">error</span>
+          <span class="gen-status-sep">·</span>
+          <span class="gen-status-step">{{ statusFailureMsg() }}</span>
+          <button class="gen-status-retry" (click)="retryLastOp()">retry</button>
+        </div>
+      }
+      @default {
+        <div class="gen-status-content gen-status-idle">
+          specview · idle — ready
+        </div>
+      }
+    }
+  </div>
+
   <!-- Update banner -->
   @if (updateBanner()) {
     <div class="update-banner">
