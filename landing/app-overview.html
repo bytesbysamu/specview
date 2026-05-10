@@ -120,7 +120,7 @@
 
     /* ── Standard grid cards — no grey fill on empty columns ── */
     .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); column-gap: 24px; row-gap: 0; }
-    .file-item { padding: 16px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+    .file-item { padding: 16px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s, margin 0.12s, padding 0.12s; }
     .file-item:last-child { border-bottom: none; }
     .file-item:hover { background: rgba(0,0,0,0.02); margin: 0 -8px; padding: 16px 8px; }
     [data-theme="dark"] .file-item:hover { background: rgba(255,255,255,0.03); }
@@ -142,9 +142,12 @@
       border-top: none;
       border-right: none;
       border-bottom: none;
-      padding: 0;
+      padding: 8px;
+      margin: -8px;
+      border-radius: 2px;
     }
-    .hero-grid .file-item:hover { background: none; }
+    .hero-grid .file-item:hover { background: rgba(0,0,0,0.02); margin: -8px; padding: 8px; }
+    [data-theme="dark"] .hero-grid .file-item:hover { background: rgba(255,255,255,0.03); }
     .hero-grid .overline { color: var(--section-color, var(--ink-muted)); display: block; margin-bottom: 8px; }
 
     /* E5: hero title 28px, teaser 16px */
