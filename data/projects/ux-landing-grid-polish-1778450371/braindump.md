@@ -124,6 +124,74 @@ For sections with 3+ cards, the auto-fill grid creates a newspaper-like multi-co
 3. **Variable column widths** — first card gets `2fr`, rest get `1fr` (hero + standard, like the mock's Active section)
 4. **Border-bottom separators within columns** — restore horizontal rules between cards in the same column, while keeping vertical rules between columns
 
+## Mock UI enumeration — `app-overview.html` top to bottom
+
+```
+#  ELEMENT                         POSITION              NOTES
+── ──────────────────────────────── ──────────────────── ─────────────────────────
+ 1  Masthead                        Top                  3-col grid: edition | title+date+tagline | actions
+    ├── edition label                Left                "Spec Doc" — 11px uppercase muted
+    ├── date                         Center              "Sunday, May 10, 2026" — 12px uppercase
+    ├── title                        Center              "Specview" — 64px Playfair 700
+    ├── tagline                      Center              "All the Specs Fit to Read" — 13px italic
+    ├── + New button                 Right               accent border, fills accent on hover
+    ├── theme toggle                 Right               ☾ button
+    └── Sign out                     Right               muted uppercase
+
+ 2  Section nav                      Sticky               3px ink top border, 1px bottom
+    ├── All (9)                      Tab                  Grey pill count badge
+    ├── Active (2)                   Tab
+    ├── Specced (2)                  Tab
+    ├── Ready to build (1)           Tab
+    ├── Braindumps (4)               Tab
+    └── Archive                      Tab (no count)
+
+ 3  Generation status bar            Below nav            CLICK TO CYCLE 4 STATES
+    ├── Active state                 amber #7a5800        shimmer track + pulsing white dot + project name + step
+    ├── Success state                green #1a6b30        dot + project name + "done — 5 files generated"
+    ├── Failure state                red #C41E3A          dot + project name + "error — chain timed out" + Retry
+    └── Idle state                   green #1a6b30        dot + "specview" + "idle — ready"
+
+ 4  Search bar                       Below status bar     input + "9 projects" count label + 1px bottom border
+
+ 5  Active section (hero grid)       2fr 1fr 1fr          Green "ACTIVE" header + 2px ink underline + pill count
+    ├── Hero main card               2fr column           28px title, 16px serif teaser, 4-line clamp, status dot
+    └── Hero secondary card          1fr column           16px title, 3-line clamp, border-left divider
+
+ 6  Specced section (standard grid)  auto-fill 280px      Blue "SPECCED" header + pill count
+    ├── Card 1 (featured)            17px title           3-line teaser clamp, badge "COMPLETE" (green)
+    └── Card 2                       15px title           2-line clamp, border-left divider
+
+ 7  Ready to build section           auto-fill            Purple "READY TO BUILD" header + pill count
+    └── Card 1 (featured)            17px title           badge "READY" (accent blue)
+
+ 8  Braindumps section               auto-fill            Brown "BRAINDUMPS" header + pill count
+    ├── Card 1 (featured)            17px title           badge "NEW" (red)
+    ├── Card 2                       15px title           border-left divider
+    ├── Card 3                       15px title           border-left divider
+    └── Card 4                       15px title           border-left divider
+
+ 9  Archive section                  Empty state          Muted "ARCHIVE" header + "0" pill
+    └── "No archived projects."      Italic muted         + "Archive a project →" accent link
+
+10  --- Design reference divider --- Dashed line          "Design reference" label
+11  Iteration A (baseline)           Old grid             240px, 12px pad, sans teasers, grey fill
+12  Iteration B (breathing room)     Old grid             280px, 20px pad, sans teasers, grey fill
+```
+
+### Status bar placement — mock vs app
+
+| | Mock | Live app |
+|---|---|---|
+| Position | `position: relative` (inline flow, between nav and search) | `position: fixed; bottom: 0` (pinned to viewport bottom) |
+| Layout | `display: flex; padding: 8px 16px` | `position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000` |
+| Visibility | Always visible (idle state shows green "idle — ready") | Only visible during generation |
+| Color | State-specific: amber/green/red per playground 5.7 | `background: var(--ink)` base with state modifiers |
+
+**Decision needed:** The mock places the status bar inline (always visible, part of the page flow). The app pins it to the bottom (only visible during generation, overlaps content). The mock approach is better for the newspaper feel — it's part of the editorial structure, not a floating overlay. But the app approach avoids wasting 32px of vertical space when idle.
+
+**Recommendation:** Keep `position: fixed; bottom: 0` for the app (it's functional — shows during generation only). The mock's inline placement is for design reference, not for shipping. The state colors (playground 5.7) should match in both.
+
 ## References
 
 - Mock reference: `landing/app-overview.html` (served at `http://localhost:8097/app-overview.html`)
