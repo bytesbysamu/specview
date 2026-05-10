@@ -17,6 +17,10 @@
       --bg:         #FFFEF9;
       --accent:     #567B95;
       --red:        #C41E3A;
+      --status-idle:       #1a6b30;
+      --status-active:     #7a5800;
+      --status-success:    #1a6b30;
+      --status-failure:    #C41E3A;
       --status-success-bg: #2E7D32;
       --color-active:    #22A66A;
       --color-specced:   #567B95;
@@ -31,6 +35,10 @@
       --bg:         #141414;
       --accent:     #7BAFC8;
       --red:        #E05A72;
+      --status-idle:       #1a4d25;
+      --status-active:     #5a4000;
+      --status-success:    #1a4d25;
+      --status-failure:    #8B0000;
       --status-success-bg: #1B5E20;
       --color-active:    #1DB97A;
       --color-specced:   #7BAFC8;
@@ -66,22 +74,61 @@
     .section-link.active { color: var(--ink); font-weight: 600; }
     .section-count { font-size: 9px; background: var(--border); border-radius: 2px; padding: 1px 5px; color: var(--ink-muted); font-weight: 400; }
 
-    /* ── Update banner (playground 5.13) ── */
-    .update-banner {
-      background: var(--ink); color: var(--bg);
-      font-size: 12px; text-align: center; padding: 8px 16px;
-      display: flex; align-items: center; justify-content: center; gap: 12px;
+    /* ── Generation status bar (playground 5.7 colors) ── */
+    .gen-status-bar {
+      color: #fff; font-size: 12px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
     }
-    .update-banner button {
-      border: 1px solid var(--bg); border-radius: 2px; background: none; color: var(--bg);
-      font-family: inherit; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
-      padding: 2px 10px; cursor: pointer; transition: background 0.15s, color 0.15s;
+    .gen-status-bar--idle    { background: var(--status-idle); }
+    .gen-status-bar--active  { background: var(--status-active); padding-top: 2px; position: relative; }
+    .gen-status-bar--success { background: var(--status-success); }
+    .gen-status-bar--failure { background: var(--status-failure); }
+    .gen-status-dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; flex-shrink: 0; }
+    .gen-status-bar--active .gen-status-dot { animation: poll-pulse-white 0.7s ease-out infinite alternate; }
+    .gen-status-name { font-weight: 700; }
+    .gen-status-sep { opacity: 0.5; }
+    .gen-status-step { font-style: italic; opacity: 0.85; }
+    .gen-status-track {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), #fff, var(--accent), transparent);
+      background-size: 200% 100%;
+      animation: gen-shimmer 1.6s linear infinite;
     }
-    .update-banner button:hover { background: var(--bg); color: var(--ink); }
-    .update-banner .banner-dismiss {
-      margin-left: auto; border: none; padding: 0 4px; font-size: 14px; opacity: 0.5;
+    .gen-status-bar button {
+      margin-left: auto; border: 1px solid rgba(255,255,255,0.5); border-radius: 2px;
+      background: none; color: inherit; font-family: inherit; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; cursor: pointer;
+      transition: background 0.15s;
     }
-    .update-banner .banner-dismiss:hover { opacity: 1; }
+    .gen-status-bar button:hover { background: rgba(255,255,255,0.2); }
+
+    /* ── Animations (playground §6) ── */
+    @keyframes gen-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @keyframes poll-pulse-white {
+      from { box-shadow: 0 0 0 0   rgba(255,255,255,0.55); }
+      to   { box-shadow: 0 0 0 4px rgba(255,255,255,0); }
+    }
+    @keyframes count-pulse {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+    @keyframes status-success-flash {
+      0%, 40% { background: var(--status-success-bg); }
+      100%    { background: var(--status-success); }
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.85); }
+      50%      { opacity: 1;   transform: scale(1); }
+    }
 
     /* ── Search ── */
     .search-bar { padding: 8px 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; display: flex; align-items: center; gap: 12px; }
@@ -258,10 +305,38 @@
     <button class="section-link" data-filter="Archive">Archive</button>
   </nav>
 
-  <div class="update-banner" id="update-banner">
-    New spec files ready — Landing Page v2 updated 3 files.
-    <button>Reload</button>
-    <button class="banner-dismiss" onclick="document.getElementById('update-banner').style.display='none'">×</button>
+  <!-- Generation status bar — all 4 states stacked for demo, pick one -->
+  <div id="gen-status-demo">
+    <!-- Active (default visible) -->
+    <div class="gen-status-bar gen-status-bar--active">
+      <div class="gen-status-track" style="position:absolute;top:0;left:0;right:0;"></div>
+      <span class="gen-status-dot"></span>
+      <span class="gen-status-name">ux-app-grid-polish</span>
+      <span class="gen-status-sep">·</span>
+      <span class="gen-status-step">generating architecture…</span>
+    </div>
+    <!-- Success -->
+    <div class="gen-status-bar gen-status-bar--success">
+      <span class="gen-status-dot"></span>
+      <span class="gen-status-name">landing-page-v2</span>
+      <span class="gen-status-sep">·</span>
+      <span class="gen-status-step">done — 5 files generated</span>
+    </div>
+    <!-- Failure -->
+    <div class="gen-status-bar gen-status-bar--failure">
+      <span class="gen-status-dot"></span>
+      <span class="gen-status-name">clawboi-ecosystem</span>
+      <span class="gen-status-sep">·</span>
+      <span class="gen-status-step">error — chain timed out</span>
+      <button>Retry</button>
+    </div>
+    <!-- Idle -->
+    <div class="gen-status-bar gen-status-bar--idle">
+      <span class="gen-status-dot"></span>
+      <span class="gen-status-name">specview</span>
+      <span class="gen-status-sep">·</span>
+      <span class="gen-status-step">idle — ready</span>
+    </div>
   </div>
 
   <div class="search-bar">
@@ -546,6 +621,16 @@
     document.querySelectorAll('#mock .file-item').forEach(item => {
       item.style.display = !q || (item.dataset.name || '').includes(q) ? '' : 'none';
     });
+  });
+
+  // Status bar: click to cycle through states
+  const statusBars = document.querySelectorAll('#gen-status-demo .gen-status-bar');
+  let visibleIdx = 0;
+  statusBars.forEach((bar, i) => { if (i > 0) bar.style.display = 'none'; });
+  document.getElementById('gen-status-demo').addEventListener('click', () => {
+    statusBars[visibleIdx].style.display = 'none';
+    visibleIdx = (visibleIdx + 1) % statusBars.length;
+    statusBars[visibleIdx].style.display = '';
   });
 </script>
 </body>
