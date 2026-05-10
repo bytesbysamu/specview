@@ -84,7 +84,7 @@
     .update-banner .banner-dismiss:hover { opacity: 1; }
 
     /* ── Search ── */
-    .search-bar { padding: 8px 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; display: flex; align-items: center; gap: 12px; }
+    .search-bar { padding: 8px 0; margin-bottom: 28px; display: flex; align-items: center; gap: 12px; }
     .search-bar input { width: 320px; font-size: 13px; font-family: inherit; background: none; border: none; border-bottom: 1px solid var(--border); color: var(--ink); padding: 4px 0; outline: none; }
     .search-bar input::placeholder { color: var(--ink-muted); }
     .search-count { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; }
@@ -105,8 +105,8 @@
     .section-group[data-section="Archive"]        { --section-color: var(--ink-muted); }
 
     /* ── Section group — E2: inter-section dividers ── */
-    .section-group { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
-    .section-group:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+    .section-group { margin-bottom: 32px; }
+    .section-group:last-child { margin-bottom: 0; }
     .section-group.hidden { display: none; }
 
     /* Section headers — overline + count badge (playground 5.16 pattern) */
@@ -125,8 +125,7 @@
     .file-item:hover { background: rgba(0,0,0,0.02); margin: 0 -8px; padding: 16px 8px; }
     [data-theme="dark"] .file-item:hover { background: rgba(255,255,255,0.03); }
 
-    /* E7: featured first card — lead story with top border */
-    .section-group-cards .file-item:first-child { border-top: 2px solid var(--ink); padding-top: 16px; }
+    /* E7: featured first card — larger title, longer teaser */
     .section-group-cards .file-item:first-child .file-item-title { font-size: 17px; }
     .section-group-cards .file-item:first-child .file-item-teaser { -webkit-line-clamp: 3; }
 
@@ -136,8 +135,7 @@
       grid-template-columns: 2fr 1fr 1fr;
       gap: 24px;
       background: none !important;
-      border-top: 3px solid var(--section-color, transparent);
-      padding-top: 20px;
+      padding-top: 4px;
     }
     .hero-grid .file-item {
       border-left: none;
