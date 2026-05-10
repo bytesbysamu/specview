@@ -1,22 +1,47 @@
-# Architecture: UX: Landing & Grid Polish
+# Architecture: UX — Landing & Grid Polish
+
+## Overview
+
+Two independent surfaces — the Angular app (`web-ng/`) and the static landing page (`landing/`) — each receive targeted CSS and HTML edits to match the validated mockup design. The app and landing page have separate stylesheets (`web-ng/src/styles.css` vs `landing/style.css`) so changes to one do not affect the other. The API receives one constant change (`teaser_chars`). No new components, no new services, no new files beyond HTML markup additions.
 
 ## Design Principles
 
-1. **No new abstractions.** Every change is a leaf-node edit — a CSS rule value, an HTML element insertion, or a Python constant. No new components, no new CSS classes, no new API endpoints.
-2. **CSS classes already exist.** The `landing/style.css` already defines `.output-grid`, `.output-card`, `.demo-strip`, `.demo-masthead`, `.demo-body`, `.demo-sidebar`, `.demo-content`, `.step-body`. HTML changes wire these up; they do not invent them.
-3. **Verified source of truth is `landing/app-overview.html`.** Every visual decision is already locked in the mock. Implementation reads the mock and reproduces it — it does not design.
-4. **One concern per diff.** Each task touches exactly one file and one concern. CSS edits do not co-travel with HTML edits.
-5. **Color philosophy: state not category.** Grey for counts, red for attention, green for done, blue for action. No re-categorization of colors is permitted.
-
----
+| Principle | Application |
+|---|---|
+| **Dieter Rams + newspaper** | Typography does the heavy lifting. Borders and whitespace create structure. Shadows do not exist (one modal exception). Density without clutter. |
+| **State not category** | Color communicates current operational state (running/done/error/idle), never section taxonomy. Category comes from position and grouping. |
+| **Playground is the contract** | All component values copy verbatim from `playground.html`. No values are derived or invented. |
+| **No speculative abstractions** | Each change fixes one specific gap. No new CSS systems, no wrapper components, no configuration. |
 
 ## Component Design
 
-### Component 1: App CSS — `.section-count` Pill Badge
+### Status Bar Relocation (App)
 
-**File:** `web-ng/src/styles.css`
+**Current:** `position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000`. Only visible during generation.
 
-**Current state (verified):**
+**Target:** `position: relative`. Inline flow between section nav and search bar. Always visible — idle state shows green `#1a6b30` with "idle — ready" text.
+
+**CSS change** (`web-ng/src/styles.css`):
+```css
+.gen-status-bar {
+  /* Remove: position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000; */
+  position: relative;
+  color: #fff;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+}
+```
+
+**Template change** (`web-ng/src/app/app.component.html`):
+Move the `.gen-status-bar` element from its current position to immediately after `.section-nav` and before `.search-bar`. Remove any `@if` that hides the bar when idle — it should always render.
+
+### Section Count Pill Badges (App)
+
+**Current:** `.section-count { font-size: 9px; opacity: 0.7; margin-left: 2px; }`
+
+**Target:**
 ```css
 .section-count {
   font-size: 9px;
@@ -28,148 +53,66 @@
 }
 ```
 
-**Status: Already correct.** The pill badge styling (`background: var(--border)`, `border-radius: 2px`, `padding: 1px 5px`) is already applied. The braindump described this as a needed change, but inspection of the live CSS shows it was applied in a prior session. No change required.
+### Overline Override (App)
 
----
+**Current:** `.overline { font-size: 11px; color: var(--red); }` — shared between landing (correct) and app (wrong).
 
-### Component 2: App CSS — `.overline` Color in App Context
+**Target:** In `web-ng/src/styles.css` only, override to `font-size: 9px; color: var(--ink-muted)`. Landing keeps `var(--red)` in its own `landing/style.css`.
 
-**File:** `web-ng/src/styles.css`
+### Teaser Window (API)
 
-**Current state (verified):**
-```css
-.overline {
-  font-family: var(--sans);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--red);          ← WRONG for app context
-  margin-bottom: 14px;
-  display: block;
-}
-```
+**Current:** `teaser_chars=300` in `api/modules/data/projects/service.py`.
 
-**Problem:** The base `.overline` class uses `color: var(--red)`. On the landing page this is intentional (marketing emphasis). In the app, `.section-group-title` inherits this and renders red overlines, while the mock specifies `color: var(--ink-muted)` at `9px`.
+**Target:** `teaser_chars=500`. Ensures `firstNonHeadingSentence()` has enough text to find a prose sentence past markdown headings and lists.
 
-**Investigation result:** The `.section-group-title` rule sets `color: var(--section-color, var(--ink-muted))` on the title text itself. However, if `.overline` is applied as a child of or alongside `.section-group-title`, the `color: var(--red)` bleeds through because `.section-group-title` does not scope the overline.
+### Output Card Grid (Landing)
 
-**Fix:** Change the base `.overline` rule to use `var(--ink-muted)`. The landing page overlines (in `.lede-main span.overline`) rely on the red for marketing emphasis — those must be explicitly re-scoped to red.
+Replace the `<ul>` in `.lede-aside` with 5 `.output-card` elements:
+- Analysis, Epic, Architecture, Timeline, Implementation Guide
+- Each card: icon (Unicode glyph), Playfair title, monospace filename, body sentence
+- Uses existing `.output-grid` / `.output-card` CSS from `landing/style.css`
 
-**Revised `.overline`:**
-```css
-.overline {
-  font-family: var(--sans);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-  margin-bottom: 14px;
-  display: block;
-}
-```
+### Demo Strip (Landing)
 
-**Note:** This change only applies to `web-ng/src/styles.css`. The landing page has its own `.overline` rule in `landing/style.css` which already correctly defines `color: var(--red)` and `font-size: 11px` for marketing context. These are separate files — no cross-contamination risk.
+New section between "How it works" and "Pricing". Composes:
+- `.demo-strip` container
+- `.demo-masthead` — miniaturized newspaper masthead
+- `.demo-body` — flex container
+- `.demo-sidebar` — file list mock
+- `.demo-content` — markdown content mock
 
----
+All CSS classes already exist in `landing/style.css`.
 
-### Component 3: API — Teaser Character Window
+### Step Bodies (Landing)
 
-**File:** `api/modules/data/projects/service.py`
+Add `<p class="step-body">` above each `.step-code` in the "How it works" 3-column section. One editorial sentence per step. Class already styled.
 
-**Current state (verified at line 101):**
-```python
-"specs": _read_specs(d, include_content=False, teaser_chars=300),
-```
+### Masthead Tagline Font (Landing)
 
-**Problem:** `firstNonHeadingSentence()` in the frontend skips heading lines (`#`, `-`, `*`, `>`, `|`). Many braindumps start with a title, then a section heading, then a bulleted list — the first real prose sentence may start at character 320–450. A 300-char teaser window captures only the heading block, so the teaser field is empty or contains only markdown symbols, triggering a fallback.
+**Current:** `.masthead-tagline { font-family: var(--sans); }`
 
-**Fix:** Change `teaser_chars=300` to `teaser_chars=500`.
+**Target:** `font-family: var(--body);` — Source Serif 4 italic reads as editorial deck, not UI label.
 
-**Boundary:** `_read_specs()` already handles the truncation correctly via `content[:teaser_chars]`. No other code changes are needed. The service function, not the route handler, owns this — consistent with the convention that service functions own data shaping.
+### Section Nav Demo Link (Landing)
 
-**Risk:** Slightly larger JSON payload on `GET /api/projects`. The delta is at most 200 chars × number of projects. For a typical 20-project list, this adds ~4KB — negligible.
-
----
-
-### Component 4: Landing CSS — Masthead Tagline Font
-
-**File:** `landing/style.css`
-
-**Current state (verified at lines 132–137):**
-```css
-.masthead-tagline {
-  font-family: var(--body);
-  font-size: 13px;
-  font-style: italic;
-  color: var(--ink-light);
-}
-```
-
-**Status: Already correct.** The tagline already uses `var(--body)` (Source Serif 4 italic). The braindump described this as a needed change, but inspection shows it was already applied. No change required.
-
----
-
-### Component 5: Landing HTML — Output Card Grid
-
-**File:** `landing/index.html`
-
-**Current state (verified):** The `.lede-aside` section already contains an `.output-grid` with five `.output-card` elements (Analysis, Epic, Architecture, Timeline, Implementation Guide). The braindump described this as a needed change, but inspection shows it was already wired. No change required.
-
----
-
-### Component 6: Landing HTML — Demo Strip & Section Nav
-
-**File:** `landing/index.html`
-
-**Current state (verified):** The demo strip section is already wired between "How it works" and "Pricing" using `.demo-strip`, `.demo-masthead`, `.demo-body`, `.demo-sidebar`, and `.demo-content`. The section nav already contains the fourth "Demo" link. No change required.
-
----
-
-### Component 7: Landing HTML — Step Bodies
-
-**File:** `landing/index.html`
-
-**Current state (verified):** All three "How it works" steps already contain `<p class="step-body">` paragraphs above their `.step-code` blocks. No change required.
-
----
-
-## Summary of Actual Remaining Work
-
-After code inspection, the gap between the braindump's task list and current state is narrower than described. The following table reflects verified current state:
-
-| Task | Described As Needed | Actual State | Action |
-|------|--------------------|-----------|----|
-| `.section-count` pill badge | Change needed | Already correct | None |
-| `.overline` muted in app | Verify + fix if needed | Red bleeds through | Fix: change base color to `var(--ink-muted)`, reduce to `9px` |
-| `teaser_chars` 300→500 | API change needed | Still at 300 | Fix: change to `500` |
-| Masthead tagline font | CSS change needed | Already correct | None |
-| Output card grid | HTML change needed | Already wired | None |
-| Demo strip HTML | HTML change needed | Already wired | None |
-| Step bodies | HTML change needed | Already wired | None |
-| Section nav "Demo" link | HTML change needed | Already present | None |
-
-**Net remaining work: 2 targeted edits across 2 files.**
-
----
+Add 4th anchor link "Demo" to `.section-nav` pointing to the demo strip section. Depends on demo strip HTML landing first.
 
 ## Technology Stack
 
-| Layer | Technology | Note |
-|-------|-----------|------|
-| App CSS | CSS custom properties on vanilla CSS | No preprocessor; var() tokens only |
-| Landing CSS | Same token vocabulary (`landing/style.css`) | Separate file — does not share the app's `.overline` rule |
-| API service | Python 3.11 — pure function, no ORM interaction | `teaser_chars` is a scalar passed to a single `content[:n]` slice |
-| HTML | Static HTML5 in `landing/index.html` | No framework; edits are text insertions |
-
----
+| Layer | Choice | Rationale |
+|---|---|---|
+| App CSS | `web-ng/src/styles.css` | Direct edits. No preprocessor. |
+| Landing CSS | `landing/style.css` | Separate stylesheet. Changes don't cross. |
+| Landing HTML | `landing/index.html` | Static markup. No build step. |
+| API | `api/modules/data/projects/service.py` | One constant change. |
+| Template | `web-ng/src/app/app.component.html` | Status bar relocation only. |
 
 ## Design Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Change base `.overline` color, not add a scoped override | Simpler; the app CSS has no use for red overlines anywhere | Red overlines are a landing-page concern; the landing page has its own CSS file |
-| Reduce `.overline` font-size from 11px to 9px | Matches the mock's `font-size: 9px` spec | 11px overlines are too prominent for app section headers; the 9px value matches the mock's micro-label treatment |
-| `teaser_chars=500` not a config variable | The value is stable and semantics are self-documenting as a literal | Avoids env-var proliferation for a single tuning constant |
-| No Angular template changes | Out of scope per epic definition | Status bar relocation and hero grid require `app.component.html` edits; deferred to a separate ticket |
+| Decision | Rationale |
+|---|---|
+| Status bar inline, not fixed bottom | Editorial ticker vs web app download bar. Always visible communicates system readiness. Prevents layout shift on generation start. |
+| Overline muted in app, red in landing | App is a tool (quiet structure). Landing is marketing (attention-grabbing). Separate stylesheets make this safe. |
+| teaser_chars=500 not unlimited | 500 chars covers 2-3 paragraphs of markdown — enough to find first prose sentence past headings. Unlimited would send entire files on the list endpoint. |
+| Output cards not list | Cards give editorial weight per artifact. Reuse existing CSS. Converts enumeration into demonstration. |
+| Demo strip as static HTML | Guarantees aesthetic parity, loads instantly. No auth, no dev server dependency. |

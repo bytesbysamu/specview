@@ -1,54 +1,84 @@
-# 🎯 Epic: UX: Landing & Grid Polish
+# Epic: UX — Landing & Grid Polish
 
 ## Business Value
 
-The landing page is the conversion surface for spec-doc — the first thing a visitor sees before deciding whether the tool is worth trying. The current page uses a flat `<ul>` where the validated mockup proved that an output-card grid, demo strip, and editorial step bodies communicate the product's value far more effectively. Every missing element is a missed opportunity to show, not tell, what the tool produces. Closing these gaps turns the landing page from a feature list into a working product demo.
+Specview's core narrative is "opening the app feels like opening a newspaper." The app-ui-mockups project locked the design decisions that deliver that feeling — card sizing, section headers, typography, status colors. Most of those decisions now live in `web-ng/src/styles.css`. This epic closes the remaining gaps.
 
-Inside the app, small CSS divergences between the validated mockup and live styles erode the editorial authority the design system was built to project. Grey pill badges, muted overlines, and longer teaser windows are details individually trivial but collectively responsible for the difference between "polished tool" and "prototype." For a solo-founder product competing on craft, that gap is the product-market signal. Users of documentation tools judge the tool by its own documentation and presentation — inconsistency here is a direct credibility cost.
+Three categories of impact:
 
-This epic is a single polish pass across two surfaces (app CSS, landing HTML) that closes the remaining mockup-to-production gaps without touching Angular templates or introducing new architectural patterns.
+1. **Perceptual authority** — the status bar moving from a fixed overlay to an inline newsroom ticker, the section count badges rendering as structured pills, and the overline micro-labels dropping to muted 9px transforms the app from "generic SPA" to "editorial tool." These are small CSS changes with outsized perceptual effect.
 
-## Scope
+2. **Content fidelity** — the teaser window increase from 300 to 500 characters means real prose replaces empty fallbacks for braindump-heavy projects. Empty teasers undermine the newspaper illusion; real teasers reward it.
 
-### What This Epic Covers
+3. **Landing page editorial quality** — the output card grid, demo strip, step editorial bodies, and masthead tagline fix bring the landing page into alignment with the design system validated in the mockup. The landing page is the first thing a prospective user sees; it should reflect the same editorial authority as the app.
 
-- **App CSS alignment** – Pill badge styling for nav count badges, overline color verification in app context, and separator class name consistency (`styles.css` only, no template changes)
-- **Teaser window expansion** – Increase `teaser_chars` from 300 to 500 in the API so braindump-heavy projects surface meaningful prose instead of fallback text
-- **Landing output card grid** – Replace the flat `<ul>` in `.lede-aside` with 5 `.output-card` elements using existing CSS classes, and add `<p class="step-body">` editorial rhythm to the "How it works" section
-- **Landing demo strip** – Wire the `.demo-strip` HTML section between "How it works" and "Pricing", add corresponding 4th section nav link
-- **Masthead tagline font correction** – Single CSS rule change from `var(--sans)` to `var(--body)` for editorial deck styling
+---
 
-### What This Epic Does NOT Cover
+## Full Scope
 
-- ❌ **Hero grid `2fr 1fr 1fr` Angular template change** — Deferred until single-section view work begins; requires Angular template surgery outside this CSS/HTML scope
-- ❌ **Status bar relocation** — Moving `.gen-status-bar` from fixed-bottom to inline-flow requires Angular template changes (`app.component.html`) and always-render logic; different build surface than CSS edits; separate ticket
-- ❌ **Newspaper column-first layout for small sections** — Four possible directions identified, none chosen; this is research, not a deliverable
-- ❌ **Vertical rhythm / `border-bottom` restoration** — Not included in "What to build"; do not let it creep in
-- ❌ **Playground or component-library changes** — Playground is a design reference, not a build target
+### In Scope
 
-## Tasks
+- **Task 1 — Fix `.section-count` pill badge styling** (App CSS, `web-ng/src/styles.css`)
+- **Task 2 — Fix `.overline` app-context styling** (App CSS, `web-ng/src/styles.css`)
+- **Task 3 — Increase `teaser_chars` from 300 to 500** (API, `api/modules/data/projects/service.py`)
+- **Task 4 — Status bar: move inline, always visible** (App CSS + Angular, `web-ng/src/styles.css` + `app.component.html`)
+- **Task 5 — Landing: output card grid** (Landing HTML, `landing/index.html`)
+- **Task 6 — Landing: demo strip section** (Landing HTML, `landing/index.html`)
+- **Task 7 — Landing: step editorial bodies** (Landing HTML, `landing/index.html`)
+- **Task 8 — Landing: masthead tagline font** (Landing CSS, `landing/style.css`)
+- **Task 9 — Landing: section nav "Demo" link** (Landing HTML, `landing/index.html`, depends on Task 6)
+- **Task 10 — Class name consistency check** (App CSS + Angular templates — cosmetic, low priority)
 
-| # | Task | Dependencies | Parallel | Effort | Priority |
-|---|------|--------------|----------|--------|----------|
-| 1 | **App CSS Alignment** — Pill-style `.section-count`, verify `.overline` scoping in app context, normalize `.file-item-meta-sep` / `.sep` class name | None | — | 0.5 days | High |
-| 2 | **Teaser Window Expansion** — Change `teaser_chars=300` → `500` in `service.py`; verify braindump-heavy projects surface prose | None | T1 | 0.5 days | High |
-| 3 | **Landing: Output Card Grid & Step Bodies** — Replace `.lede-aside` `<ul>` with 5 `.output-card` elements; add `<p class="step-body">` above each `.step-code` in "How it works" | None | T1, T2 | 1 day | High |
-| 4 | **Landing: Demo Strip & Section Nav** — Wire `.demo-strip` section HTML between "How it works" and "Pricing"; add 4th nav link ("Demo") pointing to the new section | T3 | — | 1 day | High |
-| 5 | **Masthead Tagline Font** — Change `.masthead-tagline` `font-family` from `var(--sans)` to `var(--body)` in `landing/style.css` | None | T1–T4 | 0.5 days | Low |
+### Out of Scope
+
+- Hero grid `2fr 1fr 1fr` for Active section — deferred, requires Angular template changes
+- Dark mode new work — existing tokens only
+- Mobile/responsive changes — not intentionally changed
+- E2E test additions — no behavior flow changes
+- New CSS design decisions — all classes already exist
+
+---
+
+## Task Breakdown
+
+| # | Task | Layer | Effort | Priority | Dependencies |
+|---|------|-------|--------|----------|--------------|
+| 1 | Fix `.section-count` pill badge | App CSS | 0.25 days | High | None |
+| 2 | Fix `.overline` app-context overline | App CSS | 0.25 days | High | None |
+| 3 | Increase `teaser_chars` 300 → 500 | API | 0.25 days | High | None |
+| 4 | Status bar: inline, always visible | App CSS + Angular | 0.5 days | High (highest perceptual impact) | None |
+| 5 | Landing: output card grid | Landing HTML | 0.5 days | Medium | None |
+| 6 | Landing: demo strip section | Landing HTML | 0.75 days | Medium | None |
+| 7 | Landing: step editorial bodies | Landing HTML | 0.25 days | Medium | None |
+| 8 | Landing: masthead tagline font | Landing CSS | 0.25 days | Medium | None |
+| 9 | Landing: section nav "Demo" link | Landing HTML | 0.25 days | Medium | Task 6 |
+| 10 | Class name consistency check | App CSS + Angular | 0.25 days | Low | None |
+
+**Total estimated effort: ~3.5 days**
+
+Tasks 1–3 are independent CSS/API edits. Task 4 has the highest perceptual return and should run early. Tasks 5–9 are all landing page work and can run in sequence after Task 6 is done. Task 10 is cosmetic and deferred to available capacity.
+
+---
 
 ## Success Criteria
 
-- ✅ Nav count badges render as grey pill badges (`background: var(--border)`, `border-radius: 2px`) in the live app, matching the mockup
-- ✅ App-context `.overline` elements render in `var(--ink-muted)` — not red — within section group headers
-- ✅ Projects whose first prose sentence falls between chars 300–500 display a real teaser instead of fallback text
-- ✅ Landing hero aside shows 5 output cards (Analysis, Epic, Architecture, Timeline, Implementation Guide) using `.output-card` grid, not a flat `<ul>`
-- ✅ "How it works" steps each have a `<p class="step-body">` sentence creating editorial rhythm above the code mockup
-- ✅ Demo strip section is visible between "How it works" and "Pricing" with section nav linking to it
-- ✅ Masthead tagline renders in `Source Serif 4 italic 13px`, not `Source Sans 3`
-- ✅ All locked design decisions (grid min-width, card padding, color philosophy, etc.) remain unchanged
+- Section count badges render as grey pills (`background: var(--border); border-radius: 2px; padding: 1px 5px`) in every section header, replacing plain muted text.
+- `.overline` in app context renders at `9px` in `var(--ink-muted)` — not red, not 11px. Landing page overlines remain red (separate CSS file).
+- Projects with braindumps whose first prose sentence falls between characters 300–500 now show a real teaser instead of an empty fallback.
+- Status bar renders between the section nav and the search bar, inline in page flow (`position: relative`), always visible. Idle state shows green "idle — ready". No layout shift when generation starts.
+- Landing page `.lede-aside` shows 5 output cards in `.output-grid` — not a flat `<ul>`.
+- Landing page "How it works" each step has a `<p class="step-body">` sentence above its `.step-code` block.
+- Landing page has a `.demo-strip` section between "How it works" and "Pricing".
+- Landing page section nav has a fourth "Demo" link.
+- `.masthead-tagline` in `landing/style.css` uses `font-family: var(--body)` (Source Serif 4 italic at 13px).
+- `ng build --configuration production` passes with zero errors.
+- `pytest api/` passes with no regressions.
+
+---
 
 ## Related Documents
 
-- [Analysis](./analysis.md) – Problems driving this epic
-- [Solution Architecture](./architecture.md) – System design and CSS/HTML change specifications
-- [Timeline](./timeline.md) – Status tracking
+- [Analysis](./analysis.md) — Gap inventory, constraints, open questions
+- [Architecture](./architecture.md) — Design principles, component design, exact CSS values
+- [Timeline](./timeline.md) — Task status tracking
+- [Implementation Guide](./implementation-guide.md) — Step-by-step execution for every task
