@@ -6,7 +6,7 @@
   <title>Specview — Overview (Mockup)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
   <style>
     /* ── Tokens ── */
     :root {
@@ -18,7 +18,7 @@
       --accent:     #567B95;
       --red:        #C41E3A;
       --bg:         #FFFEF9;
-      --status-running: #22A66A;
+      --status-running:    #22A66A;
       --status-success-bg: #2E7D32;
     }
     [data-theme="dark"] {
@@ -30,7 +30,7 @@
       --accent:     #7BAFC8;
       --red:        #E05A72;
       --bg:         #141414;
-      --status-running: #1DB97A;
+      --status-running:    #1DB97A;
       --status-success-bg: #1B5E20;
     }
 
@@ -38,237 +38,144 @@
     html { background: var(--bg); color: var(--ink); font-family: 'Source Sans 3', sans-serif; font-size: 16px; line-height: 1.5; transition: background 0.2s ease, color 0.2s ease; }
     button { cursor: pointer; font-family: inherit; }
 
-    /* ── Page ── */
     .page { max-width: 1400px; margin: 0 auto; padding: 20px 40px; }
 
-    /* ── Masthead (matches app exactly) ── */
+    /* ── Masthead ── */
     .masthead { padding: 16px 0; }
-    .masthead-top {
-      display: grid;
-      grid-template-columns: 150px 1fr 150px;
-      align-items: flex-end;
-      gap: 20px;
-    }
-    .edition {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--ink-muted);
-    }
+    .masthead-top { display: grid; grid-template-columns: 150px 1fr 150px; align-items: flex-end; gap: 20px; }
+    .edition { font-family: 'Source Sans 3', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-muted); }
     .masthead-center { text-align: center; }
-    .masthead-date {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--ink-light);
-      margin-bottom: 4px;
-    }
-    .masthead-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 64px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 2px;
-    }
-    .masthead-tagline {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 13px;
-      font-style: italic;
-      color: var(--ink-light);
-    }
-    .masthead-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-    .new-project-btn {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 6px 12px;
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      background: none;
-      color: var(--ink);
-    }
+    .masthead-date { font-family: 'Source Sans 3', sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-light); margin-bottom: 4px; }
+    .masthead-title { font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; }
+    .masthead-tagline { font-family: 'Source Sans 3', sans-serif; font-size: 13px; font-style: italic; color: var(--ink-light); }
+    .masthead-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+    .new-project-btn { font-family: 'Source Sans 3', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 6px 12px; border: 1px solid var(--border); border-radius: 2px; background: none; color: var(--ink); }
     .new-project-btn:hover { border-color: var(--ink); }
-    .theme-toggle {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 6px 10px;
-      font-size: 14px;
-      color: var(--ink);
-      line-height: 1;
-    }
+    .theme-toggle { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 6px 10px; font-size: 14px; color: var(--ink); line-height: 1; }
     .theme-toggle:hover { border-color: var(--ink); }
-    .logout-btn {
-      background: none;
-      border: none;
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--ink-muted);
-      padding: 4px 4px;
-    }
+    .logout-btn { background: none; border: none; font-family: 'Source Sans 3', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); padding: 4px; }
     .logout-btn:hover { color: var(--ink); }
 
-    /* ── Section nav (matches app exactly) ── */
-    .section-nav {
-      display: flex;
-      gap: 0;
-      padding: 0;
-      justify-content: center;
-      border-top: 3px solid var(--ink);
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 10;
-    }
-    .section-link {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 11px;
-      color: var(--ink-light);
-      padding: 4px 16px;
-      border: none;
-      background: none;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      border-right: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    /* ── Section nav ── */
+    .section-nav { display: flex; gap: 0; padding: 0; justify-content: center; border-top: 3px solid var(--ink); border-bottom: 1px solid var(--border); flex-wrap: wrap; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+    .section-link { font-family: 'Source Sans 3', sans-serif; font-size: 11px; color: var(--ink-light); padding: 4px 16px; border: none; background: none; text-transform: uppercase; letter-spacing: 0.08em; border-right: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
     .section-link:last-child { border-right: none; }
     .section-link:hover { color: var(--ink); }
     .section-link.active { color: var(--ink); font-weight: 600; }
-    .section-count {
-      font-size: 9px;
-      font-weight: 400;
-      background: var(--border);
-      border-radius: 2px;
-      padding: 1px 5px;
-      color: var(--ink-muted);
-    }
+    .section-count { font-size: 9px; font-weight: 400; background: var(--border); border-radius: 2px; padding: 1px 5px; color: var(--ink-muted); }
 
     /* ── Search bar ── */
-    .search-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .search-bar input[type="search"] {
-      flex: 1;
-      max-width: 360px;
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 13px;
-      background: none;
-      border: none;
-      border-bottom: 1px solid var(--border);
-      color: var(--ink);
-      padding: 4px 0;
-      outline: none;
-    }
+    .search-bar { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .search-bar input[type="search"] { flex: 1; max-width: 360px; font-family: 'Source Sans 3', sans-serif; font-size: 13px; background: none; border: none; border-bottom: 1px solid var(--border); color: var(--ink); padding: 4px 0; outline: none; }
     .search-bar input::placeholder { color: var(--ink-muted); }
-    .search-count {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 11px;
-      color: var(--ink-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
 
-    /* ── Section group (matches app exactly) ── */
-    .section-group { margin-bottom: 24px; }
-    .section-group-header {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 4px;
-      margin-bottom: 12px;
-    }
-    .overline {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-weight: 600;
-      color: var(--ink-muted);
-    }
-    .section-group-count {
-      font-size: 9px;
-      color: var(--ink-muted);
-      font-weight: 400;
-      opacity: 0.7;
-    }
-    .section-group-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 1px;
-      background: var(--border);
-    }
-    .section-group-cards .file-item {
-      background: var(--bg);
-      margin: 0;
-    }
-
-    /* ── File item (matches app exactly) ── */
-    .file-item {
-      padding: 12px 8px;
-      margin: 0 -8px;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    /* In grid context override the negative margin */
-    .section-group-cards .file-item { padding: 12px; margin: 0; }
-    .file-item:hover { background: rgba(0,0,0,0.025); }
-    [data-theme="dark"] .file-item:hover { background: rgba(255,255,255,0.04); }
-    .file-item:last-child { border-bottom: none; }
-    .file-item-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 15px;
-      font-weight: 600;
-      line-height: 1.3;
-      margin-bottom: 4px;
-    }
-    .file-item.featured .file-item-title { font-size: 18px; font-weight: 700; line-height: 1.25; margin-bottom: 6px; }
-    .file-item-teaser {
-      font-size: 13px;
-      color: var(--ink-light);
-      line-height: 1.55;
-      margin-top: 4px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .file-item.featured .file-item-teaser { -webkit-line-clamp: 3; font-size: 14px; }
-    .file-item-meta {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 11px;
-      color: var(--ink-muted);
-      margin-top: 7px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    /* ── Shared card styles ── */
+    .overline { font-family: 'Source Sans 3', sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; color: var(--ink-muted); }
+    .file-item-title { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+    .file-item-teaser { font-size: 13px; color: var(--ink-light); line-height: 1.55; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .file-item-meta { font-family: 'Source Sans 3', sans-serif; font-size: 11px; color: var(--ink-muted); margin-top: 7px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; }
     .file-item-meta-sep { width: 2px; height: 2px; border-radius: 50%; background: var(--ink-muted); display: inline-block; flex-shrink: 0; }
 
-    /* ── App grid wrapper ── */
-    .app-grid { padding: 24px 0; }
+    /* ── Iteration label ── */
+    .iter-label {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      border-top: 1px dashed var(--accent);
+      padding-top: 6px;
+      margin: 48px 0 24px;
+      opacity: 0.7;
+    }
+    .iter-label:first-of-type { margin-top: 24px; }
+
+    /* ══════════════════════════════════════════════════
+       ITERATION A — Baseline (matches current live app)
+    ══════════════════════════════════════════════════ */
+
+    .iter-a .section-group { margin-bottom: 24px; }
+    .iter-a .section-group-header { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 12px; }
+    .iter-a .section-group-count { font-size: 9px; color: var(--ink-muted); font-weight: 400; opacity: 0.7; }
+    .iter-a .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1px; background: var(--border); }
+    .iter-a .file-item { background: var(--bg); padding: 12px; margin: 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .iter-a .file-item:hover { background: rgba(0,0,0,0.025); }
+    [data-theme="dark"] .iter-a .file-item:hover { background: rgba(255,255,255,0.04); }
+    .iter-a .file-item:last-child { border-bottom: none; }
+    .iter-a .file-item.featured .file-item-title { font-size: 18px; font-weight: 700; line-height: 1.25; margin-bottom: 6px; }
+    .iter-a .file-item.featured .file-item-teaser { -webkit-line-clamp: 3; font-size: 14px; }
+
+    /* ══════════════════════════════════════════════════
+       ITERATION B — Breathing room (direction 2)
+       Increased card padding, wider min-width, more
+       section spacing. Low risk, immediate payoff.
+    ══════════════════════════════════════════════════ */
+
+    .iter-b .section-group { margin-bottom: 32px; }
+    .iter-b .section-group-header { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 16px; }
+    .iter-b .section-group-count { font-size: 9px; color: var(--ink-muted); font-weight: 400; opacity: 0.7; }
+    .iter-b .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
+    .iter-b .file-item { background: var(--bg); padding: 20px; margin: 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .iter-b .file-item:hover { background: rgba(0,0,0,0.025); }
+    [data-theme="dark"] .iter-b .file-item:hover { background: rgba(255,255,255,0.04); }
+    .iter-b .file-item:last-child { border-bottom: none; }
+    .iter-b .file-item.featured .file-item-title { font-size: 18px; font-weight: 700; line-height: 1.25; margin-bottom: 8px; }
+    .iter-b .file-item.featured .file-item-teaser { -webkit-line-clamp: 3; font-size: 14px; }
+
+    /* ══════════════════════════════════════════════════
+       ITERATION C — Hero + Breathing room (directions 1+2)
+       Active section: 2fr 1fr 1fr hero layout.
+       All other sections: auto-fill with more space.
+    ══════════════════════════════════════════════════ */
+
+    .iter-c .section-group { margin-bottom: 32px; }
+    .iter-c .section-group-header { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 16px; }
+    .iter-c .section-group-count { font-size: 9px; color: var(--ink-muted); font-weight: 400; opacity: 0.7; }
+
+    /* Standard sections — auto-fill with breathing room */
+    .iter-c .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
+    .iter-c .file-item { background: var(--bg); padding: 20px; margin: 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .iter-c .file-item:hover { background: rgba(0,0,0,0.025); }
+    [data-theme="dark"] .iter-c .file-item:hover { background: rgba(255,255,255,0.04); }
+    .iter-c .file-item:last-child { border-bottom: none; }
+    .iter-c .file-item.featured .file-item-title { font-size: 18px; font-weight: 700; line-height: 1.25; margin-bottom: 8px; }
+    .iter-c .file-item.featured .file-item-teaser { -webkit-line-clamp: 3; font-size: 14px; }
+
+    /* Hero section (Active) — 2fr 1fr 1fr, newspaper-style */
+    .iter-c .section-group-cards.hero-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0;
+      background: none;
+    }
+    .iter-c .hero-grid .file-item { background: var(--bg); border-bottom: none; border-right: 1px solid var(--border); padding: 20px 28px 20px 0; }
+    .iter-c .hero-grid .file-item:last-child { border-right: none; padding-right: 0; }
+    .iter-c .hero-grid .file-item:hover { background: rgba(0,0,0,0.025); }
+    /* Hero main card */
+    .iter-c .hero-grid .file-item.hero-main { padding-left: 0; }
+    .iter-c .hero-grid .file-item.hero-main .file-item-title { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 10px; font-family: 'Playfair Display', serif; }
+    .iter-c .hero-grid .file-item.hero-main .file-item-teaser { font-size: 15px; line-height: 1.6; -webkit-line-clamp: 4; color: var(--ink-light); }
+    /* Hero secondary cards */
+    .iter-c .hero-grid .file-item.hero-secondary { padding-left: 24px; }
+    .iter-c .hero-grid .file-item.hero-secondary .file-item-title { font-size: 16px; font-weight: 700; line-height: 1.3; }
+    .iter-c .hero-grid .file-item.hero-secondary .file-item-teaser { -webkit-line-clamp: 3; }
+
+    /* Active status dot in card meta */
+    .status-dot-active {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--status-running);
+      margin-right: 3px;
+      vertical-align: middle;
+      animation: pulse 0.7s ease-out infinite alternate;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(34,166,106,0.55); }
+      100% { box-shadow: 0 0 0 4px rgba(34,166,106,0); }
+    }
+
   </style>
 </head>
 <body>
@@ -284,7 +191,7 @@
 
 <div class="page">
 
-  <!-- Masthead -->
+  <!-- Shared masthead + nav — appears once above all iterations -->
   <header class="masthead">
     <div class="masthead-top">
       <span class="edition">Spec Doc</span>
@@ -301,7 +208,6 @@
     </div>
   </header>
 
-  <!-- Section nav -->
   <nav class="section-nav">
     <button class="section-link active">All <span class="section-count">9</span></button>
     <button class="section-link">Active <span class="section-count">1</span></button>
@@ -312,15 +218,16 @@
     <button class="section-link">Context <span class="section-count">4</span></button>
   </nav>
 
-  <!-- Search bar -->
   <div class="search-bar">
     <input type="search" placeholder="Filter projects…">
   </div>
 
-  <!-- Grid -->
-  <div class="app-grid">
+  <!-- ═══════════════════════════════════════════════════════
+       A — BASELINE (current live app)
+  ═══════════════════════════════════════════════════════ -->
+  <div class="iter-label">A — Baseline (current live app)</div>
+  <div class="iter-a">
 
-    <!-- ACTIVE -->
     <div class="section-group">
       <div class="section-group-header">
         <span class="section-group-title overline">Active</span>
@@ -330,16 +237,11 @@
         <div class="file-item featured">
           <div class="file-item-title">UX: App Grid Polish</div>
           <div class="file-item-teaser">Semantic color borders, real braindump teasers, breathing room, icon library evaluation, and playground animation backport.</div>
-          <div class="file-item-meta">
-            <span>7 files</span>
-            <span class="file-item-meta-sep"></span>
-            <span>Active</span>
-          </div>
+          <div class="file-item-meta"><span>7 files</span><span class="file-item-meta-sep"></span><span>Active</span></div>
         </div>
       </div>
     </div>
 
-    <!-- SPECCED -->
     <div class="section-group">
       <div class="section-group-header">
         <span class="section-group-title overline">Specced</span>
@@ -348,26 +250,17 @@
       <div class="section-group-cards">
         <div class="file-item featured">
           <div class="file-item-title">Landing Page v2</div>
-          <div class="file-item-teaser">Newspaper editorial aesthetic with full design system — Playfair Display headlines, stat strip, comparison table, and FAQ.</div>
-          <div class="file-item-meta">
-            <span>8 files</span>
-            <span class="file-item-meta-sep"></span>
-            <span>Specced</span>
-          </div>
+          <div class="file-item-teaser">Newspaper editorial aesthetic with full design system — Playfair headlines, stat strip, comparison table, FAQ.</div>
+          <div class="file-item-meta"><span>8 files</span><span class="file-item-meta-sep"></span><span>Specced</span></div>
         </div>
         <div class="file-item">
           <div class="file-item-title">ClawBoi Ecosystem</div>
           <div class="file-item-teaser">Dashboard, memory graph, and context system for the ClawBoi AI assistant.</div>
-          <div class="file-item-meta">
-            <span>6 files</span>
-            <span class="file-item-meta-sep"></span>
-            <span>Specced</span>
-          </div>
+          <div class="file-item-meta"><span>6 files</span></div>
         </div>
       </div>
     </div>
 
-    <!-- BRAINDUMPS -->
     <div class="section-group">
       <div class="section-group-header">
         <span class="section-group-title overline">Braindumps</span>
@@ -377,34 +270,21 @@
         <div class="file-item featured">
           <div class="file-item-title">App UI Mockups</div>
           <div class="file-item-teaser">Build static HTML mockups of the Specview app pages directly inside landing/, reusing style.css.</div>
-          <div class="file-item-meta">
-            <span>1 file</span>
-            <span class="file-item-meta-sep"></span>
-            <span>Braindumps</span>
-          </div>
+          <div class="file-item-meta"><span>1 file</span><span class="file-item-meta-sep"></span><span>Braindumps</span></div>
         </div>
         <div class="file-item">
           <div class="file-item-title">CI &amp; Test Quality</div>
           <div class="file-item-teaser">Improve test coverage and CI pipeline reliability across backend and frontend.</div>
-          <div class="file-item-meta">
-            <span>1 file</span>
-            <span class="file-item-meta-sep"></span>
-            <span>Braindumps</span>
-          </div>
+          <div class="file-item-meta"><span>1 file</span></div>
         </div>
         <div class="file-item">
           <div class="file-item-title">UX: Newspaper Polish</div>
           <div class="file-item-teaser">Phase 3 landing and app design polish — metrics bar, context cards, update banner.</div>
-          <div class="file-item-meta">
-            <span>1 file</span>
-            <span class="file-item-meta-sep"></span>
-            <span>Braindumps</span>
-          </div>
+          <div class="file-item-meta"><span>1 file</span></div>
         </div>
       </div>
     </div>
 
-    <!-- READY TO BUILD -->
     <div class="section-group">
       <div class="section-group-header">
         <span class="section-group-title overline">Ready to build</span>
@@ -414,16 +294,191 @@
         <div class="file-item featured">
           <div class="file-item-title">Specview Auth</div>
           <div class="file-item-teaser">JWT authentication flow, signup, login, and session management.</div>
-          <div class="file-item-meta">
-            <span>5 files</span>
-            <span class="file-item-meta-sep"></span>
-            <span>Ready to build</span>
-          </div>
+          <div class="file-item-meta"><span>5 files</span></div>
         </div>
       </div>
     </div>
 
-  </div><!-- /app-grid -->
+  </div><!-- /iter-a -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       B — BREATHING ROOM (direction 2)
+       20px card padding, 280px min-width, 32px section gap
+  ═══════════════════════════════════════════════════════ -->
+  <div class="iter-label">B — Breathing room: 20px card padding · 280px min-width · 32px group gap</div>
+  <div class="iter-b">
+
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Active</span>
+        <span class="section-group-count">1</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">UX: App Grid Polish</div>
+          <div class="file-item-teaser">Semantic color borders, real braindump teasers, breathing room, icon library evaluation, and playground animation backport.</div>
+          <div class="file-item-meta"><span>7 files</span><span class="file-item-meta-sep"></span><span>Active</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Specced</span>
+        <span class="section-group-count">2</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">Landing Page v2</div>
+          <div class="file-item-teaser">Newspaper editorial aesthetic with full design system — Playfair headlines, stat strip, comparison table, FAQ.</div>
+          <div class="file-item-meta"><span>8 files</span><span class="file-item-meta-sep"></span><span>Specced</span></div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">ClawBoi Ecosystem</div>
+          <div class="file-item-teaser">Dashboard, memory graph, and context system for the ClawBoi AI assistant.</div>
+          <div class="file-item-meta"><span>6 files</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Braindumps</span>
+        <span class="section-group-count">3</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">App UI Mockups</div>
+          <div class="file-item-teaser">Build static HTML mockups of the Specview app pages directly inside landing/, reusing style.css.</div>
+          <div class="file-item-meta"><span>1 file</span><span class="file-item-meta-sep"></span><span>Braindumps</span></div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">CI &amp; Test Quality</div>
+          <div class="file-item-teaser">Improve test coverage and CI pipeline reliability across backend and frontend.</div>
+          <div class="file-item-meta"><span>1 file</span></div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">UX: Newspaper Polish</div>
+          <div class="file-item-teaser">Phase 3 landing and app design polish — metrics bar, context cards, update banner.</div>
+          <div class="file-item-meta"><span>1 file</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Ready to build</span>
+        <span class="section-group-count">1</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">Specview Auth</div>
+          <div class="file-item-teaser">JWT authentication flow, signup, login, and session management.</div>
+          <div class="file-item-meta"><span>5 files</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /iter-b -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       C — HERO + BREATHING ROOM (directions 1+2)
+       Active: 2fr 1fr 1fr ClawBoi hero layout.
+       All others: auto-fill 280px with 20px padding.
+  ═══════════════════════════════════════════════════════ -->
+  <div class="iter-label">C — Hero grid for Active (2fr 1fr 1fr) · breathing room everywhere else</div>
+  <div class="iter-c">
+
+    <!-- Active — hero layout -->
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Active</span>
+        <span class="section-group-count">2</span>
+      </div>
+      <div class="section-group-cards hero-grid">
+        <div class="file-item hero-main">
+          <div class="file-item-title">UX: App Grid Polish</div>
+          <div class="file-item-teaser">Semantic color borders, real braindump teasers, breathing room, icon library evaluation, and playground animation backport from the design system.</div>
+          <div class="file-item-meta">
+            <span class="status-dot-active"></span>
+            <span>generating analysis…</span>
+            <span class="file-item-meta-sep"></span>
+            <span>7 files</span>
+          </div>
+        </div>
+        <div class="file-item hero-secondary">
+          <div class="file-item-title">Landing Phase 3 Polish</div>
+          <div class="file-item-teaser">Inline styles purged, pullquote bug fixed, metrics bar added, context cards grid.</div>
+          <div class="file-item-meta"><span>5 files</span></div>
+        </div>
+        <div class="file-item hero-secondary" style="border-right:none; padding-right:0;">
+          <!-- empty slot — shows when only 2 active -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Specced -->
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Specced</span>
+        <span class="section-group-count">2</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">Landing Page v2</div>
+          <div class="file-item-teaser">Newspaper editorial aesthetic with full design system — Playfair headlines, stat strip, comparison table, FAQ.</div>
+          <div class="file-item-meta"><span>8 files</span><span class="file-item-meta-sep"></span><span>Specced</span></div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">ClawBoi Ecosystem</div>
+          <div class="file-item-teaser">Dashboard, memory graph, and context system for the ClawBoi AI assistant.</div>
+          <div class="file-item-meta"><span>6 files</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Braindumps -->
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Braindumps</span>
+        <span class="section-group-count">3</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">App UI Mockups</div>
+          <div class="file-item-teaser">Build static HTML mockups of the Specview app pages directly inside landing/, reusing style.css.</div>
+          <div class="file-item-meta"><span>1 file</span><span class="file-item-meta-sep"></span><span>Braindumps</span></div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">CI &amp; Test Quality</div>
+          <div class="file-item-teaser">Improve test coverage and CI pipeline reliability across backend and frontend.</div>
+          <div class="file-item-meta"><span>1 file</span></div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">UX: Newspaper Polish</div>
+          <div class="file-item-teaser">Phase 3 landing and app design polish — metrics bar, context cards, update banner.</div>
+          <div class="file-item-meta"><span>1 file</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ready to build -->
+    <div class="section-group">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Ready to build</span>
+        <span class="section-group-count">1</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">Specview Auth</div>
+          <div class="file-item-teaser">JWT authentication flow, signup, login, and session management.</div>
+          <div class="file-item-meta"><span>5 files</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /iter-c -->
+
 </div><!-- /page -->
 </body>
 </html>
