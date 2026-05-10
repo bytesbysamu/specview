@@ -192,6 +192,26 @@ For sections with 3+ cards, the auto-fill grid creates a newspaper-like multi-co
 
 **Change needed in app:** `web-ng/src/styles.css` — change `.gen-status-bar` from `position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000` to `position: relative`. Move the element in `app.component.html` from its current position to between the section nav and search bar. Always render it (not conditionally hidden when idle).
 
+## Brainstorm — Most Impactful Improvements (ranked by visual impact)
+
+### 1. Status Bar: Inline Flow (Highest Impact)
+`position: relative`, always visible, idle state green. Move in DOM between nav and search. 15-minute change with outsized perceptual impact. Inline bar says "live newsroom ticker" vs fixed-bottom says "web app."
+
+### 2. Section Count Pill Badges (High Impact, Low Effort)
+One CSS rule: `.section-count` gets `background: var(--border); border-radius: 2px; padding: 1px 5px`. Replaces `opacity: 0.7` plain text. Upgrades every section header simultaneously — "curated collection" vs "database query result."
+
+### 3. Hero Grid for Active Section (Highest Layout Impact)
+`2fr 1fr 1fr` — lead story physically larger. 28px title, 4-line teaser clamp. Defines editorial layout *within* a section. Needs Angular template changes (deferred but highest-impact layout change remaining).
+
+### 4. Muted Overlines in App Context
+Red overlines = "marketing site leaked into product." Muted `9px var(--ink-muted)` = "you're in the tool." Context switch signal. The `--section-color` system does the identity work, overlines provide quiet structure above.
+
+### 5. Teaser Window Increase (300→500 chars)
+API change: `teaser_chars=500`. Empty teasers break the newspaper illusion — "UI with missing data" not "editorial layout."
+
+### The key insight
+> Stop trying to make the overview feel like columns — make it feel like a **front page**, where hierarchy comes from size variation (hero vs standard) and section authority (colored headers, pill counts, editorial overlines), not from column flow.
+
 ## References
 
 - Mock reference: `landing/app-overview.html` (served at `http://localhost:8097/app-overview.html`)
