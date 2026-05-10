@@ -3,34 +3,34 @@
 **Last Updated**: 2026-05-10
 
 > Status tracking for this capability. This is the ONLY place for status.
-> Epic and Architecture docs contain Priority, not Status.
 
 ---
 
 ## Done
 
-| # | Task | Completed | Effort | Notes |
-|---|------|-----------|--------|-------|
-| 1 | **Resolve open design questions** | 2026-05-10 | 0.5 days | All 5 questions resolved during mock iteration: text-only nav, visible idle status bar, global-only progress, state-colored badges, port 8097 |
-| 2 | **Reconcile status strip/bar naming** | 2026-05-10 | 0.5 days | Unified as `.gen-status-bar` with playground 5.7 colors. No `.action-status-strip` ever existed in mock. |
+| # | Task | Completed | Notes |
+|---|------|-----------|-------|
+| — | — | — | — |
 
 ---
 
 ## In Progress
 
-| # | Task | Started | Effort | Notes |
-|---|------|---------|--------|-------|
-| — | — | — | — | — |
+| # | Task | Started | Notes |
+|---|------|---------|-------|
+| — | — | — | — |
 
 ---
 
 ## Backlog
 
-| # | Task | Due | Effort | Notes |
-|---|------|-----|--------|-------|
-| 3 | **Promote validated CSS to `style.css`** | TBD | 1 day | 6-batch promotion from inline to shared stylesheet |
-| 4 | **Design hero grid fallback for 0–1 items** | TBD | 0.5 days | `.hero-grid--single` full-span, `.hero-grid--empty` display:none |
-| 5 | **Add Source Serif 4 font dependency** | TBD | 0.5 days | Append to `web-ng/index.html` Google Fonts link |
+| # | Task | Effort | Notes |
+|---|------|--------|-------|
+| 1 | **Grid system + card styling** | 0.5 days | 280px min, vertical rules, 20px 24px padding |
+| 2 | **Section headers + dividers** | 0.5 days | Colored overline, 2px ink underline, data-section selectors |
+| 3 | **Typography — serif teasers** | 0.5 days | Source Serif 4, 14px, featured first card |
+| 4 | **Status bar colors** | 0.5 days | Playground 5.7 state colors |
+| 5 | **Badge system** | 0.5 days | Grey count pills, state-colored status badges |
 
 ---
 
@@ -38,15 +38,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Done | 2 |
+| Done | 0 |
 | In Progress | 0 |
-| Backlog | 3 |
+| Backlog | 5 |
 | **Total** | **5** |
-
----
-
-## Related Documents
-
-- [Epic](./epic.md) – Task definitions and scope
-- [Solution Architecture](./architecture.md) – Design decisions
-- [Spec Index](./spec-index.md) – Document overview

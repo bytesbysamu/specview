@@ -2,11 +2,9 @@
 
 ## Architecture Overview
 
-This epic's architectural challenge is not about building software — it is about designing a **CSS promotion pipeline** that moves validated visual decisions from a rapid-iteration scratchpad into a shared design system consumed by both static mockups and the Angular application. The core insight is that `landing/style.css` serves as the single source of truth for all visual tokens, and the mockup's inline `<style>` block is a staging area, not a permanent home.
+This epic applies validated design decisions from the HTML mockup (`landing/app-overview.html`) directly to the Angular app's stylesheet (`web-ng/src/styles.css`). The two stylesheets are independent — the Angular app does NOT import `landing/style.css`. Both share the same CSS custom property tokens (`:root` variables) but component rules are maintained separately.
 
-The system has three layers: the **design token layer** (CSS custom properties already in `style.css`), the **component layer** (class-based rules for reusable elements), and the **page composition layer** (how components combine into layouts). Tasks 1 and 2 resolve naming and semantic conflicts at the component layer. Task 3 performs the actual promotion — moving approximately 30 validated rules from the staging area into the shared system. Tasks 4 and 5 extend the system with new capabilities (grid fallback logic, font dependency) that the Angular implementation epic will consume.
-
-The architectural constraint that shapes every decision: `landing/style.css` is imported by both `app-overview.html` (static mockup served by nginx) and `web-ng/src/styles.css` (Angular app). Any rule promoted to `style.css` must work in both contexts without modification. This means no Angular-specific selectors, no framework assumptions, and no JavaScript-dependent states in the promoted CSS.
+The mockup served as a design scratchpad with inline `<style>` rules. Those rules are now the reference for updating the app's CSS. The changes are purely cosmetic — grid dimensions, padding, borders, font choices, color tokens — with no structural changes to the Angular template or TypeScript.
 
 ## Design Principles
 
@@ -21,13 +19,11 @@ The architectural constraint that shapes every decision: `landing/style.css` is 
 
 ## Component Design
 
-### CSS Promotion Pipeline
+### CSS Update Strategy
 
-**Purpose**: Eliminate the inline `<style>` block in `app-overview.html` by moving every validated rule into `style.css`, ensuring visual regression-free transfer.
+**Purpose**: Update `web-ng/src/styles.css` component rules to match the validated mockup design.
 
-The promotion follows a dependency order: naming decisions (Task 2) must land before class names are finalized, design question resolutions (Task 1) must land before ambiguous rules can be promoted. The pipeline is: resolve ambiguity → name elements → promote rules → verify visual parity.
-
-Rules group into six promotion batches, each independently testable by browser refresh: header family, status element, section group family, data-section attribute selectors with custom property, hero grid family, and animation keyframes. Promoting in batches allows visual regression checks at each step rather than one large all-or-nothing transfer.
+Changes are grouped into five independent tasks: grid + cards, section headers, typography, status bar colors, and badge system. Each task modifies only `web-ng/src/styles.css` (and `index.html` for fonts). The mockup's inline `<style>` block remains as the design reference — it is not promoted or deleted.
 
 ### Unified Status Element
 
@@ -84,7 +80,7 @@ The mockup already loads Source Serif 4 via its own Google Fonts link tag. The A
 | **Dev port: 8097 (host), 8096 (Docker)** | Local dev uses `python3 -m http.server 8097` in `landing/` for instant iteration without Docker rebuild. Docker landing container serves on 8096 but requires a rebuild to pick up changes. Both are valid — 8097 is the fast iteration path. | Two ports to remember. Acceptable because Docker is for deployment verification, not design iteration. |
 | **Class prefix: `.gen-status-bar`** | Unifies "action status strip" and "status bar" under one name matching the existing playground class. Avoids a breaking rename since `.gen-status-bar` already exists in `style.css`. | "Generation" in the name limits future reuse for non-generation status. Acceptable per P4 — build for the one concrete case that exists now. |
 | **Hero fallback: span full width at 1 item, hide at 0** | Single item stretched across `2fr 1fr 1fr` looks orphaned in column one. Full-width span gives it hero prominence appropriate to being the only active project. Zero items hiding the section entirely prevents an empty hero region with no content. | Lose the three-column visual rhythm with a single item. Acceptable because a single active project deserves maximum visual weight, not a cramped quarter of the viewport. |
-| **Promotion target: `landing/style.css` not `web-ng/src/styles.css`** | The landing stylesheet is the shared contract. Angular imports from it (or can import from it). Promoting to the Angular-specific stylesheet would strand the mockup with inline rules forever. One source of truth, two consumers. | Angular-specific overrides still live in `web-ng/src/styles.css`. Acceptable because overrides are rare — the design system should serve both contexts without modification. |
+| **Target: `web-ng/src/styles.css` directly** | Angular does not import `landing/style.css`. Both files share token values (`:root` variables) but component rules are independent. Applying changes directly to the app stylesheet is the simplest path with no build chain changes. | Mockup and app CSS may drift over time. Acceptable for a solo project — the mockup is the reference, the app is the implementation. |
 
 ## Integration Points
 
