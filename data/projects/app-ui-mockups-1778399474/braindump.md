@@ -253,3 +253,161 @@ All app-specific rules live in a `<style>` block in the HTML file:
 3. Should Active section cards show the generation progress bar inside the card itself?
 4. Column view: should only one column be populated, or all three with overflow?
 5. Count badge on nav tabs: inside the tab button (current) or as a superscript dot?
+
+---
+
+## Grid/Overview Design Research — 2026-05-10
+
+Cross-referenced: Specview git history, ClawBoi dashboard, landing design system.
+
+### What the git history shows
+
+The overview has gone through three distinct phases:
+
+**Phase 1 — `9fd2968` (original Angular port)**
+Fixed 3-column `.file-grid` with vertical column separators (`border-right: 1px solid var(--border)`), `gap: 0`, `padding: 24px`. All projects shown in one undifferentiated grid. No section grouping.
+
+**Phase 2 — `932c88d` / `678c942` (UX overhaul)**
+Introduced `.section-group-cards` with `repeat(auto-fill, minmax(240px, 1fr))` and `gap: 1px` (border-as-divider). Section taxonomy introduced. Two separate systems coexist: auto-fill grid for "All" view, fixed 3-column for single-section view.
+
+**Phase 3 — `80c5b18` (current, newspaper aesthetic)**
+Lucide icons removed, `.overline` applied to section headers, sidebar reordering. Grid structure unchanged from Phase 2.
+
+**Key observation:** Every redesign has kept the 3-column newspaper grid for the single-section column view. The `section-group-cards` auto-fill grid is newer (Phase 2) and less developed visually.
+
+---
+
+### What ClawBoi does differently
+
+ClawBoi (`clawboi/dashboard/style.css`) uses a richer hierarchy in three tiers:
+
+**Tier 1 — Headlines (above the fold)**
+`display: grid; grid-template-columns: 2fr 1fr 1fr` — one large hero + two secondary cards side by side. Hero (`headline-main`): 32px Playfair title, 16px body teaser, 4-line clamp, `border-right: 1px solid var(--border)`. Secondary (`headline-secondary`): 18px title, 14px teaser, 3-line clamp.
+
+**Tier 2 — Newspaper grid (below the fold)**
+`display: grid; grid-template-columns: repeat(3, 1fr); gap: 0` — three equal columns, each a `section-column` with `padding: 0 20px` and `border-right`. Items are `memory-item` with `padding: 12px 0` (column provides horizontal padding).
+
+**Tier 3 — Memory items**
+`memory-item`: 12px vertical padding, `border-bottom`. Hover: `margin: 0 -8px; padding: 12px 8px` — negative-margin bleed activates on hover only (not at rest). Featured: 17px title vs 15px, 3-line clamp vs 2-line.
+
+**Key observation:** ClawBoi's above-the-fold 2fr/1fr/1fr hero system has NO equivalent in the Specview app. This is the richest unexploited pattern.
+
+---
+
+### Ranked design directions
+
+#### 1. Hero + Grid hybrid (highest impact)
+
+**What:** Apply ClawBoi's `2fr 1fr 1fr` above-the-fold hero layout to the Active section — the currently-generating or most-recently-active project gets a large hero card, the next two get secondary cards. All other sections use the standard auto-fill grid below.
+
+**Key CSS:**
+```css
+.section-group--hero .section-group-cards {
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 0;
+  background: none;
+}
+.section-group--hero .file-item.hero-main {
+  padding: 20px 24px 20px 0;
+  border-right: 1px solid var(--border);
+}
+.section-group--hero .file-item.hero-main .file-item-title { font-size: 24px; -webkit-line-clamp: 4; }
+.section-group--hero .file-item.hero-secondary { padding: 12px 16px; border-right: 1px solid var(--border); }
+.section-group--hero .file-item.hero-secondary:last-child { border-right: none; }
+```
+**Gain:** Strong visual hierarchy, newspaper-editorial feel, Active section immediately commands attention.
+**Lose:** Only works well when Active has 2–3 projects. Single or zero items look orphaned. Needs fallback.
+
+---
+
+#### 2. Breathing room on current system (lowest risk, high ROI)
+
+**What:** Keep everything, increase spacing only. Column padding `24px → 32px`, card padding `12px 8px → 16px 12px`, section group margin `24px → 32px`, grid min-width `240px → 280px`.
+
+**Key CSS:**
+```css
+.file-column { padding: 0 32px; }
+.section-group { margin-bottom: 32px; }
+.section-group-cards { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.file-item { padding: 16px 12px; margin: 0 -12px; }
+.section-group-cards .file-item { padding: 16px; margin: 0; }
+```
+**Gain:** Premium feel, no structural change, easy to A/B compare in mockup. Matches ClawBoi's column padding.
+**Lose:** Fewer cards above fold, more scroll.
+
+---
+
+#### 3. ClawBoi hover bleed on column cards
+
+**What:** Adopt ClawBoi's hover pattern exactly — at rest, cards have `padding: 12px 0` with no horizontal padding; hover triggers `margin: 0 -8px; padding: 12px 8px`. The column itself provides horizontal padding. This means cards visually "expand" into the column gutter on hover.
+
+**Key CSS:**
+```css
+/* Column provides horizontal padding */
+.file-column { padding: 0 20px; }
+.file-column:first-child { padding-left: 0; }
+.file-column:last-child { padding-right: 0; }
+
+/* Cards have no horizontal padding at rest */
+.file-item { padding: 12px 0; margin: 0; border-bottom: 1px solid var(--border); }
+
+/* On hover: bleed into column padding */
+.file-item:hover { background: rgba(0,0,0,0.025); margin: 0 -8px; padding: 12px 8px; }
+```
+**Gain:** Satisfying hover feedback, matches ClawBoi's exact interaction model, requires no layout change.
+**Lose:** At rest, cards look spacious but horizontally flush — different from current style. Works only in column view (grid cards can't use negative-margin bleed).
+
+---
+
+#### 4. Single unified grid (simplification)
+
+**What:** Remove the dual-system (auto-fill for "All", 3-column for single section). Use `repeat(auto-fill, minmax(280px, 1fr))` everywhere. Section grouping in "All" view; no section grouping in single-section view.
+
+**Key CSS:**
+```css
+.file-grid, .section-group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--border);
+}
+.file-item { background: var(--bg); padding: 16px; margin: 0; }
+```
+**Gain:** One CSS system, fully responsive, consistent across all views.
+**Lose:** Newspaper column aesthetic lost in single-section view. Less editorial feel.
+
+---
+
+#### 5. Masonry with variable card heights
+
+**What:** Use CSS `grid-template-rows: masonry` (or JS fallback) to allow cards with longer teasers to take more height without leaving blank space. Featured cards still first in flow.
+
+**Gain:** Denser packing, more organic editorial feel, teasers never truncated.
+**Lose:** Browser support is experimental (`masonry` not in all browsers). Inconsistent row heights make scanning harder. Not aligned with the clean grid aesthetic.
+
+---
+
+### Recommendation for next mockup iteration
+
+**Implement in `app-overview.html`:**
+
+1. **Direction 2 first** — increase spacing to match ClawBoi (`32px` column padding, `16px 12px` card padding). Low risk, high visual payoff. Compare side-by-side with current in mockup.
+
+2. **Direction 1 second** — try the `2fr 1fr 1fr` hero grid for the Active section only. Leave all other sections as auto-fill. This preserves simplicity while adding hierarchy where it matters most.
+
+3. **Direction 3 third** — try the ClawBoi hover bleed on the single-section column view. Adds interactivity with no structural change.
+
+Avoid directions 4 (too much simplification) and 5 (browser support) for now.
+
+### CSS values to steal directly from ClawBoi
+
+| ClawBoi value | Current Specview | Proposed |
+|---|---|---|
+| Column padding: `0 20px` | `0 24px` | `0 24px` (already close) |
+| Memory-item padding: `12px 0` | `12px 8px` | Try `12px 0` with column-provided padding |
+| Hover bleed: `margin: 0 -8px` | Same | Same but triggered on hover only |
+| Featured title: `17px` | `18px` | Already better |
+| Featured clamp: `3` | `3` | Match |
+| Hero title: `32px` | Not used | New hero card pattern |
+| Hero summary clamp: `4` | Not used | New hero card pattern |
+| Column rule: `1px solid var(--border)` | Same | Same |
