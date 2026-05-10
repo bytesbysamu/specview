@@ -645,10 +645,161 @@ Playground shows `+ New` button hover as: `background: var(--accent); color: var
 
 ClawBoi pattern: at rest, `padding: 16px 0`. On hover, `margin: 0 -8px; padding: 16px 8px; background: rgba(0,0,0,0.02)`. Cards visually expand into surrounding space on hover — satisfying tactile feedback. Applied to mock.
 
-### Remaining improvements (not yet applied)
+### Remaining improvements (applied 2026-05-10)
 
-1. **Search count**: add `<span class="search-count">9 projects</span>` after search input
-2. **Update banner**: add between nav and search, initially hidden, JS toggleable
-3. **Sidebar status dot size**: mock uses 6px, app uses 7px — standardize to 7px
-4. **Featured card distinction**: currently `:first-child` gets 17px title — could also get a subtle `border-top: 2px solid var(--ink)` to mark it as the lead story
-5. **Empty section handling**: Archive shows "No archived projects." — could also show a subtle `+ Create` action link in the empty state
+All 5 items from the original list have been applied:
+1. Search count — "9 projects" label next to search input
+2. Generation status bar — replaced update banner with proper 5.7 status bar (4 states)
+3. Status dot size — standardized to 7px
+4. Featured card distinction — larger title + 3-line teaser (top border removed to reduce line clutter)
+5. Archive empty state — "No archived projects. Archive a project →"
+
+---
+
+## Final Mock Summary — `app-overview.html` (2026-05-10)
+
+### What was built
+
+A working HTML mockup at `landing/app-overview.html` that represents the target design for the Specview overview page. Served at `http://localhost:8097/app-overview.html`.
+
+### Design decisions locked in the mock
+
+| Decision | Value | Source |
+|---|---|---|
+| **Grid system** | `repeat(auto-fill, minmax(280px, 1fr))`, column-gap: 0, no background fill | ClawBoi + grey-space fix |
+| **Card separation** | Vertical rules only (`border-right: 1px solid var(--border)`) — no horizontal card borders | Matches hero grid |
+| **Card padding** | `20px 24px` all sides | Breathing room, matches hero |
+| **Section separation** | `1px solid var(--border)` divider + 24px margin | Rhythm between sections |
+| **Section headers** | Colored overline + 2px ink underline spanning title text only + grey count pill | ClawBoi + playground 5.16 |
+| **Color philosophy** | State not category. Cards have no color border. Badges use status colors (red=NEW, green=COMPLETE, blue=READY). Section header title stays colored for scan-ability. | Playground audit |
+| **Teaser font** | Source Serif 4, 14px | ClawBoi body font |
+| **Title font** | Playfair Display, 15px (17px featured, 28px hero) | Existing system |
+| **Status bar** | Playground 5.7: idle=#1a6b30, active=#7a5800+shimmer, success=#1a6b30, failure=#C41E3A. White dot, white text, consistent height. | Playground 5.7 |
+| **Hover** | Subtle background tint only (`rgba(0,0,0,0.02)`), no margin/padding shift | Simplified from ClawBoi |
+| **Badges** | Neutral grey for counts. State-colored for status: `badge--new` (red), `badge--complete` (green), `badge--ready` (accent blue) | Playground 5.16 |
+| **Hero grid** | `2fr 1fr 1fr`, gap 24px, Active section only. Vertical rule via `border-left` on secondary cards. | ClawBoi headlines |
+| **Nav** | Sticky, 3px ink top border, tab filter with count pill badges. Functional JS filtering. | Existing system |
+| **Search** | Input with underline + "9 projects" count label. Functional JS filtering. | Playground 5.15 |
+| **Animations** | 7 keyframes available: gen-shimmer, poll-pulse, count-pulse, status-success-flash, rise, dot-pulse, poll-pulse-white | Playground §6 |
+
+### Horizontal lines — final inventory
+
+```
+ #  Element                    Weight       Purpose
+─── ─────────────────────────  ──────────   ────────────────────────
+ 1  Nav top                    3px ink      Editorial anchor
+ 2  Nav bottom                 1px border   Closes nav
+ 3  Status bar                 solid block  Generation state (not a line)
+ 4  Search bar bottom          1px border   Closes header zone
+ 5  Search input underline     1px border   Input affordance
+ 6  Section header underlines  2px ink ×5   Section identity
+ 7  Section dividers           1px border   Rhythm between sections
+ 8  Card vertical rules        1px border   Column separation
+```
+
+Removed: hero grid top border, lead card top borders, card bottom borders.
+
+---
+
+## Plan: Apply to Specview App
+
+### Overview — what needs to change in `web-ng/`
+
+The mock validates all design decisions. To apply to the Angular app:
+
+#### Task 1: Grid system (`web-ng/src/styles.css`)
+
+**Current:** `.section-group-cards` uses `gap: 1px; background: var(--border)` (grey fill on empty columns).
+
+**Target:**
+```css
+.section-group-cards {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  column-gap: 0;
+  row-gap: 0;
+  background: none;
+}
+.section-group-cards .file-item {
+  padding: 20px 24px;
+  border-right: 1px solid var(--border);
+  border-bottom: none;
+}
+```
+
+#### Task 2: Teaser font (`web-ng/src/styles.css`)
+
+**Current:** `.file-item-teaser` uses `Source Sans 3`, 13px.
+
+**Target:**
+```css
+.file-item-teaser {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 14px;
+}
+```
+
+Also add `Source Serif 4` to the Google Fonts import in `index.html`.
+
+#### Task 3: Section headers (`web-ng/src/styles.css`)
+
+**Current:** Full-width `border-bottom: 1px solid var(--border)` on header.
+
+**Target:**
+```css
+.section-group-header { border-bottom: none; }
+.section-group-title {
+  display: inline-block;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 4px;
+}
+```
+
+#### Task 4: Remove card left borders (`web-ng/src/styles.css`)
+
+**Current:** `border-left: 3px solid var(--section-accent)` on every card.
+
+**Target:** Remove. Color = state, not category. Section header color stays.
+
+#### Task 5: Badge system (`web-ng/src/styles.css` + `app.component.html`)
+
+**Current:** No badges on cards.
+
+**Target:** Add grey count pill + status badges to `file-item-meta`:
+```css
+.badge { background: var(--border); color: var(--ink-light); font-size: 9px; padding: 2px 6px; border-radius: 2px; }
+.badge--new { background: var(--red); color: white; }
+.badge--complete { background: var(--status-success-bg); color: white; }
+```
+
+#### Task 6: Generation status bar (`web-ng/src/styles.css` + `app.component.html`)
+
+**Current:** Uses `--ink` background for all states.
+
+**Target:** Match playground 5.7 colors:
+```css
+.gen-status-bar--idle    { background: #1a6b30; }
+.gen-status-bar--active  { background: #7a5800; }
+.gen-status-bar--success { background: #1a6b30; }
+.gen-status-bar--failure { background: #C41E3A; }
+```
+Add shimmer track overlay on active state.
+
+#### Task 7: Hero grid for Active section (`web-ng/src/styles.css` + `app.component.html`)
+
+**Current:** Active section uses same auto-fill grid as other sections.
+
+**Target:** When section is "Active" and has items, use `2fr 1fr 1fr` hero grid. First item gets 28px title, 16px serif teaser, 4-line clamp. Requires template change to add `.hero-grid` class conditionally.
+
+#### Task 8: Featured first card (`web-ng/src/styles.css`)
+
+**Current:** All cards same size.
+
+**Target:**
+```css
+.section-group-cards .file-item:first-child .file-item-title { font-size: 17px; }
+.section-group-cards .file-item:first-child .file-item-teaser { -webkit-line-clamp: 3; }
+```
+
+### Execution approach
+
+Create a new braindump project for the Angular implementation — do NOT edit the app code directly from this plan. Run through `/spec-pipeline` → `/impl-guide` → `/exec-guide`.

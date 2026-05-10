@@ -54,10 +54,11 @@ def _build_env() -> dict | None:
 
 
 def create_message(
-    system: str, prompt: str, *, model: str = "claude-sonnet-4-5", max_tokens: int = 4096
+    system: str, prompt: str, *, model: str = "claude-opus-4-6", max_tokens: int = 4096
 ) -> tuple[str, None, None]:
     """Subprocess-driven CLI call. Returns ``(text, None, None)``."""
     cmd = _build_cmd(system)
+    cmd.extend(["--model", model])
     env = _build_env()
     try:
         result = subprocess.run(
@@ -77,6 +78,6 @@ def create_message(
         raise ProviderError("claude CLI not found — install Claude Code", 500)
 
 
-def stream_message(system: str, prompt: str, *, model: str = "claude-sonnet-4-5", max_tokens: int = 4096):
+def stream_message(system: str, prompt: str, *, model: str = "claude-opus-4-6", max_tokens: int = 4096):
     text, _, _ = create_message(system, prompt, model=model, max_tokens=max_tokens)
     yield text
