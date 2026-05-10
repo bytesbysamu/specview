@@ -73,6 +73,57 @@ These are NON-NEGOTIABLE — do not re-litigate:
 
 8. **Section nav "Demo" link** — Add 4th nav link after demo strip lands.
 
+## Original UX vision — Dieter Rams + newspaper (from ux-polish-newspaper)
+
+"Dieter Rams minimalism + editorial newspaper layout."
+
+**Core principles:**
+- Typography does the heavy lifting — no decorative UI chrome
+- Borders and whitespace create structure; shadows do not exist (one modal exception)
+- Ink on paper: cream (`#FFFEF9`) not white, near-black (`#121212`) not black
+- Interaction is quiet — hover is a whisper of background, nothing more
+- Density without clutter: if it doesn't communicate something, it doesn't exist
+- The reader should focus entirely on content and ideas
+
+**What excellent looks like (quoted from the braindump):**
+> Opening the app should feel like opening a newspaper. The masthead carries editorial authority (64px Playfair, cream, near-black). The section nav tabs have a nameplate rule above them — that thick 3px bar that says "you are here in the publication." Section group headers are red overlines, not neutral gray labels.
+
+### Card grid — where we diverge from the vision
+
+The original vision describes a **newspaper column layout** — 3 equal columns, each a vertical stack of items separated by borders. ClawBoi uses `repeat(3, 1fr)` with column dividers (`border-right: 1px solid var(--border)`), vertical items within each column (`padding: 12px 0`, `border-bottom: 1px`).
+
+Our current app uses `auto-fill` grid with `minmax(280px, 1fr)` — a responsive card grid. This is fundamentally different from a newspaper column layout:
+
+| Newspaper columns (ClawBoi) | Card grid (current app) |
+|---|---|
+| Fixed 3 columns, items flow vertically within each | Responsive N columns, items fill left-to-right |
+| Vertical dividers between columns | Vertical dividers between cards (no column concept) |
+| Items per column vary by count | All items in flat grid, wrapping |
+| Column header at top of each column | Section header above entire grid |
+| Feels like reading a newspaper | Feels like browsing a catalog |
+
+**The key tension:** The newspaper column layout works beautifully for the **single-section view** (e.g. viewing only "Specced" projects) — that's the 3-column `.file-grid` layout. But the **all-sections view** (grouped by section) needs a different layout because sections have variable counts.
+
+**Current approach:** Section groups with auto-fill card grid works well for the all-sections view. But the cards themselves don't feel editorial — they feel like a generic card grid. The newspaper feel comes from:
+
+1. **Typography hierarchy** — first card (lead story) visibly larger than the rest ✅ Applied (17px vs 15px)
+2. **Vertical rhythm** — items stacked with border-bottom separators, not side-by-side cards ❌ We removed horizontal borders
+3. **Column dividers** — thin vertical rules between columns, not between individual cards ⚠️ We have `border-left` on cards, but it separates cards not columns
+4. **Content density** — teasers that give you a reason to click ✅ Applied (Source Serif 14px, real content)
+5. **Masthead authority** — nameplate rule, editorial headings ✅ Applied (3px top, Playfair headings)
+
+### The grid improvement opportunity
+
+For sections with 3+ cards, the auto-fill grid creates a newspaper-like multi-column layout naturally. The issue is:
+- **Sections with 1-2 cards** look sparse — one card with empty space to the right
+- **Cards side-by-side** read as tiles, not as stories in a newspaper column
+
+**Possible directions:**
+1. **Column-first layout for small sections** — 1-2 cards span full width (single column, more teaser text)
+2. **Stacked layout for small sections** — cards stack vertically at full width, not in a grid
+3. **Variable column widths** — first card gets `2fr`, rest get `1fr` (hero + standard, like the mock's Active section)
+4. **Border-bottom separators within columns** — restore horizontal rules between cards in the same column, while keeping vertical rules between columns
+
 ## References
 
 - Mock reference: `landing/app-overview.html` (served at `http://localhost:8097/app-overview.html`)
