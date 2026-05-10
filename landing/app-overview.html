@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Specview — Overview (Mockup)</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── App-specific overrides not yet in style.css ── */
+
+    /* Slim app header — not the editorial masthead */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 3px solid var(--ink);
+    }
+    .app-wordmark {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .app-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .app-signout {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .app-signout:hover { color: var(--ink); }
+
+    /* Section nav — full-width, tab style */
+    .section-nav {
+      display: flex;
+      align-items: center;
+      border-top: none;
+      border-bottom: 1px solid var(--border);
+      padding: 0;
+      justify-content: flex-start;
+    }
+    .section-link {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 11px;
+      color: var(--ink-muted);
+      padding: 8px 16px;
+      border: none;
+      border-right: 1px solid var(--border);
+      background: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .section-link:hover { color: var(--ink); }
+    .section-link.active {
+      color: var(--ink);
+      font-weight: 700;
+      background: rgba(0,0,0,0.025);
+    }
+    [data-theme="dark"] .section-link.active { background: rgba(255,255,255,0.04); }
+    .section-link .section-count {
+      font-size: 9px;
+      font-weight: 400;
+      color: var(--ink-muted);
+      background: var(--border);
+      border-radius: 2px;
+      padding: 1px 5px;
+    }
+    .section-link.active .section-count { background: var(--border); }
+    .nav-new-btn {
+      margin-left: auto;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: none;
+      cursor: pointer;
+      color: var(--ink);
+      margin-right: 0;
+    }
+    .nav-new-btn:hover { border-color: var(--ink); }
+
+    /* Action status strip — below section nav */
+    .action-status-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 11px;
+      border-bottom: 1px solid var(--border);
+      min-height: 32px;
+    }
+    .action-status-strip--idle { color: var(--ink-muted); }
+    .action-status-strip--active {
+      color: var(--ink);
+      background: rgba(34,166,106,0.05);
+      padding: 6px 8px;
+      margin: 0 -8px;
+    }
+    .action-status-strip--failure { color: var(--red); }
+    .action-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .action-status-dot--idle    { background: var(--ink-muted); }
+    .action-status-dot--active  { background: var(--status-running); animation: poll-pulse 0.7s ease-out infinite alternate; }
+    .action-status-dot--success { background: var(--status-success-bg); }
+    .action-status-dot--failure { background: var(--red); }
+    @keyframes poll-pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(34,166,106,0.55); }
+      100% { box-shadow: 0 0 0 5px rgba(34,166,106,0); }
+    }
+    .action-status-project {
+      font-weight: 600;
+    }
+    .action-status-sep { color: var(--ink-muted); margin: 0 2px; }
+    .action-status-step { color: var(--ink-light); }
+    .action-status-retry {
+      margin-left: auto;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--red);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+      border: 1px solid var(--red);
+      border-radius: 2px;
+    }
+
+    /* Section group — taxonomy grouping */
+    .section-group {
+      margin-bottom: 32px;
+    }
+    .section-group-header {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin-bottom: 12px;
+    }
+    .section-group-count {
+      font-size: 9px;
+      color: var(--ink-muted);
+      font-weight: 400;
+      opacity: 0.7;
+    }
+    .section-group-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1px;
+      background: var(--border);
+    }
+    .section-group-cards .file-item {
+      background: var(--bg);
+      margin: 0;
+      padding: 16px;
+    }
+
+    /* Semantic section colors */
+    [data-section="Active"]     { --section-accent: var(--status-running); }
+    [data-section="Specced"]    { --section-accent: var(--accent); }
+    [data-section="Braindumps"] { --section-accent: var(--ink-muted); }
+
+    [data-section="Active"]  .section-group-title { color: var(--status-running); }
+    [data-section="Specced"] .section-group-title { color: var(--accent); }
+
+    .section-group-cards .file-item {
+      border-left: 3px solid var(--section-accent, transparent);
+      padding-left: 13px;
+    }
+
+    /* File item — card */
+    .file-item {
+      padding: 16px 12px;
+      margin: 0 -12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .file-item:hover { background: rgba(0,0,0,0.025); }
+    [data-theme="dark"] .file-item:hover { background: rgba(255,255,255,0.04); }
+    .file-item:last-child { border-bottom: none; }
+    .file-item-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .file-item.featured .file-item-title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+    .file-item-teaser {
+      font-size: 13px;
+      color: var(--ink-light);
+      line-height: 1.55;
+      margin-top: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .file-item.featured .file-item-teaser { -webkit-line-clamp: 3; font-size: 14px; }
+    .file-item-meta {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 11px;
+      color: var(--ink-muted);
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .file-item-meta-sep {
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: var(--ink-muted);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    /* Search bar */
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .search-bar input[type="search"] {
+      flex: 1;
+      max-width: 360px;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--ink);
+      padding: 4px 0;
+      outline: none;
+    }
+    .search-bar input::placeholder { color: var(--ink-muted); }
+    .search-count {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 11px;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Grid wrapper */
+    .app-grid {
+      padding: 24px 0;
+    }
+
+    /* Mockup annotation helpers */
+    .mock-annotation {
+      display: inline-block;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 10px;
+      color: var(--accent);
+      border: 1px dashed var(--accent);
+      border-radius: 2px;
+      padding: 1px 5px;
+      margin-left: 6px;
+      vertical-align: middle;
+      opacity: 0.6;
+    }
+    .mock-variant-label {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--ink-muted);
+      margin-bottom: 4px;
+    }
+    .mock-divider {
+      border: none;
+      border-top: 1px dashed var(--border);
+      margin: 40px 0;
+    }
+    .mock-section-label {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      margin-top: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mock-section-label::before,
+    .mock-section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.25;
+    }
+  </style>
+</head>
+<body>
+<script>
+  // Theme toggle (same as playground)
+  const stored = localStorage.getItem('theme');
+  if (stored === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  }
+</script>
+
+<div class="page">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       VARIANT A — App header (slim, tool-style)
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="mock-section-label">Variant A — Slim app header</div>
+
+  <header class="app-header">
+    <div class="app-wordmark">Specview</div>
+    <div class="app-header-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">☀/☾</button>
+      <button class="app-signout">Sign out</button>
+    </div>
+  </header>
+
+  <!-- Section nav — text only -->
+  <div class="mock-variant-label" style="margin-top:16px;">Nav: text-only tabs</div>
+  <nav class="section-nav">
+    <button class="section-link active">All <span class="section-count">9</span></button>
+    <button class="section-link">Active <span class="section-count">1</span></button>
+    <button class="section-link">Ready to build <span class="section-count">1</span></button>
+    <button class="section-link">Specced <span class="section-count">2</span></button>
+    <button class="section-link">Braindumps <span class="section-count">3</span></button>
+    <button class="section-link">Archive</button>
+    <button class="nav-new-btn">+ New</button>
+  </nav>
+
+  <!-- Action status strip — active state -->
+  <div class="mock-variant-label" style="margin-top:12px;">Status strip: active</div>
+  <div class="action-status-strip action-status-strip--active">
+    <span class="action-status-dot action-status-dot--active"></span>
+    <span class="action-status-project">UX: App Grid Polish</span>
+    <span class="action-status-sep">·</span>
+    <span class="action-status-step">generating analysis…</span>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-bar" style="margin-top:0;">
+    <input type="search" placeholder="Filter projects…" value="">
+    <span class="search-count">9 projects</span>
+  </div>
+
+  <!-- ─── GRID: All sections ─────────────────────── -->
+  <div class="app-grid">
+
+    <!-- ACTIVE -->
+    <div class="section-group" data-section="Active">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Active</span>
+        <span class="section-group-count">1</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">UX: App Grid Polish</div>
+          <div class="file-item-teaser">Semantic color borders, real braindump teasers, breathing room, icon library evaluation, and playground animation backport.</div>
+          <div class="file-item-meta">
+            <span>7 files</span>
+            <span class="file-item-meta-sep"></span>
+            <span>Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPECCED -->
+    <div class="section-group" data-section="Specced">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Specced</span>
+        <span class="section-group-count">2</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">Landing Page v2</div>
+          <div class="file-item-teaser">Newspaper editorial aesthetic with full design system — Playfair Display headlines, stat strip, comparison table, and FAQ.</div>
+          <div class="file-item-meta">
+            <span>8 files</span>
+            <span class="file-item-meta-sep"></span>
+            <span>Specced</span>
+          </div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">ClawBoi Ecosystem</div>
+          <div class="file-item-teaser">Dashboard, memory graph, and context system for the ClawBoi AI assistant.</div>
+          <div class="file-item-meta">
+            <span>6 files</span>
+            <span class="file-item-meta-sep"></span>
+            <span>Specced</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRAINDUMPS -->
+    <div class="section-group" data-section="Braindumps">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Braindumps</span>
+        <span class="section-group-count">3</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">App UI Mockups</div>
+          <div class="file-item-teaser">Build static HTML mockups of the Specview app pages directly inside landing/, reusing style.css.</div>
+          <div class="file-item-meta">
+            <span>1 file</span>
+            <span class="file-item-meta-sep"></span>
+            <span>Braindumps</span>
+          </div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">CI &amp; Test Quality</div>
+          <div class="file-item-teaser">Improve test coverage and CI pipeline reliability across backend and frontend.</div>
+          <div class="file-item-meta">
+            <span>1 file</span>
+            <span class="file-item-meta-sep"></span>
+            <span>Braindumps</span>
+          </div>
+        </div>
+        <div class="file-item">
+          <div class="file-item-title">UX: Newspaper Polish</div>
+          <div class="file-item-teaser">Phase 3 landing and app design polish — metrics bar, context cards, update banner, word count pipe.</div>
+          <div class="file-item-meta">
+            <span>1 file</span>
+            <span class="file-item-meta-sep"></span>
+            <span>Braindumps</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- READY TO BUILD -->
+    <div class="section-group" data-section="Ready to build">
+      <div class="section-group-header">
+        <span class="section-group-title overline">Ready to build</span>
+        <span class="section-group-count">1</span>
+      </div>
+      <div class="section-group-cards">
+        <div class="file-item featured">
+          <div class="file-item-title">Specview Auth</div>
+          <div class="file-item-teaser">JWT authentication flow, signup, login, and session management.</div>
+          <div class="file-item-meta">
+            <span>5 files</span>
+            <span class="file-item-meta-sep"></span>
+            <span>Ready to build</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /app-grid -->
+
+  <hr class="mock-divider">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       VARIANT B — Nav with icon placeholders
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="mock-section-label">Variant B — Nav tabs with icons</div>
+
+  <header class="app-header">
+    <div class="app-wordmark">Specview</div>
+    <div class="app-header-actions">
+      <button class="theme-toggle" onclick="toggleTheme()">☀/☾</button>
+      <button class="app-signout">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="section-nav" style="margin-top:0;">
+    <button class="section-link active">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      All <span class="section-count">9</span>
+    </button>
+    <button class="section-link">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Active <span class="section-count">1</span>
+    </button>
+    <button class="section-link">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Specced <span class="section-count">2</span>
+    </button>
+    <button class="section-link">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 9l-7 7 7 7"/><path d="M21 4v7h-7"/></svg>
+      Ready to build <span class="section-count">1</span>
+    </button>
+    <button class="section-link">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Braindumps <span class="section-count">3</span>
+    </button>
+    <button class="section-link">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+      Archive
+    </button>
+    <button class="nav-new-btn">+ New</button>
+  </nav>
+
+  <!-- Status strip variants side by side -->
+  <div class="mock-section-label" style="margin-top:24px;">Status strip states</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+    <div>
+      <div class="mock-variant-label">Idle (hidden — no strip shown)</div>
+      <div style="height:32px;border-bottom:1px solid var(--border);display:flex;align-items:center;">
+        <span style="font-family:'Source Sans 3',sans-serif;font-size:11px;color:var(--ink-muted);">&nbsp;</span>
+      </div>
+    </div>
+    <div>
+      <div class="mock-variant-label">Active</div>
+      <div class="action-status-strip action-status-strip--active">
+        <span class="action-status-dot action-status-dot--active"></span>
+        <span class="action-status-project">UX: App Grid Polish</span>
+        <span class="action-status-sep">·</span>
+        <span class="action-status-step">generating analysis…</span>
+      </div>
+    </div>
+    <div>
+      <div class="mock-variant-label">Success (brief)</div>
+      <div class="action-status-strip" style="color:var(--status-running);">
+        <span class="action-status-dot action-status-dot--success"></span>
+        done
+      </div>
+    </div>
+    <div>
+      <div class="mock-variant-label">Failure</div>
+      <div class="action-status-strip action-status-strip--failure">
+        <span class="action-status-dot action-status-dot--failure"></span>
+        <span>API timeout — claude CLI exited with code 1</span>
+        <button class="action-status-retry">Retry</button>
+      </div>
+    </div>
+  </div>
+
+  <hr class="mock-divider">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       VARIANT C — Single section view (Braindumps tab active)
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="mock-section-label">Variant C — Single section column view (Braindumps active)</div>
+
+  <header class="app-header">
+    <div class="app-wordmark">Specview</div>
+    <div class="app-header-actions">
+      <button class="theme-toggle" onclick="toggleTheme()">☀/☾</button>
+      <button class="app-signout">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="section-nav">
+    <button class="section-link">All <span class="section-count">9</span></button>
+    <button class="section-link">Active <span class="section-count">1</span></button>
+    <button class="section-link">Ready to build <span class="section-count">1</span></button>
+    <button class="section-link">Specced <span class="section-count">2</span></button>
+    <button class="section-link active">Braindumps <span class="section-count">3</span></button>
+    <button class="section-link">Archive</button>
+    <button class="nav-new-btn">+ New</button>
+  </nav>
+
+  <div class="action-status-strip action-status-strip--idle">
+    <!-- idle: nothing shown -->
+  </div>
+
+  <div class="search-bar">
+    <input type="search" placeholder="Filter projects…" value="">
+    <span class="search-count">3 projects</span>
+  </div>
+
+  <!-- 3-column file grid (single section) -->
+  <div class="file-grid" data-section="Braindumps" style="padding:24px 0;">
+    <div class="file-column" style="border-left:3px solid var(--ink-muted); padding-left:21px;">
+      <div class="file-header">
+        <span class="col-title">Braindumps</span>
+        <span class="col-badge">3</span>
+      </div>
+      <div class="file-item featured">
+        <div class="file-item-title">App UI Mockups</div>
+        <div class="file-item-teaser">Build static HTML mockups of the Specview app pages directly inside landing/, reusing style.css. No Angular, no build step.</div>
+        <div class="file-item-meta">
+          <span>1 file</span>
+          <span class="file-item-meta-sep"></span>
+          <span>Braindumps</span>
+        </div>
+      </div>
+      <div class="file-item">
+        <div class="file-item-title">CI &amp; Test Quality</div>
+        <div class="file-item-teaser">Improve test coverage and CI pipeline reliability across backend and frontend.</div>
+        <div class="file-item-meta"><span>1 file</span></div>
+      </div>
+      <div class="file-item">
+        <div class="file-item-title">UX: Newspaper Polish</div>
+        <div class="file-item-teaser">Phase 3 landing and app design polish — metrics bar, context cards, update banner.</div>
+        <div class="file-item-meta"><span>1 file</span></div>
+      </div>
+    </div>
+    <div class="file-column"></div>
+    <div class="file-column" style="border-right:none; padding-right:0;"></div>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>

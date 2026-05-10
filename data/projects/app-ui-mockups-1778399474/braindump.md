@@ -189,3 +189,67 @@ Some classes exist in `web-ng/src/styles.css` but NOT in `landing/style.css`. Th
 - Not a replacement for the Angular app
 - Not a deliverable — it's a design scratchpad
 - Not committed with every change — only commit when a design decision is locked
+
+---
+
+## Build log
+
+### 2026-05-10 — `landing/app-overview.html` created
+
+**File:** `landing/app-overview.html`
+**Serve at:** `http://localhost:8096/app-overview.html`
+
+#### What was built
+
+Three variants on one page for rapid comparison:
+
+**Variant A — Full overview (all sections)**
+- Slim app header (wordmark left, theme toggle + sign out right) — not the editorial masthead
+- Text-only section nav tabs with count badges, `+ New` button pushed right
+- Action status strip below nav — active state with animated green dot + project name + step
+- Search bar with project count
+- All four section groups: Active (1), Specced (2), Braindumps (3), Ready to build (1)
+- Semantic left borders: green (Active), blue (Specced), muted (Braindumps), transparent (Ready)
+- Section titles colored for Active (green) and Specced (blue) only
+- Featured card (first in each group): 18px Playfair title, 3-line teaser clamp
+- Real teaser copy from actual project descriptions
+
+**Variant B — Nav with inline SVG icons + status strip states**
+- Same header, nav tabs with 12×12 SVG icons (no external dependency)
+- All four status strip states side by side: idle (empty), active, success, failure with retry button
+
+**Variant C — Single section column view**
+- Braindumps tab active
+- 3-column `file-grid` with left border on first column (muted accent)
+- Shows real teaser content per card
+
+#### CSS approach
+
+All app-specific rules live in a `<style>` block in the HTML file:
+- `.app-header`, `.app-wordmark`, `.app-signout` — slim header
+- `.action-status-strip` + `--idle/active/failure` modifiers + `@keyframes poll-pulse`
+- `.section-group`, `.section-group-cards`, `.section-group-header` — taxonomy grouping
+- `[data-section]` attribute selectors + `--section-accent` custom property
+- `.file-item` overrides (16px 12px padding, 0 -12px margin, featured sizes)
+
+#### Design decisions captured in mockup
+
+| Decision | What the mockup shows |
+|---|---|
+| Header style | Slim single-line — wordmark + icon buttons only, no editorial date/tagline |
+| Nav icons | Both: text-only (A) and inline SVG icons (B) — pick one |
+| Status strip placement | Below nav, above search — full width, 32px min-height |
+| Status strip idle state | Empty strip (no dot, no text) — not "connected" |
+| Section title tint | Only Active (green) and Specced (blue); others neutral overline |
+| Featured card | First card in each group gets 18px title, 3-line clamp |
+| Empty section groups | Hidden (not shown in mock — only sections with projects rendered) |
+| New project button | Right-aligned in nav bar, not floating |
+| Search bar | Below nav + status strip, full-width left-aligned |
+
+#### Open questions for next iteration
+
+1. Nav icons: inline SVG vs Unicode vs no icons — which reads better at 12px?
+2. Status strip idle: truly hidden, or show a faint "● connected" in ink-muted?
+3. Should Active section cards show the generation progress bar inside the card itself?
+4. Column view: should only one column be populated, or all three with overflow?
+5. Count badge on nav tabs: inside the tab button (current) or as a superscript dot?
