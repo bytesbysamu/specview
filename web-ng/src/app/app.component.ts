@@ -1013,24 +1013,25 @@ export class AppComponent implements OnInit, OnDestroy {
     const activeStep = hasJob ? (this.specGenStep() ?? null) : null;
 
     // Pick lead file by section
+    // Use content if loaded (single-project view), fall back to teaser (list view)
+    const specText = (s: any) => s?.content ?? s?.teaser ?? null;
+
     let leadContent: string | null = null;
     if (sec === 'Active') {
-      leadContent = p.specs.find(s => s.filename === 'braindump.md')?.content
-        ?? p.specs.find(s => s.filename === 'epic.md')?.content
-        ?? null;
+      leadContent = specText(p.specs.find(s => s.filename === 'braindump.md'))
+        ?? specText(p.specs.find(s => s.filename === 'epic.md'));
     } else if (sec === 'Specced') {
-      leadContent = p.specs.find(s => s.filename === 'implementation-guide.md')?.content ?? null;
+      leadContent = specText(p.specs.find(s => s.filename === 'implementation-guide.md'));
     } else if (sec === 'Ready to build') {
-      leadContent = p.specs.find(s => s.filename === 'architecture.md')?.content
-        ?? p.specs.find(s => s.filename === 'epic.md')?.content
-        ?? null;
+      leadContent = specText(p.specs.find(s => s.filename === 'architecture.md'))
+        ?? specText(p.specs.find(s => s.filename === 'epic.md'));
     } else if (sec === 'Braindumps') {
-      leadContent = p.specs.find(s => s.filename === 'braindump.md')?.content ?? null;
+      leadContent = specText(p.specs.find(s => s.filename === 'braindump.md'));
     }
 
     // Count tasks in implementation guide if present
-    const guideContent = p.specs.find(s => s.filename === 'implementation-guide.md')?.content;
-    const taskCount = guideContent != null ? countTasks(guideContent) : null;
+    const guideText = specText(p.specs.find(s => s.filename === 'implementation-guide.md'));
+    const taskCount = guideText != null ? countTasks(guideText) : null;
 
     return projectTeaser(sec, activeStep, leadContent, taskCount, null);
   }
