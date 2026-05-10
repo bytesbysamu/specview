@@ -91,10 +91,14 @@
     .section-group:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
     .section-group.hidden { display: none; }
 
-    /* E3: heavier section headers — underline spans title only */
-    .section-group-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; border-bottom: none; padding-bottom: 0; }
+    /* Section headers — overline + count badge (playground 5.16 pattern) */
+    .section-group-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border-bottom: none; padding-bottom: 0; }
     .section-group-title { color: var(--section-color, var(--ink-muted)); display: inline-block; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
-    .section-group-count { font-size: 9px; color: var(--ink-muted); }
+    .section-group-count {
+      font-family: 'Source Sans 3', sans-serif; font-size: 10px;
+      background: var(--border); color: var(--ink-light);
+      padding: 2px 8px; border-radius: 2px;
+    }
 
     /* ── Standard grid cards ── */
     .section-group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
@@ -264,8 +268,7 @@
             <span class="status-dot"></span>
             <span>generating analysis…</span>
             <span class="sep"></span>
-            <span>7 files</span>
-            <span class="sep"></span>
+            <span class="badge">7</span>
             <span>2 min ago</span>
           </div>
         </div>
@@ -278,7 +281,7 @@
             <span class="status-dot"></span>
             <span>running</span>
             <span class="sep"></span>
-            <span>5 files</span>
+            <span class="badge">5</span>
           </div>
         </div>
 
@@ -295,12 +298,12 @@
         <div class="file-item" data-name="landing page v2">
           <div class="file-item-title">Landing Page v2</div>
           <div class="file-item-teaser">Newspaper editorial aesthetic with full design system — Playfair headlines, stat strip, comparison table, FAQ accordion.</div>
-          <div class="file-item-meta"><span>8 files</span><span class="sep"></span><span>May 8</span><span class="sep"></span><span class="badge badge--complete">complete</span></div>
+          <div class="file-item-meta"><span class="badge">8</span><span>May 8</span><span class="sep"></span><span class="badge badge--complete">complete</span></div>
         </div>
         <div class="file-item" data-name="clawboi ecosystem">
           <div class="file-item-title">ClawBoi Ecosystem</div>
           <div class="file-item-teaser">Dashboard, memory graph, and context viewer for the ClawBoi AI assistant project.</div>
-          <div class="file-item-meta"><span>6 files</span><span class="sep"></span><span>May 5</span></div>
+          <div class="file-item-meta"><span class="badge">6</span><span>May 5</span></div>
         </div>
       </div>
     </div>
@@ -315,7 +318,7 @@
         <div class="file-item" data-name="specview auth">
           <div class="file-item-title">Specview Auth</div>
           <div class="file-item-teaser">JWT authentication flow, signup, login, token refresh, and session management across API and Angular frontend.</div>
-          <div class="file-item-meta"><span>5 files</span><span class="sep"></span><span>May 3</span><span class="sep"></span><span class="badge badge--ready">ready</span></div>
+          <div class="file-item-meta"><span class="badge">5</span><span>May 3</span><span class="sep"></span><span class="badge badge--ready">ready</span></div>
         </div>
       </div>
     </div>
@@ -330,22 +333,22 @@
         <div class="file-item" data-name="app ui mockups">
           <div class="file-item-title">App UI Mockups</div>
           <div class="file-item-teaser">Build static HTML mockups of the Specview app pages directly inside landing/, reusing style.css for fast iteration.</div>
-          <div class="file-item-meta"><span>1 file</span><span class="sep"></span><span>Today</span><span class="sep"></span><span class="badge badge--new">new</span></div>
+          <div class="file-item-meta"><span class="badge">1</span><span>Today</span><span class="sep"></span><span class="badge badge--new">new</span></div>
         </div>
         <div class="file-item" data-name="ci test quality">
           <div class="file-item-title">CI &amp; Test Quality</div>
           <div class="file-item-teaser">Improve test coverage and CI pipeline reliability across backend and frontend.</div>
-          <div class="file-item-meta"><span>1 file</span><span class="sep"></span><span>May 9</span></div>
+          <div class="file-item-meta"><span class="badge">1</span><span>May 9</span></div>
         </div>
         <div class="file-item" data-name="ux newspaper polish">
           <div class="file-item-title">UX: Newspaper Polish</div>
           <div class="file-item-teaser">Phase 3 landing and app design polish — metrics bar, context cards, update banner, status strip.</div>
-          <div class="file-item-meta"><span>1 file</span><span class="sep"></span><span>May 9</span></div>
+          <div class="file-item-meta"><span class="badge">1</span><span>May 9</span></div>
         </div>
         <div class="file-item" data-name="notification system">
           <div class="file-item-title">Notification System</div>
           <div class="file-item-teaser">In-app notifications for job completion, errors, and spec ready events.</div>
-          <div class="file-item-meta"><span>1 file</span><span class="sep"></span><span>May 7</span></div>
+          <div class="file-item-meta"><span class="badge">1</span><span>May 7</span></div>
         </div>
       </div>
     </div>
