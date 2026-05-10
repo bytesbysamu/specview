@@ -505,3 +505,100 @@ Add an Archive section with italic muted text: "No archived projects."
 
 #### E10 — Teaser font size 14px for standard cards
 Currently 13px. Bump to 14px for standard (non-hero) cards to match ClawBoi's secondary headline summary size.
+
+---
+
+## Playground Color Audit — 2026-05-10
+
+Studied 4 playground sections to understand how color is used in the established design system, then compared against the overview mock.
+
+### How the playground uses color
+
+#### Generation Status Bar (5.7) — color = state, full commitment
+
+4 states, each a **full opaque background fill** with white text:
+
+| State | Background | CSS variable |
+|---|---|---|
+| Idle | `#1a6b30` (dark green) | `--status-idle` |
+| Active | `#7a5800` (dark amber) | `--status-active` |
+| Success | `#1a6b30` (dark green) | `--status-success` |
+| Failure | `#C41E3A` (red) | `--status-failure` |
+
+Plus a `gen-shimmer` animation track (2px gradient sweep) on the Active state. Color here is **bold, opaque, full-width** — it IS the bar. No subtlety.
+
+**Principle: when color means "something is happening right now," go full saturation.**
+
+#### Diff Blocks (5.12) — color = semantic operation, subtle + border
+
+| Type | Background | Border-left |
+|---|---|---|
+| Remove | `rgba(196,30,58,0.05)` — barely visible | `3px solid var(--red)` |
+| Add | `rgba(46,125,50,0.06)` — barely visible | `3px solid var(--status-success-bg)` |
+
+Pattern: **ghost background tint + strong left border**. The border does all the work. The background is a whisper. Remove also gets `line-through` + `opacity: 0.65`.
+
+**Principle: left border = semantic meaning, background tint = ambient context.**
+
+#### Overline + Badges (5.16) — color is minimal and earned
+
+- **Overline**: no color — just `var(--ink-muted)` uppercase, 9px, 0.12em letter-spacing. Completely neutral.
+- **Count badge**: `background: var(--border)`, `color: var(--ink-light)` — grey, no semantic color. Just a number.
+- **NEW badge**: `background: var(--red)`, `color: white` — only badge that uses color, and only because "new" is an attention state.
+
+**Principle: color is earned. Count badges are neutral. Only status-meaning badges get color.**
+
+#### Animations (section) — color maps to state, never to category
+
+| Animation | Color used | Meaning |
+|---|---|---|
+| `poll-pulse` | `var(--status-running)` green | Active/running |
+| `thinking-pulse` | `var(--accent)` blue | Processing/thinking |
+| `dot-pulse` | `var(--ink-muted)` grey | Idle/loading |
+| `count-pulse` | `var(--border)` bg, `var(--ink)` text | Neutral, no state |
+| `status-success-flash` | `var(--status-success)` green | Done |
+
+**Principle: animation color = current state. Never used for category identity.**
+
+---
+
+### The disconnect with our overview mock
+
+The playground uses color for **state** (running / success / failure / idle). The overview mock uses color for **category** (Active / Specced / Ready / Braindumps). These are fundamentally different philosophies.
+
+**Current mock's category color usage:**
+
+| Element | Color source | Problem |
+|---|---|---|
+| Left border on every card | `--section-color` (green/blue/purple/brown) | Redundant — section header already identifies category |
+| Section header title | `--section-color` | Acceptable — quick scan aid, analogous to overline |
+| Hero grid top border | `--section-color` | Acceptable — marks the hero region |
+| Badge background | `--section-color` | Wrong — badges should use status color (playground) or neutral |
+
+**What the playground would do instead:**
+- Cards get left border **only when they have a state**: running = green, error = red, done = green flash
+- Cards with no active state: **no color border** — just the grid lines
+- Section header title color: keep for scan-ability (low-key, like a colored overline)
+- Badges: neutral grey for counts, red only for "NEW", green only for "COMPLETE/DONE"
+- Category differentiation comes from **section grouping and position**, not from per-card color
+
+### Color rethink — applied to overview mock
+
+#### Remove
+- `border-left: 3px solid var(--section-color)` from all standard grid cards — redundant
+- Category-colored badge backgrounds — replace with state-appropriate colors
+
+#### Keep
+- Section header title in `--section-color` — subtle, useful for scanning
+- Hero grid `border-top: 3px solid var(--section-color)` — marks the hero region
+- Status dot animation (green pulse) — state-based, matches playground
+- Hero overline in `--section-color` — matches section identity
+
+#### Change badges to state color
+- "NEW" → `background: var(--red)` (attention, matches playground)
+- "COMPLETE" → `background: var(--status-success-bg)` (done state)
+- "READY" → `background: var(--accent)` (info/action state)
+- Count badges → `background: var(--border); color: var(--ink-light)` (neutral)
+
+#### Result
+Color in the overview now means the same thing as in the playground: **state, not category.** Category is communicated by section grouping + header. State is communicated by card-level color (border, badge, dot).
