@@ -10,7 +10,7 @@
       <div class="masthead-center">
         <div class="masthead-date">{{ today }}</div>
         <h1 class="masthead-title">Specview</h1>
-        <div class="masthead-tagline">All the Specs Fit to Read</div>
+        <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
       </div>
       <div class="masthead-actions">
         <button class="new-project-btn" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
@@ -82,7 +82,10 @@
       }
       @default {
         <div class="gen-status-content gen-status-idle">
-          specview · idle — ready
+          <span class="gen-dot"></span>
+          <span class="gen-status-project">specview</span>
+          <span class="gen-status-sep">·</span>
+          <span class="gen-status-step">idle — ready</span>
         </div>
       }
     }
@@ -112,11 +115,13 @@
         autocomplete="off"
         [value]="searchQuery()"
         (input)="onSearch($any($event.target).value)" />
-      @if (searchQuery()) {
-        <span class="search-count">
+      <span class="search-count">
+        @if (searchQuery()) {
           {{ filteredProjects().length }} match{{ filteredProjects().length !== 1 ? 'es' : '' }}
-        </span>
-      }
+        } @else {
+          {{ projects().length }} projects
+        }
+      </span>
     </div>
   }
 
