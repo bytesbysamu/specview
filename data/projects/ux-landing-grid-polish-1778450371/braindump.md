@@ -188,9 +188,9 @@ For sections with 3+ cards, the auto-fill grid creates a newspaper-like multi-co
 | Visibility | Always visible (idle state shows green "idle — ready") | Only visible during generation |
 | Color | State-specific: amber/green/red per playground 5.7 | `background: var(--ink)` base with state modifiers |
 
-**Decision needed:** The mock places the status bar inline (always visible, part of the page flow). The app pins it to the bottom (only visible during generation, overlaps content). The mock approach is better for the newspaper feel — it's part of the editorial structure, not a floating overlay. But the app approach avoids wasting 32px of vertical space when idle.
+**Decision: match the mock.** Status bar is inline — `position: relative`, part of the page flow between nav and search. Always visible. Idle state shows green "idle — ready". This is part of the editorial structure, not a floating overlay. The 32px vertical cost is acceptable — it communicates system readiness and prevents layout shift when generation starts.
 
-**Recommendation:** Keep `position: fixed; bottom: 0` for the app (it's functional — shows during generation only). The mock's inline placement is for design reference, not for shipping. The state colors (playground 5.7) should match in both.
+**Change needed in app:** `web-ng/src/styles.css` — change `.gen-status-bar` from `position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000` to `position: relative`. Move the element in `app.component.html` from its current position to between the section nav and search bar. Always render it (not conditionally hidden when idle).
 
 ## References
 
