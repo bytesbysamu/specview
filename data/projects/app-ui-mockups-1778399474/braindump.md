@@ -411,3 +411,97 @@ Avoid directions 4 (too much simplification) and 5 (browser support) for now.
 | Hero title: `32px` | Not used | New hero card pattern |
 | Hero summary clamp: `4` | Not used | New hero card pattern |
 | Column rule: `1px solid var(--border)` | Same | Same |
+
+---
+
+## ClawBoi vs Mock C — Gap Analysis (2026-05-10)
+
+Comparing our promoted working mock (C: hero grid + section colors + breathing room) against ClawBoi's production dashboard. Focus: grid, spacing, organization, typography, color.
+
+### Grid & space
+
+| Property | ClawBoi | Mock C | Gap / Experiment |
+|---|---|---|---|
+| Hero grid gap | `gap: 24px` | `gap: 0` + `border-right` + padding | Try `gap: 24px` — removes need for card `border-right` and complex padding, cleaner |
+| Hero main title | `32px` 700 | `26px` 700 | Bump to `28px` or `30px` — ours is undersized vs the 2fr column width |
+| Hero main teaser | `16px`, 4-line | `15px`, 4-line | Bump to `16px` for parity |
+| Standard card padding | `12px 0` (column provides horiz.) | `20px 20px 20px 17px` | Our cards carry their own horizontal padding; ClawBoi delegates to column. Try `16px 0` in standard grid with column-provided padding? |
+| Column internal padding | `0 20px` on center/right columns | N/A (no column layout in All view) | Only applies if we add a single-section column view mock |
+| Section bottom margin | Divider-based (`16px margin`) | `32px` (margin only, no divider) | Add a 1px `var(--border)` rule between sections, reduce margin to `24px` — tighter + more structured |
+
+### Typography
+
+| Property | ClawBoi | Mock C | Gap / Experiment |
+|---|---|---|---|
+| Body/teaser font | `Source Serif 4` (serif) | `Source Sans 3` (sans) | **Big miss.** ClawBoi uses serif for all body text — teasers, summaries, descriptions. We use sans-serif everywhere. Try `Source Serif 4` on `.file-item-teaser` — strengthens newspaper feel significantly |
+| Masthead title | `56px` Playfair | `64px` Playfair | Ours is larger — intentional, app has fewer competing elements |
+| Section header border | `2px solid var(--ink)` | `1px solid var(--border)` | **Weak headers.** ClawBoi uses ink-weight bottom border on section labels. Try `2px solid var(--ink)` — more authoritative |
+| Section header style | `inline-block` (underline only spans text) | Full-width `border-bottom` | ClawBoi's `inline-block` trick: underline only spans the label text, not full width. More editorial. Try it. |
+| Markdown h3 styling | `13px 600 uppercase, letter-spacing: 0.05em` | N/A | Not applicable in overview mock |
+| Overline letter-spacing | `0.1em` (widget-title) | `0.12em` | Close enough — leave as-is |
+
+### Color & semantics
+
+| Property | ClawBoi | Mock C | Gap / Experiment |
+|---|---|---|---|
+| Section color system | None — all sections same color | 4 colors: green (Active), blue (Specced), purple (Ready), brown (Braindumps) | **Our advantage.** ClawBoi has no section differentiation. Keep this. |
+| Mood color scale | 6-step green → red (`--mood-10` to `--mood-0`) | Not applicable | Could adapt as a project health/completeness indicator (how many specs generated?) |
+| Badge system | `.badge-new`: red bg, white text, 9px, `padding: 2px 6px`, `border-radius: 2px` | None | **Missing.** Add badges for states like "NEW", "3 specs", or file count. Experiment with `--section-color` bg instead of red. |
+| Status dot | None | Animated green pulse (`.status-dot`) | **Our advantage.** Keep — ClawBoi doesn't have this. |
+| Accent usage | Links only (`--accent`) | Links + Specced section color | Same variable, expanded use. Good. |
+| Hover color | `rgba(0,0,0,0.02)` | `rgba(0,0,0,0.025)` | Nearly identical. Fine. |
+
+### Card patterns & interaction
+
+| Property | ClawBoi | Mock C | Gap / Experiment |
+|---|---|---|---|
+| Hover bleed | `margin: 0 -8px; padding: 12px 8px` on hover only | Background color change only | **Missing.** Add negative-margin hover bleed to standard grid cards. At rest: flush. On hover: card expands into gutter. Satisfying tactile feedback. |
+| Inter-section dividers | `.divider.thick`: 3px, `var(--border-dark)` between major sections | None — just margin space | **Missing.** Add a thin horizontal rule between section groups. `1px solid var(--border)` after each `.section-group` except last. |
+| Featured card distinction | 17px title (vs 15px regular), 3-line clamp | No featured cards in standard grid | Add `featured` class back to first card in each section — larger title, longer teaser clamp |
+| Card border radius | `2px` (inputs/buttons only) | None | Match — no radius on cards. Clean. |
+| Empty state | `13px italic Source Sans 3, color: var(--ink-muted), padding: 20px 0` | Not shown | Worth adding to Archive section — "No archived projects yet" |
+
+### Organization
+
+| Property | ClawBoi | Mock C | Gap / Experiment |
+|---|---|---|---|
+| Thick top rule | `3px solid var(--border-dark)` above nav | `3px solid var(--ink)` above nav | Same concept — ours uses `--ink` which is correct |
+| Section count display | `font-size: 9px; opacity: 0.6` inline with nav | `font-size: 9px; background: var(--border); padding: 1px 5px` as pill badge | Different approaches. Both work. Ours is slightly more visible — keep. |
+| Sidebar widgets | Stacked vertically with `margin-bottom: 24px; padding-bottom: 20px; border-bottom` | N/A (no sidebar in overview mock) | Not applicable yet — relevant for page 2 (project reader) |
+| Column-count for body | `column-count: 2; column-gap: 32px; column-rule: 1px solid var(--border)` | N/A | Not applicable in overview — relevant for expanded reader view |
+
+---
+
+### Experiment queue for next mockup iteration
+
+Priority ordered. Each experiment can be toggled independently.
+
+#### E1 — Serif teasers (high impact, zero risk)
+Change `.file-item-teaser` to `font-family: 'Source Serif 4', Georgia, serif`. Already loaded via Google Fonts link. Biggest single-change improvement for newspaper feel.
+
+#### E2 — Inter-section dividers (medium impact)
+Add `border-bottom: 1px solid var(--border); padding-bottom: 24px` to `.section-group`. Reduce `margin-bottom` from `32px` to `24px`. Creates visual rhythm between sections.
+
+#### E3 — Heavier section headers (medium impact)
+Change `.section-group-header` from `border-bottom: 1px solid var(--border)` to `border-bottom: 2px solid var(--ink)`. Make `display: inline-block` so underline only spans the label text, not the full width.
+
+#### E4 — Hero grid gap (medium impact)
+Change `.hero-grid` from `gap: 0` to `gap: 24px`. Remove `border-right` from hero cards. Simpler CSS, more whitespace between columns.
+
+#### E5 — Hero title size bump (low risk)
+Increase `.hero-main .file-item-title` from `26px` to `28–30px`. Increase teaser from `15px` to `16px`.
+
+#### E6 — Hover bleed on standard cards (interactive)
+At rest: `padding: 16px 0`. On hover: `margin: 0 -8px; padding: 16px 8px; background: rgba(0,0,0,0.025)`. Only works in standard grid, not hero grid.
+
+#### E7 — Featured first card per section (visual hierarchy)
+First `.file-item` in each `.section-group-cards` gets: title `17–18px`, teaser `14px`, clamp `3` lines. CSS: `.section-group-cards .file-item:first-child .file-item-title { font-size: 17px; }`.
+
+#### E8 — Status badge pill (additive)
+Add a small pill badge to cards showing file count or status. CSS: `.badge { background: var(--section-color); color: white; font-size: 9px; padding: 2px 6px; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.05em; }`
+
+#### E9 — Empty state for Archive (polish)
+Add an Archive section with italic muted text: "No archived projects."
+
+#### E10 — Teaser font size 14px for standard cards
+Currently 13px. Bump to 14px for standard (non-hero) cards to match ClawBoi's secondary headline summary size.
