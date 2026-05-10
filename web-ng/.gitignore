@@ -31,6 +31,9 @@ yarn-error.log
 !.vscode/extensions.json
 .history/*
 
+# Local dev proxy override
+proxy.conf.json
+
 # Miscellaneous
 /.angular/cache
 .sass-cache/
