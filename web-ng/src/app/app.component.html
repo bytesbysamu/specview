@@ -150,11 +150,15 @@
               <span class="section-group-title overline">{{ group.section }}</span>
               <span class="section-group-count section-count-pulse" [attr.data-count]="group.projects.length">{{ group.projects.length }}</span>
             </div>
-            <div class="section-group-cards">
+            <div class="section-group-cards"
+                 [class.hero-grid]="group.section === 'Active'"
+                 [class.hero-grid--single]="group.section === 'Active' && group.projects.length === 1">
               @for (p of group.projects; track p.id; let pi = $index) {
                 <div
                   class="file-item"
                   [class.featured]="pi === 0"
+                  [class.hero-main]="group.section === 'Active' && pi === 0"
+                  [class.hero-secondary]="group.section === 'Active' && pi > 0"
                   (click)="selectProject(p.id)">
                   <div class="file-item-title">{{ p.name }}</div>
                   <div class="file-item-teaser">{{ teaserFor(p) }}</div>

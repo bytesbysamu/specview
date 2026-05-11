@@ -738,6 +738,35 @@ body {
 .section-group-cards .file-item:first-child .file-item-title { font-size: 17px; }
 .section-group-cards .file-item:first-child .file-item-teaser { -webkit-line-clamp: 3; }
 
+/* ── Hero grid (Active section) — 2fr 1fr 1fr ── */
+.hero-grid {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 24px;
+  background: none !important;
+  padding-top: 4px;
+}
+.hero-grid .file-item {
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  padding: 8px;
+  margin: -8px;
+  border-radius: 2px;
+}
+.hero-grid .file-item:hover { background: rgba(0,0,0,0.02); }
+[data-theme="dark"] .hero-grid .file-item:hover { background: rgba(255,255,255,0.03); }
+
+.hero-grid .file-item.hero-main .file-item-title { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 10px; }
+.hero-grid .file-item.hero-main .file-item-teaser { font-size: 16px; line-height: 1.65; -webkit-line-clamp: 4; }
+
+.hero-grid .file-item.hero-secondary .file-item-title { font-size: 16px; }
+.hero-grid .file-item.hero-secondary .file-item-teaser { -webkit-line-clamp: 3; }
+.hero-grid .file-item.hero-secondary { padding-left: 24px; border-left: 1px solid var(--border); }
+
+/* Fallback: single active item spans full width */
+.hero-grid--single .file-item { grid-column: 1 / -1; }
+
 /* ── Badge system — state colors, not category ── */
 .badge {
   display: inline-block;
