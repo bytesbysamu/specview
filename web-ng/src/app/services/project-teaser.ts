@@ -58,8 +58,12 @@ export function projectTeaser(
   taskCount: number | null | undefined,
   archivedAt?: string | null,
 ): string {
-  if (section === 'Active' && activeStep) {
-    return `generating ${activeStep}…`;
+  if (section === 'Active') {
+    if (activeStep) return `generating ${activeStep}…`;
+    if (leadFileContent) {
+      const sentence = firstNonHeadingSentence(leadFileContent);
+      if (sentence) return sentence;
+    }
   }
 
   if (section === 'Specced') {
@@ -81,6 +85,10 @@ export function projectTeaser(
   }
 
   if (section === 'Braindumps') {
+    if (leadFileContent) {
+      const sentence = firstNonHeadingSentence(leadFileContent);
+      if (sentence) return sentence;
+    }
     return 'Braindump — ready to generate';
   }
 

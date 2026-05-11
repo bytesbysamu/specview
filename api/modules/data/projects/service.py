@@ -98,7 +98,7 @@ def list_projects(projects_dir: Path) -> list[dict]:
             "createdAt": meta["createdAt"],
             "section": meta.get("section", ""),
             "priority": meta.get("priority", 99),
-            "specs": _read_specs(d, include_content=False, teaser_chars=300),
+            "specs": _read_specs(d, include_content=False, teaser_chars=500),
         })
     # Sort by priority asc (1=highest), then newest first within same priority
     results.sort(key=lambda p: (p["priority"], p["createdAt"]))

@@ -20,7 +20,7 @@ from .types import ChainResult
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-sonnet-4-5"
+DEFAULT_MODEL = "claude-opus-4-6"
 
 
 def _resolve_provider_name() -> str:

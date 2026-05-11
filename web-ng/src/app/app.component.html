@@ -10,7 +10,7 @@
       <div class="masthead-center">
         <div class="masthead-date">{{ today }}</div>
         <h1 class="masthead-title">Specview</h1>
-        <div class="masthead-tagline">All the Specs Fit to Read</div>
+        <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
       </div>
       <div class="masthead-actions">
         <button class="new-project-btn" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
@@ -45,6 +45,52 @@
     }
   </nav>
 
+  <!-- Generation status bar — always visible, positioned between nav and search -->
+  <div class="gen-status-bar"
+       [class.gen-status-bar--idle]="mode() === 'idle'"
+       [class.gen-status-bar--active]="mode() === 'active'"
+       [class.gen-status-bar--success]="mode() === 'success-flash'"
+       [class.gen-status-bar--failure]="mode() === 'failure'">
+    @switch (mode()) {
+      @case ('active') {
+        <div class="gen-status-track"></div>
+        <div class="gen-status-content">
+          <span class="thinking-dot gen-dot"></span>
+          <span class="thinking-dot gen-dot"></span>
+          <span class="thinking-dot gen-dot"></span>
+          <span class="gen-status-project">{{ specGenProjectName() }}</span>
+          @if (specGenStep()) {
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">{{ specGenStep() }}</span>
+          }
+        </div>
+      }
+      @case ('success-flash') {
+        <div class="gen-status-content">
+          <span class="gen-status-project">{{ specGenProjectName() ?? 'done' }}</span>
+          <span class="gen-status-sep">·</span>
+          <span class="gen-status-step">done</span>
+        </div>
+      }
+      @case ('failure') {
+        <div class="gen-status-content">
+          <span class="gen-status-project">error</span>
+          <span class="gen-status-sep">·</span>
+          <span class="gen-status-step">{{ statusFailureMsg() }}</span>
+          <button class="gen-status-retry" (click)="retryLastOp()">retry</button>
+        </div>
+      }
+      @default {
+        <div class="gen-status-content gen-status-idle">
+          <span class="gen-dot"></span>
+          <span class="gen-status-project">specview</span>
+          <span class="gen-status-sep">·</span>
+          <span class="gen-status-step">idle — ready</span>
+        </div>
+      }
+    }
+  </div>
+
   <!-- Update banner -->
   @if (updateBanner()) {
     <div class="update-banner">
@@ -69,11 +115,13 @@
         autocomplete="off"
         [value]="searchQuery()"
         (input)="onSearch($any($event.target).value)" />
-      @if (searchQuery()) {
-        <span class="search-count">
+      <span class="search-count">
+        @if (searchQuery()) {
           {{ filteredProjects().length }} match{{ filteredProjects().length !== 1 ? 'es' : '' }}
-        </span>
-      }
+        } @else {
+          {{ projects().length }} projects
+        }
+      </span>
     </div>
   }
 
@@ -97,22 +145,25 @@
       } @else if (activeSection() === 'all') {
         <!-- Grouped by taxonomy section in canonical order -->
         @for (group of projectsBySection(); track group.section) {
-          <div class="section-group">
+          <div class="section-group" [attr.data-section]="group.section">
             <div class="section-group-header">
               <span class="section-group-title overline">{{ group.section }}</span>
               <span class="section-group-count section-count-pulse" [attr.data-count]="group.projects.length">{{ group.projects.length }}</span>
             </div>
-            <div class="section-group-cards">
+            <div class="section-group-cards"
+                 [class.hero-grid]="group.section === 'Active'"
+                 [class.hero-grid--single]="group.section === 'Active' && group.projects.length === 1">
               @for (p of group.projects; track p.id; let pi = $index) {
                 <div
                   class="file-item"
                   [class.featured]="pi === 0"
+                  [class.hero-main]="group.section === 'Active' && pi === 0"
+                  [class.hero-secondary]="group.section === 'Active' && pi > 0"
                   (click)="selectProject(p.id)">
                   <div class="file-item-title">{{ p.name }}</div>
                   <div class="file-item-teaser">{{ teaserFor(p) }}</div>
                   <div class="file-item-meta">
-                    <span>{{ p.specs.length }} file{{ p.specs.length !== 1 ? 's' : '' }}</span>
-                    <span class="file-item-meta-sep"></span>
+                    <span class="badge">{{ p.specs.length }}</span>
                     <span>{{ sectionForProject(p) }}</span>
                   </div>
                 </div>
@@ -137,8 +188,7 @@
                 <div class="file-item-title">{{ p.name }}</div>
                 <div class="file-item-teaser">{{ teaserFor(p) }}</div>
                 <div class="file-item-meta">
-                  <span>{{ p.specs.length }} file{{ p.specs.length !== 1 ? 's' : '' }}</span>
-                  <span class="file-item-meta-sep"></span>
+                  <span class="badge">{{ p.specs.length }}</span>
                   <span>{{ sectionForProject(p) }}</span>
                 </div>
               </div>
