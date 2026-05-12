@@ -1,4 +1,16 @@
-# Specview SaaS Launch Readiness
+# Specview SaaS Launch Readiness (Superseded)
+
+> **This braindump has been split into 5 phase-specific projects after fact-checking against the actual codebase on 2026-05-12.** Key corrections: auth is bcrypt/HS256 (not Supabase magic-link), billing/usage/observability modules are already built, project isolation models exist but routes don't enforce ownership.
+
+## Phase Projects (use these instead)
+
+| Phase | Project | Priority | Summary |
+|-------|---------|----------|---------|
+| **Phase 1** | `saas-phase1-security-auth-1778590275` | P1 | Signup endpoint, auth interceptor, secrets out of compose, CORS, security headers |
+| **Phase 2** | `saas-phase2-isolation-billing-1778590276` | P1 | Per-user project filtering, Stripe credentials, Angular subscription UI, migration script |
+| **Phase 3** | `saas-phase3-reliability-observability-1778590277` | P2 | Sentry activation, health probes, per-step retry, cancel, streaming partials |
+| **Phase 4** | `saas-phase4-sdk-onboarding-1778590278` | P3 | SDK provider as production default, landing → signup, first-run experience |
+| **Phase 5** | `saas-phase5-git-storage-1778590279` | P3 | Git-backed file storage, history/diff/revert endpoints, migration script |
 
 ## What this is
 
