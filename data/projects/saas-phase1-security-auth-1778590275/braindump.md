@@ -227,3 +227,81 @@ If implemented:
 - [ ] CORS rejects requests from origins other than specview.app (production) or localhost (dev)
 - [ ] Security headers present on all responses
 - [ ] Neon database password rotated
+
+---
+
+## Braindump
+
+### 1. Key Themes
+
+"Finish, don't reinvent" is the entire philosophy. The most important decision in this doc is the one that's almost buried: rejecting Supabase magic-link auth in favor of completing bcrypt/HS256. This is a maturity signal. The temptation to rip-and-replace working infrastructure with a shinier dependency is the single most common way early SaaS projects stall. The 70%-done framing is doing real work here — it reframes the remaining effort as completion, not construction.
+
+Security debt is being treated as a launch gate, not a backlog item. Hardcoded secrets in git history, wildcard CORS, missing security headers — these are typically the things teams say "we'll fix later" and never do. Elevating them to P1 blocking status is the right call, but it also means the team has to actually follow through on credential rotation, not just env-var substitution.
+
+The Angular frontend is the silent bottleneck. Three of six tasks require Angular changes (signup form, interceptor, token refresh logic). The backend work is straightforward CRUD. The real integration risk is in the frontend: interceptor registration, 401 handling, auth state management across the app, and making sure the signup UX doesn't feel like an afterthought.
+
+Email infrastructure is being deferred, and that's a ticking clock. Password reset is "optional for launch," but so is email verification. That means the system will accept any string that looks like an email with zero validation that the human controls it. This is fine for a soft launch but becomes a real problem the moment someone typos their email and can't recover their account.
+
+The 3-day estimate is aggressive but achievable — if there are no surprises in the Angular build pipeline. The backend tasks are well-scoped. The risk is entirely in frontend integration and environment configuration across dev/staging/production.
+
+### 2. Hidden Connections
+
+Credential rotation and the JWT secret are the same problem. Rotating the Neon password and generating a new JWT secret are listed as separate line items, but they share a deeper issue: every JWT ever issued with the old secret is still valid until expiry. Rotating the secret effectively logs out every existing user. If there are any active sessions (even test accounts), this needs to be coordinated — not just run as a one-liner.
+
+The auth interceptor and the refresh logic are tightly coupled but specified separately. The interceptor attaches tokens; the refresh logic checks expiry on responses. These need to be built as a single unit. If the interceptor fires, gets a 401, and the refresh handler also fires, you get a race condition. The interceptor should own the entire lifecycle: attach → detect expiry → refresh → retry → or redirect to login.
+
+Rate limiting on /register and the absence of email verification create a spam vector. Without email verification, an attacker can register thousands of accounts with fake emails. Rate limiting by IP helps, but any attacker behind a VPN rotation or botnet bypasses it trivially. The real mitigation is either email verification (deferred) or a CAPTCHA (not mentioned at all).
+
+CORS lockdown and the auth interceptor solve different halves of the same trust problem. CORS prevents unauthorized origins from making requests; the interceptor ensures authorized origins send credentials. But if CORS is locked to specview.app and the interceptor only fires for /api/ paths, what happens with any non-/api/ endpoints? Is there anything served outside that prefix that needs protection?
+
+The SKIP_AUTH bypass in the decorator is a security hole hiding in plain sight. It's mentioned as existing functionality but not listed as something to remove or gate behind NODE_ENV. If SKIP_AUTH is an environment variable and it leaks into production, the entire auth system is worthless.
+
+### 3. Open Questions
+
+**What happens to the git history containing the hardcoded secrets?**
+- Option A: Accept that the secrets are in history, rotate all credentials, and move on. The old values become useless.
+- Option B: Use git filter-branch or BFG Repo-Cleaner to scrub history, then force-push.
+- Option C: Rotate credentials AND scrub history for defense-in-depth.
+- Recommended: Option A. History scrubbing is fragile, breaks clones, and the credentials are about to be rotated anyway. Rotation is the real fix; scrubbing is theater.
+
+**Should the SKIP_AUTH dev bypass be removed or environment-gated before launch?**
+- Option A: Remove it entirely — devs use real auth locally.
+- Option B: Gate it behind FLASK_ENV=development so it can never fire in production.
+- Option C: Leave it as-is and rely on deployment config to not set the flag.
+- Recommended: Option B. Removing it entirely adds friction to local dev that slows everyone down. Gating it behind FLASK_ENV is a one-line change that eliminates the production risk.
+
+**How should the Angular app handle the "logged in but token expired" state during the refresh window?**
+- Option A: Optimistic — queue failed requests, refresh token, replay them automatically.
+- Option B: Simple — on any 401, clear token, redirect to login, user re-authenticates.
+- Option C: Proactive — check token expiry before each request, refresh preemptively if within 1 hour.
+- Recommended: Option C with Option B as fallback. Proactive refresh avoids user-visible failures. But if the proactive check misses (clock skew, server-side revocation), the 401 handler cleans up gracefully.
+
+**Is localStorage the right storage mechanism for the JWT, given XSS risk?**
+- Option A: Keep localStorage — simple, already implemented, and XSS is mitigated by CSP (coming in Phase 4).
+- Option B: Switch to httpOnly cookies — immune to XSS but requires backend changes for CSRF protection.
+- Option C: Use sessionStorage — same XSS risk as localStorage but tokens don't persist across tabs.
+- Recommended: Option A for now. Switching to httpOnly cookies mid-stream adds CSRF complexity that bloats a 3-day sprint. CSP in Phase 4 is the real XSS mitigation. Revisit cookie-based auth if the threat model changes.
+
+**What's the plan for the auth_user_id nullable field on the User model?**
+- Option A: It's a vestige of the Supabase plan — drop it in a migration.
+- Option B: Keep it for future external auth provider integration (Google SSO, etc.).
+- Option C: Ignore it — nullable fields don't hurt anything.
+- Recommended: Option C for this phase, Option A in Phase 4 cleanup. Don't spend migration effort now, but don't build anything new on top of a field that has no purpose.
+
+### 4. Ideas to Explore
+
+- **Add a "canary" health check that fails if SKIP_AUTH is enabled.** Create a /api/health/security endpoint that returns 503 if any dev-bypass flags are active. Wire it into your deployment pipeline so production deploys fail-fast if someone misconfigures the environment.
+
+- **Implement account lockout after N failed login attempts before you implement password reset.** Without password reset, lockout is a denial-of-service against your own users. But without lockout, brute-force is trivial. The pragmatic middle: lock for 15 minutes after 10 failures, log the event, and unlock automatically. No email needed.
+
+- **Build the interceptor as a token-lifecycle service, not just a header-attacher.** Have it own: token storage, expiry checking, refresh orchestration, 401 handling, and logout. The interceptor function itself becomes a thin wrapper around this service. This makes it testable and prevents the auth logic from scattering across components.
+
+- **Add a one-time "rotate secrets" migration script** that coordinates JWT secret rotation with user session invalidation. Don't just swap the secret and hope — build a script that: generates a new secret, updates the env var, and logs a warning that all active sessions will be invalidated. If you ever need to rotate again (breach response), you want this to be a single command, not a wiki page.
+
+- **Ship a minimal CAPTCHA on the register endpoint instead of relying solely on IP rate limiting.** Turnstile (Cloudflare) is free, privacy-respecting, and takes ~30 minutes to integrate. It's a better spam defense than IP-based rate limiting and buys time before email verification is built.
+
+- **Add an X-Request-ID header in the security headers middleware.** You're already touching after_request — adding a UUID request ID costs nothing and makes debugging auth failures across frontend/backend dramatically easier. Especially valuable when you're about to onboard real users who will file bug reports like "it doesn't work."
+
+- **Write a pre-commit hook that greps for known secret patterns** (Neon connection strings, hex tokens > 32 chars) and blocks the commit. The horse is already out of the barn for the current secrets, but this prevents the next developer from making the same mistake. Tools like detect-secrets or gitleaks do this out of the box.
+
+- **Consider adding a /api/auth/me response that includes token_expires_at as an ISO timestamp.** The Angular app currently has to decode the JWT client-side to check expiry. Returning the expiry in the /me response (which is likely called on app init) gives the frontend a clean, decode-free way to schedule refresh.
