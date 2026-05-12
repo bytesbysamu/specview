@@ -36,6 +36,11 @@ RUN chown -R appuser:appgroup /data/spec-doc/
 COPY api/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Pre-create .claude directory with correct ownership so named volumes
+# inherit appuser ownership on first mount (Docker copies the image's
+# directory ownership into empty named volumes).
+RUN mkdir -p /home/appuser/.claude && chown appuser:appgroup /home/appuser/.claude
+
 USER appuser
 ENV HOME=/home/appuser
 
