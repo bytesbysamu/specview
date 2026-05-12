@@ -5,7 +5,11 @@
 # JSON from: security find-generic-password -s "Claude Code-credentials" -w
 if [ -n "$CLAUDE_CREDENTIALS_JSON" ]; then
     mkdir -p /home/appuser/.claude
-    printf '%s' "$CLAUDE_CREDENTIALS_JSON" > /home/appuser/.claude/.credentials.json
+    if [ -f /home/appuser/.claude/.credentials.json ]; then
+        echo "entrypoint: credentials file already exists on volume — preserving existing credentials"
+    else
+        printf '%s' "$CLAUDE_CREDENTIALS_JSON" > /home/appuser/.claude/.credentials.json
+    fi
 fi
 
 exec "$@"

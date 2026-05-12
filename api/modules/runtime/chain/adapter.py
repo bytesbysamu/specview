@@ -29,19 +29,12 @@ def _resolve_provider_name() -> str:
     Precedence:
       1. CHAIN_PROVIDER explicitly set -> use it as-is.
       2. ANTHROPIC_API_KEY present -> "claude" (SDK, production default).
-      3. ANTHROPIC_CLI_KEY present -> "claude" (SDK, using OAuth token as key).
-      4. Otherwise -> "cli" (host-only; uses macOS keychain via Claude Code).
+      3. Otherwise -> "cli" (uses Claude Code credential file / keychain).
     """
     explicit = os.environ.get("CHAIN_PROVIDER")
     if explicit:
         return explicit
     if os.environ.get("ANTHROPIC_API_KEY"):
-        return "claude"
-    # ANTHROPIC_CLI_KEY is the Claude.ai OAuth token — works as an API key
-    # with the Anthropic SDK. Inject it so the SDK provider picks it up.
-    cli_key = os.environ.get("ANTHROPIC_CLI_KEY")
-    if cli_key:
-        os.environ["ANTHROPIC_API_KEY"] = cli_key
         return "claude"
     return "cli"
 

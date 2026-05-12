@@ -13,8 +13,11 @@ services:
       CHAIN_AGENT: chain-agent
       SPEC_DOC_DIR: /data/spec-doc
       PLUGIN_DIR: /app/plugin
-      CLAUDE_CREDENTIALS_JSON: ${CLAUDE_CREDENTIALS_JSON}
     volumes:
+      - claude-credentials:/home/appuser/.claude
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw
       - /Users/sam/Projects/specview/data:/data/spec-doc
       - /Users/sam/Projects/specview/plugin:/app/plugin:ro
+
+volumes:
+  claude-credentials:

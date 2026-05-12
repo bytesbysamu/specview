@@ -9,14 +9,14 @@ DO NOT TOUCH list). Testing the blueprint in isolation guarantees the
 test suite is green at the moment Task 3 lands and stays green when the
 wrap-up commit registers it later.
 
-The CHAIN_PROVIDER env var is intentionally not touched here because this
-blueprint does not go through the chain adapter (locked decision: probe
-calls the Anthropic SDK directly to avoid generation credits and to keep
-the probe out of the rest of the request lifecycle).
+CHAIN_PROVIDER is set in CLI-path tests (TestAnthropicCliHealth) to exercise
+the subprocess branch. The SDK-path tests (TestAnthropicHealth) leave
+CHAIN_PROVIDER unset so they exercise only the ANTHROPIC_API_KEY branch.
 """
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -184,6 +184,88 @@ class TestAnthropicHealth:
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         resp = client.get("/api/health/anthropic")
         assert set(resp.get_json().keys()) == {"status"}
+
+
+# ---------------------------------------------------------------------------
+# Anthropic CLI path — CHAIN_PROVIDER=cli, no ANTHROPIC_API_KEY.
+# ---------------------------------------------------------------------------
+
+
+class TestAnthropicCliHealth:
+    """Covers the subprocess branch: CHAIN_PROVIDER=cli, no ANTHROPIC_API_KEY."""
+
+    def test_anthropic_cli_ok(self, client, monkeypatch):
+        """subprocess exits 0 -> 200 {"status": "ok"}."""
+        monkeypatch.setenv("CHAIN_PROVIDER", "cli")
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+
+        with patch("subprocess.run", return_value=mock_result):
+            resp = client.get("/api/health/anthropic")
+
+        assert resp.status_code == 200
+        assert resp.get_json() == {"status": "ok"}
+
+    def test_anthropic_cli_degraded(self, client, monkeypatch):
+        """Non-zero exit code -> 503 {"status": "degraded"}."""
+        monkeypatch.setenv("CHAIN_PROVIDER", "cli")
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = "authentication failed"
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            resp = client.get("/api/health/anthropic")
+
+        assert resp.status_code == 503
+        body = resp.get_json()
+        assert body["status"] == "degraded"
+        assert "error" in body
+
+    def test_anthropic_cli_timeout(self, client, monkeypatch):
+        """subprocess.TimeoutExpired -> 503 {"status": "degraded"}."""
+        monkeypatch.setenv("CHAIN_PROVIDER", "cli")
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        with patch(
+            "subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd=["claude"], timeout=15),
+        ):
+            resp = client.get("/api/health/anthropic")
+
+        assert resp.status_code == 503
+        body = resp.get_json()
+        assert body["status"] == "degraded"
+        assert "error" in body
+
+    def test_anthropic_skipped(self, client, monkeypatch):
+        """Neither CHAIN_PROVIDER=cli nor ANTHROPIC_API_KEY -> 200 {"status": "skipped"}."""
+        monkeypatch.delenv("CHAIN_PROVIDER", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        resp = client.get("/api/health/anthropic")
+
+        assert resp.status_code == 200
+        assert resp.get_json() == {"status": "skipped"}
+
+    def test_cli_command_uses_haiku_model(self, client, monkeypatch):
+        """The subprocess call must pass --model claude-haiku-4-5 to minimise credit cost."""
+        monkeypatch.setenv("CHAIN_PROVIDER", "cli")
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            client.get("/api/health/anthropic")
+
+        call_args = mock_run.call_args[0][0]  # first positional arg = command list
+        assert "--model" in call_args
+        assert "claude-haiku-4-5" in call_args
 
 
 # ---------------------------------------------------------------------------
