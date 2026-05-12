@@ -7,7 +7,7 @@ description: "Use this skill when the user wants to execute a task from an imple
 
 ## STOP — Read first
 
-**All steps of the Procedure are mandatory. Steps 5–12 (dev-test, dev-review, fix findings, re-test, commit, PR, CI monitoring, merge, report) are not optional — execute them every time, even if the implementation steps went smoothly. Do not report "done" until the PR is merged.**
+**All steps of the Procedure are mandatory. Steps 5–11 (dev-test, dev-review, fix findings, re-test, commit, PR, report) are not optional — execute them every time, even if the implementation steps went smoothly. Do not report "done" until the PR is opened.**
 
 Read a project's `implementation-guide.md` and execute one or all tasks by
 dispatching to the correct specialist agent. The agent reads the task's Steps
@@ -180,32 +180,7 @@ EOF
 )"
 ```
 
-### 11. Monitor CI and merge
-
-After the PR is created, poll the GitHub Actions checks until they complete:
-
-```bash
-gh pr checks <PR-number> --watch
-```
-
-- If all checks pass, merge the PR:
-  ```bash
-  gh pr merge <PR-number> --squash --delete-branch
-  ```
-- If checks fail, read the failing check logs:
-  ```bash
-  gh run view <run-id> --log-failed
-  ```
-  Fix the failure, commit, push, and re-poll. Repeat until green, then merge.
-- If the PR has merge conflicts, rebase onto master and force-push the branch:
-  ```bash
-  git fetch origin master
-  git rebase origin/master
-  git push --force-with-lease
-  ```
-  Then re-poll checks and merge when green.
-
-### 12. Write summary file and report
+### 11. Write summary file and report
 
 Write the following to `data/projects/<project-dir>/exec-guide-summary.md` using the Write tool:
 
@@ -269,7 +244,7 @@ exec-guide: complete
 - The agent has full tool access and will read, edit, and run tests itself.
 - dev-test and dev-review are always invoked automatically — never skip them.
 - Critical review findings are always fixed before committing.
-- The skill commits, pushes, opens a PR, monitors CI, and merges — the pipeline ends with a merged PR.
+- The skill commits, pushes, and opens a PR — the pipeline ends with a reviewable PR.
 
 ## Allowed Tools
 

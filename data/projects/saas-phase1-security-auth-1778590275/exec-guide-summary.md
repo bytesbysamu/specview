@@ -3,9 +3,8 @@
 **Date:** 2026-05-12
 **Tasks run:** 4
 **Tasks passed:** 4 / 4
-**Tests:** passed (backend: modules/auth — 19 passed)
-**Review:** 4 critical (all fixed), 7 warnings (acknowledged)
-**PR:** https://github.com/bytesbysamu/specview/pull/44
+**Tests:** passed (backend: modules/auth — 5 passed)
+**Review:** 4 critical, 7 warnings
 
 ## Tasks
 
@@ -46,6 +45,5 @@ Backend: modules/auth — 5 passed, 0 failed
 
 ## Next steps
 
-- Review and merge PR: https://github.com/bytesbysamu/specview/pull/44
-- Manual: rotate Neon DB password, update .env and Coolify
-- Manual: set CORS_ORIGINS, DATABASE_URL, JWT_SECRET in Coolify production
+- Fix 4 critical review findings
+- Run `/commit` to commit all changes
