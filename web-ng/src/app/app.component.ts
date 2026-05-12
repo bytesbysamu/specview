@@ -4,10 +4,10 @@ import { trigger, transition, style, animate, query, group } from '@angular/anim
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
+import { RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile } from './services/projects.service';
 import { AiService } from './services/ai.service';
-import { LoginComponent } from './components/login/login.component';
 import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
 import { projectTeaser, countTasks } from './services/project-teaser';
 import { WordCountPipe } from './word-count.pipe';
@@ -71,7 +71,7 @@ const GEN_POLL_INTERVAL = 10_000;
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [LoginComponent, WordCountPipe],
+  imports: [RouterOutlet, WordCountPipe],
   templateUrl: './app.component.html',
   animations: [
     trigger('panelEnter', [

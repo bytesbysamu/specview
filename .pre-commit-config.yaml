@@ -1,0 +1,18 @@
+repos:
+  - repo: local
+    hooks:
+      - id: no-neon-connection-strings
+        name: Block Neon connection strings
+        language: pygrep
+        entry: "neon\\.tech"
+        args: ["--multiline"]
+        exclude: "^(\\.env\\.example|CLAUDE\\.md|plugin/|data/).*"
+        types: [text]
+
+      - id: no-jwt-secrets
+        name: Block long hex JWT secrets
+        language: pygrep
+        # Matches a 64-character lowercase hex string (typical token_hex(32) output)
+        entry: "[0-9a-f]{64}"
+        exclude: "^(\\.env\\.example|CLAUDE\\.md|plugin/|data/).*"
+        types: [text]
