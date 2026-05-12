@@ -28,12 +28,14 @@ services:
       DATABASE_URL: "postgresql://neondb_owner:npg_7koHUOnPFp3E@ep-lively-feather-agg1dzjp-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
       JWT_SECRET: "ef65adfbc50572d85b346a0cb5791ccc577fd4ec6a91a018a5b994a92ff40405"
       CORS_ORIGINS: "*"
+    volumes:
+      - claude-credentials:/home/appuser/.claude
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3101/api/health"]
-      interval: 30s
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3101/api/health/anthropic"]
+      interval: 300s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 3
+      start_period: 120s
     restart: unless-stopped
     networks:
       - specview
@@ -57,3 +59,6 @@ services:
 networks:
   specview:
     driver: bridge
+
+volumes:
+  claude-credentials:
