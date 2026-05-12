@@ -1,12 +1,18 @@
-# Frontend Test Coverage — Overview Page
+# Frontend Test Coverage — Overview Page (Superseded)
 
-## What this is
+> **This braindump has been split into 3 phase-specific projects.** Use those instead.
 
-A testing strategy for the Specview Angular frontend, focused on the overview page. This document describes what features exist today, what testing infrastructure is in place, and how we'll layer tests: features → Gherkin → E2E → unit/component tests.
+## Phase Projects
 
-Features documented here will be updated as new requirements arrive. Gherkin scenarios are generated from features. E2E tests are generated from Gherkin. Unit tests fill the gaps.
+| Phase | Project | What it covers |
+|-------|---------|---------------|
+| **Phase 1** | `test-phase1-feature-specs-1778592995` | Document all 17 overview page features (F1-F17), testing infrastructure audit, UX epic decisions that need coverage |
+| **Phase 2** | `test-phase2-gherkin-e2e-1778592996` | 6 new Gherkin feature files (auth, navigation, status bar, search, grid, polling), Playwright E2E implementation, step definitions |
+| **Phase 3** | `test-phase3-unit-component-1778592997` | Pure function tests (section-taxonomy, project-teaser), component/template tests (masthead, nav, status bar, search, grid, auth gate), CI integration |
 
-**Scope: Overview page only.** The expanded project page (editor, text ops, diff view) is Phase 2.
+## Original content below (reference only)
+
+**Scope: Overview page only.** The expanded project page (editor, text ops, diff view) is a future phase.
 
 ---
 
