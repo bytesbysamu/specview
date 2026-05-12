@@ -1,30 +1,37 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { TokenLifecycleService } from './token-lifecycle.service';
 
-interface LoginResponse { token: string; email: string; }
+interface AuthResponse { token: string; email: string; }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly TOKEN_KEY = 'specview_jwt';
-  readonly isLoggedIn = signal(!!this.getStoredJwt());
+  /** Exposed for components and guards — backed by TokenLifecycleService. */
+  get isLoggedIn() { return this.lifecycle.isLoggedIn; }
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private lifecycle: TokenLifecycleService) {}
 
   async login(email: string, password: string): Promise<void> {
     const res = await firstValueFrom(
-      this.http.post<LoginResponse>('/api/auth/login', { email, password })
+      this.http.post<AuthResponse>('/api/auth/login', { email, password })
     );
-    localStorage.setItem(this.TOKEN_KEY, res.token);
-    this.isLoggedIn.set(true);
+    this.lifecycle.storeToken(res.token);
+  }
+
+  async register(email: string, password: string): Promise<void> {
+    const res = await firstValueFrom(
+      this.http.post<AuthResponse>('/api/auth/register', { email, password })
+    );
+    this.lifecycle.storeToken(res.token);
   }
 
   signOut(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-    this.isLoggedIn.set(false);
+    this.lifecycle.handleAuthFailure();
   }
 
+  /** Returns the raw stored JWT. Used by the interceptor for non-refresh paths. */
   getStoredJwt(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return this.lifecycle.getRawToken();
   }
 }

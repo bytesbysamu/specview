@@ -1,6 +1,7 @@
 import importlib
 import os
 import sys
+import uuid
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, send_from_directory, abort
@@ -30,7 +31,7 @@ ENABLED_MODULES = [
 
 
 def _parse_cors_origins() -> list[str]:
-    raw = os.environ.get("CORS_ORIGINS", "http://localhost:4201")
+    raw = os.environ.get("CORS_ORIGINS", "")
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 
@@ -74,6 +75,14 @@ def create_app(config=None):
 
     CORS(app, origins=_parse_cors_origins())
 
+    @app.after_request
+    def _add_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Request-ID"] = str(uuid.uuid4())
+        return response
+
     for module_path, blueprint_attr in ENABLED_MODULES:
         module = importlib.import_module(module_path)
         bp = getattr(module, blueprint_attr)
@@ -90,6 +99,18 @@ def create_app(config=None):
     @app.get('/api/health')
     def health():
         return jsonify({'status': 'ok'})
+
+    @app.get('/api/health/security')
+    def health_security():
+        skip_auth_active = os.environ.get("SKIP_AUTH", "").lower() in ("1", "true", "yes")
+        flask_env = os.environ.get("FLASK_ENV", "")
+        if skip_auth_active and flask_env != "development":
+            return jsonify({
+                "status": "misconfigured",
+                "error": "SKIP_AUTH is active in a non-development environment",
+                "flask_env": flask_env or "(unset)",
+            }), 503
+        return jsonify({"status": "ok", "skip_auth_bypassed": False})
 
     @app.errorhandler(404)
     def not_found(e):
