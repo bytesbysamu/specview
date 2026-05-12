@@ -42,7 +42,7 @@ describe('SECTION_ORDER', () => {
 describe('sectionFor', () => {
 
   describe('active-state precedence — hasActiveJob overrides file state', () => {
-    const cases: Array<{ desc: string; filenames: string[]; expected: Section }> = [
+    const cases: { desc: string; filenames: string[]; expected: Section }[] = [
       {
         desc: 'no files + hasActiveJob → Active',
         filenames: [],
@@ -73,7 +73,7 @@ describe('sectionFor', () => {
   });
 
   describe('file-based classification — hasActiveJob is false', () => {
-    const cases: Array<{ desc: string; filenames: string[]; expected: Section }> = [
+    const cases: { desc: string; filenames: string[]; expected: Section }[] = [
       {
         desc: 'implementation-guide.md → Specced',
         filenames: ['implementation-guide.md'],
@@ -124,7 +124,7 @@ describe('sectionFor', () => {
   });
 
   describe('archive override — archived flag wins over all file states', () => {
-    const cases: Array<{ desc: string; filenames: string[] }> = [
+    const cases: { desc: string; filenames: string[] }[] = [
       { desc: 'no files + archived → Archive', filenames: [] },
       { desc: 'implementation-guide.md + archived → Archive (not Specced)', filenames: ['implementation-guide.md'] },
       { desc: 'architecture.md + archived → Archive (not Ready to build)', filenames: ['architecture.md'] },
