@@ -13,6 +13,7 @@ services:
       CHAIN_AGENT: chain-agent
       SPEC_DOC_DIR: /data/spec-doc
       PLUGIN_DIR: /app/plugin
+      CORS_ORIGINS: "http://localhost:4200,http://localhost:8095"
     volumes:
       - claude-credentials:/home/appuser/.claude
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw

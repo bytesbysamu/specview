@@ -7,7 +7,7 @@ description: "Use this skill when the user wants to execute a task from an imple
 
 ## STOP — Read first
 
-**All 8 steps of the Procedure are mandatory. Steps 5–8 (dev-test, dev-review, summary file, report) are not optional — execute them every time, even if the implementation steps went smoothly. Do not report "done" until the summary file is written.**
+**All steps of the Procedure are mandatory. Steps 5–12 (dev-test, dev-review, fix findings, re-test, commit, PR, CI monitoring, merge, report) are not optional — execute them every time, even if the implementation steps went smoothly. Do not report "done" until the PR is merged.**
 
 Read a project's `implementation-guide.md` and execute one or all tasks by
 dispatching to the correct specialist agent. The agent reads the task's Steps
@@ -131,7 +131,81 @@ Working directory: /Users/sam/Projects/specview
 
 Collect the review output and include it in the final summary.
 
-### 8. Write summary file
+### 8. Fix review findings (automatic — do not skip)
+
+If the review found **critical** findings, fix them before proceeding. Dispatch a `chain-developer` agent with the list of critical findings and the affected files. The agent must:
+- Read each affected file
+- Apply the fix described in the finding
+- Not introduce new issues or change unrelated code
+
+After fixing, re-run dev-test (step 6) to confirm nothing broke. If tests fail, fix and re-test until green.
+
+**Warnings** are logged in the summary but do not block the PR. Do not fix warnings unless they are trivial one-line changes.
+
+### 9. Commit all changes
+
+Stage all changed and new files from the exec-guide run and commit:
+
+```bash
+git add <all changed files>
+git commit -m "<type>: <description>
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
+```
+
+Use `feat:` for new features, `fix:` for bug fixes, `refactor:` for refactors. The commit message should summarize what the epic delivered, not list individual tasks.
+
+### 10. Open PR
+
+Push the branch and open a PR against `master`:
+
+```bash
+git push -u origin <current-branch>
+gh pr create --title "<short title>" --body "$(cat <<'EOF'
+## Summary
+<1-3 bullet points summarizing what this PR delivers>
+
+## Tasks completed
+<list of tasks from the implementation guide>
+
+## Test plan
+- [ ] Backend tests pass (modules/auth)
+- [ ] Frontend builds cleanly
+- [ ] Manual: verify signup flow end-to-end
+- [ ] Manual: verify token refresh works
+- <any task-specific manual checks>
+
+Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
+### 11. Monitor CI and merge
+
+After the PR is created, poll the GitHub Actions checks until they complete:
+
+```bash
+gh pr checks <PR-number> --watch
+```
+
+- If all checks pass, merge the PR:
+  ```bash
+  gh pr merge <PR-number> --squash --delete-branch
+  ```
+- If checks fail, read the failing check logs:
+  ```bash
+  gh run view <run-id> --log-failed
+  ```
+  Fix the failure, commit, push, and re-poll. Repeat until green, then merge.
+- If the PR has merge conflicts, rebase onto master and force-push the branch:
+  ```bash
+  git fetch origin master
+  git rebase origin/master
+  git push --force-with-lease
+  ```
+  Then re-poll checks and merge when green.
+
+### 12. Write summary file and report
 
 Write the following to `data/projects/<project-dir>/exec-guide-summary.md` using the Write tool:
 
@@ -142,7 +216,8 @@ Write the following to `data/projects/<project-dir>/exec-guide-summary.md` using
 **Tasks run:** N
 **Tasks passed:** N / N
 **Tests:** passed | FAILED (backend: <module> — N passed)
-**Review:** <critical count> critical, <warning count> warnings
+**Review:** <initial critical count> critical (all fixed), <warning count> warnings
+**PR:** <PR URL>
 
 ## Tasks
 
@@ -157,25 +232,27 @@ Write the following to `data/projects/<project-dir>/exec-guide-summary.md` using
 
 ## Review findings
 
-<paste dev-review critical/warning list, or "No issues found">
+### Fixed (critical)
+<list of critical findings that were fixed>
+
+### Acknowledged (warnings)
+<list of warnings, or "No warnings">
 
 ## Next steps
 
-- Run `/commit` to commit all changes
-- <any task-specific follow-ups noted by agents>
+- Review and merge PR: <PR URL>
+- <any manual follow-ups noted by agents>
 ```
 
-Then print the same content to the conversation so it's visible.
-
-### 9. Report to user
+Then print the final report to the conversation:
 
 ```
 exec-guide: complete
   Tasks run: N  (N passed, 0 failed)
   Tests: passed (backend: <module> — N passed)
-  Review: <critical count> critical, <warning count> warnings
-  Summary written to: data/projects/<project-dir>/exec-guide-summary.md
-  Next: run /commit to commit the changes
+  Review: N critical (fixed), N warnings (acknowledged)
+  PR: <PR URL>
+  Summary: data/projects/<project-dir>/exec-guide-summary.md
 ```
 
 ## Abort Conditions
@@ -184,13 +261,15 @@ exec-guide: complete
 - Agent reports a blocking error on a task → stop, report the error, do not proceed to the next task.
 - A Verify check fails → treat as a blocking error; report and stop.
 - Tests fail after implementation → stop, report failures, do not run review, do not write summary file.
+- Tests fail after fixing review findings → stop, report failures.
 
 ## Notes
 
 - Always run tasks in order — later tasks depend on earlier ones.
 - The agent has full tool access and will read, edit, and run tests itself.
 - dev-test and dev-review are always invoked automatically — never skip them.
-- This skill does not commit — run `/commit` after reviewing the output.
+- Critical review findings are always fixed before committing.
+- The skill commits, pushes, opens a PR, monitors CI, and merges — the pipeline ends with a merged PR.
 
 ## Allowed Tools
 

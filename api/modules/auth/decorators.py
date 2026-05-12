@@ -21,7 +21,10 @@ def _load_user(user_id: int) -> User | None:
 def require_auth(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if os.environ.get("SKIP_AUTH", "").lower() in ("1", "true", "yes"):
+        if (
+            os.environ.get("FLASK_ENV") == "development"
+            and os.environ.get("SKIP_AUTH", "").lower() in ("1", "true", "yes")
+        ):
             g.current_user = None
             return fn(*args, **kwargs)
 
