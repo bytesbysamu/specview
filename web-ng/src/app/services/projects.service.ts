@@ -21,6 +21,22 @@ export interface GeneratedFile {
   content: string;
 }
 
+export interface PollStatusResponse {
+  running: boolean;
+  done: boolean;
+  current_step: string | null;
+  partial_files?: GeneratedFile[];
+  files?: GeneratedFile[];
+  error?: string;
+}
+
+export interface PollResultResponse {
+  running: boolean;
+  done: boolean;
+  filename?: string;
+  error?: string;
+}
+
 const CANONICAL_ORDER = [
   'braindump',
   'analysis',
@@ -73,16 +89,9 @@ export class ProjectsService {
     );
   }
 
-  pollBootstrap(jobId: string): Promise<{
-    running: boolean;
-    done: boolean;
-    current_step: string | null;
-    partial_files?: GeneratedFile[];
-    files?: GeneratedFile[];
-    error?: string;
-  }> {
+  pollBootstrap(jobId: string): Promise<PollStatusResponse> {
     return firstValueFrom(
-      this.http.get<any>(`/api/ai/text/bootstrap-project/status/${jobId}`)
+      this.http.get<PollStatusResponse>(`/api/ai/text/bootstrap-project/status/${jobId}`)
     );
   }
 
@@ -106,9 +115,9 @@ export class ProjectsService {
     );
   }
 
-  pollEpicGuide(projectId: string): Promise<{ running: boolean; done: boolean; filename?: string; error?: string }> {
+  pollEpicGuide(projectId: string): Promise<PollResultResponse> {
     return firstValueFrom(
-      this.http.get<any>(`/api/projects/${projectId}/generate-epic-guide/status`)
+      this.http.get<PollResultResponse>(`/api/projects/${projectId}/generate-epic-guide/status`)
     );
   }
 }

@@ -1552,6 +1552,51 @@ body {
   display: block;
 }
 
+/* Retry button in sidebar failure state */
+.sidebar-status-retry {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: inherit;
+  font-family: var(--sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+/* Full-width polling error banner */
+.error-state {
+  background: var(--red);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 8px 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Billing gate message */
+.text-ops-billing {
+  border: 1px solid var(--red);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+/* Expanded spec meta line (project · word count) */
+.expanded-meta {
+  display: flex;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+
 /* ── Responsive ──────────────────────────────── */
 @media (max-width: 1100px) {
   .file-grid { grid-template-columns: repeat(2, 1fr); }

@@ -65,30 +65,32 @@
         <div class="gen-status-track"></div>
         <div class="gen-status-content">
           <div class="gen-status-dot"></div>
-          <span style="font-weight:700">spec-doc</span>
-          <span style="opacity:0.5">·</span>
-          <span style="font-style:italic;opacity:0.85">generating architecture…</span>
-          <span style="margin-left:auto;opacity:0.6;font-size:11px">47s</span>
+          <span class="gen-status-name">spec-doc</span>
+          <span style="color:var(--ink-muted)">·</span>
+          <span style="font-style:italic;color:var(--ink-muted)">generating architecture…</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--ink-muted)">47s</span>
         </div>
       </div>
-      <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
-        <div style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:11px;color:var(--ink-muted);">
-          <span style="color:var(--status-idle)">✓</span> analysis.md
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:11px;color:var(--ink-muted);">
-          <span style="color:var(--status-idle)">✓</span> epic.md
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:11px;color:var(--ink-light);">
+      <ul class="aside-list">
+        <li>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>analysis.md</strong> <span>12.3s</span>
+        </li>
+        <li>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>epic.md</strong> <span>18.1s</span>
+        </li>
+        <li>
           <span style="display:flex;gap:3px">
             <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0s"></span>
             <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.2s"></span>
             <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.4s"></span>
           </span>
-          architecture.md
-        </div>
-        <div style="font-family:var(--sans);font-size:11px;color:var(--border);">timeline.md</div>
-        <div style="font-family:var(--sans);font-size:11px;color:var(--border);">implementation-guide.md</div>
-      </div>
+          <strong>architecture.md</strong> <span style="color:var(--ink-muted)">generating…</span>
+        </li>
+        <li style="color:var(--ink-muted)"><strong>timeline.md</strong> <span>—</span></li>
+        <li style="color:var(--ink-muted)"><strong>implementation-guide.md</strong> <span>—</span></li>
+      </ul>
     </aside>
   </section>
 
@@ -110,6 +112,19 @@
       <div class="stat-value">Free</div>
       <div class="stat-label">to start</div>
     </div>
+  </div>
+
+  <!-- Metrics bar -->
+  <div class="metrics-bar">
+    <span>Claude Sonnet 4.5</span>
+    <span class="metrics-sep">·</span>
+    <span>5 files per run</span>
+    <span class="metrics-sep">·</span>
+    <span>avg 44.5s</span>
+    <span class="metrics-sep">·</span>
+    <span>Markdown output — you own the files</span>
+    <span class="metrics-sep">·</span>
+    <span class="metrics-plus">Open source</span>
   </div>
 
   <!-- 2. What ships -->
@@ -213,10 +228,10 @@ Don't overbuild — just works.</div>
     <div class="gen-status-bar gen-status-bar--success" style="animation:status-success-flash 2s ease-out forwards;margin-bottom:24px;">
       <div class="gen-status-content">
         <div class="gen-status-dot"></div>
-        <span style="font-weight:700">spec-doc</span>
-        <span style="opacity:0.5">·</span>
-        <span style="font-style:italic;opacity:0.85">done — 5 files generated</span>
-        <span style="margin-left:auto;opacity:0.6;font-size:11px">47s</span>
+        <span class="gen-status-name">spec-doc</span>
+        <span style="color:var(--ink-muted)">·</span>
+        <span style="font-style:italic;color:var(--ink-muted)">done — 5 files generated</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--ink-muted)">47s</span>
       </div>
     </div>
 
@@ -256,7 +271,7 @@ Don't overbuild — just works.</div>
   </section>
 
   <!-- Pull quote -->
-  <section class="pullquote-row pullquote-single">
+  <section class="pullquote-single">
     <div class="pullquote">
       <div class="pullquote-mark">"</div>
       <p class="pullquote-text">3 paragraphs in. 47 seconds later — analysis, epic, architecture, implementation guide. Human code lines written: 0.</p>
@@ -267,7 +282,7 @@ Don't overbuild — just works.</div>
   <!-- 4. Start -->
   <!-- Comparison table -->
   <div class="section-heading">Specview vs AI app builders</div>
-  <section class="section-page" id="compare" style="min-height:auto;padding:40px;">
+  <section class="section-page section-page--compact" id="compare">
     <div class="compare-table-wrap">
     <table class="compare-table">
       <thead>
@@ -313,6 +328,21 @@ Don't overbuild — just works.</div>
     </div>
   </section>
 
+  <!-- Two-column pull quote -->
+  <section class="pullquote-row">
+    <div class="pullquote">
+      <div class="pullquote-mark">"</div>
+      <p class="pullquote-text">We shipped three features last sprint. The architecture doc kept the team aligned — no one had to ask why.</p>
+      <div class="pullquote-attr">Solo founder, SaaS product</div>
+    </div>
+    <div class="pullquote-divider"></div>
+    <div class="pullquote">
+      <div class="pullquote-mark">"</div>
+      <p class="pullquote-text">The implementation guide handed each task to an agent with exact files and verify criteria. Review instead of rebuild.</p>
+      <div class="pullquote-attr">Engineering lead, 4-person team</div>
+    </div>
+  </section>
+
   <div class="section-heading">Start building</div>
   <section class="section-page pricing" id="start">
     <div class="pricing-grid">
@@ -330,7 +360,7 @@ Don't overbuild — just works.</div>
           <li>No credit card required</li>
         </ul>
         <div class="pricing-cta">
-          <a href="https://app.specview.io/signup" class="btn-primary">Try it free</a>
+          <a href="https://app.specview.io/signup" class="btn-secondary">Try it free</a>
         </div>
       </div>
 
@@ -358,7 +388,7 @@ Don't overbuild — just works.</div>
 
   <!-- FAQ -->
   <div class="section-heading">Questions</div>
-  <section class="section-page" id="faq" style="min-height:auto;padding:40px;">
+  <section class="section-page section-page--compact" id="faq">
     <div class="faq-list">
 
       <details class="faq-item">
@@ -388,6 +418,31 @@ Don't overbuild — just works.</div>
 
     </div>
   </section>
+
+  <!-- Who it's for -->
+  <div class="section-heading">Who it's for</div>
+  <section class="section-page section-page--compact">
+    <div class="context-grid">
+      <div class="context-card">
+        <div class="context-card__label">Solo Founder</div>
+        <div class="context-card__desc">You're building alone. You know what to build — you need the architecture written down before you build it wrong.</div>
+      </div>
+      <div class="context-card">
+        <div class="context-card__label">Small Team</div>
+        <div class="context-card__desc">Four engineers, one product. A spec keeps everyone aligned without a 2-hour kickoff meeting.</div>
+      </div>
+      <div class="context-card">
+        <div class="context-card__label">Consulting</div>
+        <div class="context-card__desc">Client work. The spec is the deliverable that survives the handoff — not the chat log.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Update banner -->
+  <div class="update-banner">
+    <span>Spec Doc is in early access — pricing locks in at $29/mo for the first 100 users.</span>
+    <a href="https://app.specview.io/signup">Get started</a>
+  </div>
 
   <footer class="footer">
     <div class="footer-brand">Spec Doc</div>
