@@ -7,7 +7,7 @@ CI smoke tests and future uptime monitors target the routes here.
 Contract:
 
 - `GET /api/health/anthropic` — live probe.
-    * `CHAIN_PROVIDER=cli`, no API key -> runs `claude -p ok` subprocess
+    * `CHAIN_PROVIDER=cli`, no API key -> runs `claude auth status` subprocess
         - exit 0                        -> 200 {"status": "ok"}
         - non-zero / timeout            -> 503 {"status": "degraded", "error": ...}
     * `ANTHROPIC_API_KEY` set          -> SDK count_tokens probe
@@ -25,7 +25,7 @@ Anthropic SDK call uses `Anthropic(timeout=5.0)` to bound the probe; importing
 the SDK lazily inside the handler keeps test collection fast and keeps the
 import out of the cold-start path when the env var is unset.
 
-CLI probe uses `subprocess.run` with a 15-second timeout. The subprocess exit
+CLI probe uses `subprocess.run` with a 10-second timeout. The subprocess exit
 code is authoritative — stdout/stderr are captured and the first 100 chars of
 combined output are surfaced in degraded responses.
 """
@@ -60,8 +60,8 @@ def anthropic_health():
     """Live probe of the Anthropic backend — CLI subprocess or SDK count_tokens.
 
     When CHAIN_PROVIDER=cli (and no ANTHROPIC_API_KEY is set) the probe runs
-    `claude -p ok --output-format text` as a lightweight auth check. A zero
-    exit code means the CLI is authenticated and operational.
+    `claude auth status` which validates credentials without consuming any
+    generation credits. Exit code 0 means the CLI is authenticated.
 
     When ANTHROPIC_API_KEY is set the probe uses the SDK count_tokens call,
     which is the cheapest authenticated round-trip the SDK exposes.
@@ -71,25 +71,15 @@ def anthropic_health():
 
     if not api_key and chain_provider == "cli":
         # CLI path: validate that `claude` is authenticated.
-        # We use `--model claude-haiku-4-5` (cheapest model) to minimise credit
-        # cost. Note: the SDK path uses count_tokens (zero generation credits);
-        # this CLI path does consume a generation credit per probe call, so the
-        # docker-compose healthcheck interval is set to 300s (5 min) to keep
-        # daily usage to ~288 calls — negligible on Claude Max flat-rate plans.
+        # `claude auth status` returns JSON with {"loggedIn": true/false} and
+        # exits 0 when authenticated, non-zero otherwise. This consumes zero
+        # generation credits — unlike `claude -p ok` which burns a request.
         try:
             result = subprocess.run(
-                [
-                    "claude",
-                    "-p",
-                    "ok",
-                    "--output-format",
-                    "text",
-                    "--model",
-                    "claude-haiku-4-5",
-                ],
+                ["claude", "auth", "status"],
                 capture_output=True,
                 text=True,
-                timeout=15,
+                timeout=10,
             )
         except Exception as exc:  # noqa: BLE001 — probe must survive all failure modes
             return (

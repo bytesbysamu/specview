@@ -252,8 +252,8 @@ class TestAnthropicCliHealth:
         assert resp.status_code == 200
         assert resp.get_json() == {"status": "skipped"}
 
-    def test_cli_command_uses_haiku_model(self, client, monkeypatch):
-        """The subprocess call must pass --model claude-haiku-4-5 to minimise credit cost."""
+    def test_cli_command_uses_auth_status(self, client, monkeypatch):
+        """The subprocess call must use `claude auth status` (zero credits)."""
         monkeypatch.setenv("CHAIN_PROVIDER", "cli")
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
@@ -264,8 +264,7 @@ class TestAnthropicCliHealth:
             client.get("/api/health/anthropic")
 
         call_args = mock_run.call_args[0][0]  # first positional arg = command list
-        assert "--model" in call_args
-        assert "claude-haiku-4-5" in call_args
+        assert call_args == ["claude", "auth", "status"]
 
 
 # ---------------------------------------------------------------------------
