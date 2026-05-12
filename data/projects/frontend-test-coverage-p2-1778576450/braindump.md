@@ -1,193 +1,517 @@
-# Frontend Test Coverage
+# Frontend Test Coverage — Overview Page
 
 ## What this is
 
-The Angular frontend (`web-ng/`) has zero test coverage. No unit tests, no integration tests, no E2E tests. Before SaaS launch, we need a testing foundation that catches regressions in the core flows: project listing, spec generation pipeline, text operations, and auth.
+A testing strategy for the Specview Angular frontend, focused on the overview page. This document describes what features exist today, what testing infrastructure is in place, and how we'll layer tests: features → Gherkin → E2E → unit/component tests.
+
+Features documented here will be updated as new requirements arrive. Gherkin scenarios are generated from features. E2E tests are generated from Gherkin. Unit tests fill the gaps.
+
+**Scope: Overview page only.** The expanded project page (editor, text ops, diff view) is Phase 2.
 
 ---
 
-## Current Frontend Architecture
+## Current Testing Infrastructure (fact-checked 2026-05-12)
 
-Single-component app with signals (no NgRx, no routing beyond hash-based view switching):
+### What already exists
 
-- **`app.component.ts`** — Root component, all state as signals. ~500 lines.
-- **`app.component.html`** — Template, ~505 lines. Uses `@if` / `@for` control flow.
-- **`services/projects.service.ts`** — All HTTP calls, returns `Promise<T>` via `firstValueFrom()`.
-- **`services/section-taxonomy.service.ts`** — Classifies projects into sections (active/specced/braindumps/archive).
-- **`services/project-teaser.ts`** — Extracts teaser text from braindump markdown.
-- **`api/`** — ng-openapi-gen generated client (auto-generated, don't test directly).
-- **`styles.css`** — 1,581 lines, full design system.
+**Angular unit tests (Karma + Jasmine):**
+- `web-ng/src/app/app.component.spec.ts` — 4 test cases: component creation, polling lifecycle (timer stops after max retries), polling error signal rendering, cleanup on destroy
+- `web-ng/src/app/services/projects.service.mock.ts` — spy-based mock
+- `web-ng/src/app/services/ai.service.mock.ts` — spy-based mock
+- `web-ng/karma.conf.js` — Chrome + ChromeHeadlessCI, coverage reporter
+- Dependencies: karma 6.4.0, jasmine-core 5.4.0, @types/jasmine 5.1.0
 
----
+**E2E tests (pytest-bdd + Playwright):**
+- `e2e/features/` — 5 Gherkin feature files, 10 scenarios total:
+  - `brainstorm.feature` — text submission, error handling
+  - `bootstrap-pipeline.feature` — async spec generation, failure polling
+  - `epic-guide.feature` — guide generation, timeout error
+  - `billing-gate.feature` — free tier limit, pro tier bypass
+  - `pro-check.feature` — pro plan routing, lookup failure
+- `e2e/steps/common_steps.py` — 193 lines, Given/When/Then step definitions
+- `e2e/pages/app_page.py` — page object (load, enter_text, click, is_visible, wait_visible)
+- `e2e/conftest.py` — session fixtures spinning up Flask (port 5001, CHAIN_PROVIDER=mock) + Angular dev server (port 4201)
+- Dependencies: pytest-bdd >= 7.0, pytest-playwright >= 0.5, playwright >= 1.44
 
-## Task 1 — Testing Infrastructure Setup
+**Product behavior contract:**
+- `product-behavior.md` — 5 core flows mirrored 1:1 by `e2e/features/`. Any flow change must be reflected in both.
 
-### Test runner
-Angular CLI ships with Karma + Jasmine by default. Decide:
-- **Option A: Keep Karma/Jasmine** — zero setup, `ng test` just works. Good enough for unit tests.
-- **Option B: Switch to Jest** — faster, better DX, but requires migration effort. Worth it if we're writing a lot of tests.
+### What's missing
 
-Recommendation: Start with Karma/Jasmine (it's already configured in Angular CLI). Switch to Jest later if pain points emerge.
-
-### First test file
-Create `app.component.spec.ts` with a smoke test:
-- Component creates successfully
-- Signals initialize with expected defaults
-
-### CI integration
-- Add `ng test --watch=false --browsers=ChromeHeadless` to CI pipeline
-- Fail the build on test failure
-- Coverage report with `--code-coverage` flag
-
----
-
-## Task 2 — Service Unit Tests (Pure Logic, No DOM)
-
-These are the highest-value tests — pure functions with clear inputs/outputs.
-
-### `section-taxonomy.service.spec.ts`
-
-The `sectionFor(project)` function has 5 branches:
-1. Project with active/running AI job → `"active"`
-2. Project with `implementation-guide.md` in files → `"specced"`
-3. Project with `architecture.md` or `epic.md` but no impl guide → `"specced"`
-4. Project with `braindump.md` only → `"braindumps"`
-5. Archived project → `"archive"`
-
-Test each branch with minimal mock project objects.
-
-### `project-teaser.spec.ts`
-
-The `projectTeaser(project)` and `firstNonHeadingSentence(text)` functions:
-- Empty content → returns empty string
-- Content with only markdown headers (`# Title\n## Subtitle`) → returns empty string
-- Content with a sentence after a header → returns that sentence
-- Multi-sentence paragraph → returns only the first sentence
-- Content longer than `teaser_chars` → truncated with ellipsis
-- Content with code blocks → skips code blocks
-
-### `projects.service.spec.ts`
-
-HTTP service tests using Angular's `HttpClientTestingModule`:
-- `loadProjects()` calls `GET /api/projects` with auth header
-- `saveFile()` calls `PUT /api/projects/:id/files/:name` with correct body
-- `createProject()` calls `POST /api/projects` with name and content
-- Error responses (401, 500) are handled correctly
-- Auth token is included in all requests
+- No service unit tests (section-taxonomy, project-teaser, projects.service)
+- No template/component tests beyond the smoke test
+- No tests for any UX feature delivered across 5+ UX epic branches
+- No CI pipeline for frontend tests (`ng test` not in any GitHub Actions workflow)
+- Existing E2E features cover backend flows (brainstorm, pipeline, billing) but not overview page layout/navigation
+- No visual regression tests
 
 ---
 
-## Task 3 — Component Tests (DOM + Signals)
+## Overview Page — Feature Inventory
 
-### `app.component` — Overview view
-- Renders section tabs (Active, Specced, Braindumps)
-- Clicking a tab filters to that section
-- Search input filters projects by name
-- Project count updates when filter changes
-- Status bar shows correct state (idle by default)
+Features documented from the actual template (`app.component.html`), component (`app.component.ts`), styles (`styles.css`), and service files. Cross-referenced against UX epics: `ux-grid-polish`, `ux-landing-grid-polish`, `ux-polish-newspaper`, `app-ui-mockups`, `ux-reader-textops`.
 
-### `app.component` — Expanded panel
-- Clicking a project card opens the expanded panel
-- File nav sidebar lists project files
-- Clicking a file loads its content
-- Generate button triggers pipeline
-- AI ops chips are visible in editor toolbar
+### F1 — Auth Gate
 
-### Test approach
-Use Angular's `TestBed` with `ComponentFixture`. Mock `ProjectsService` to return canned data. Test signal reactivity by setting signal values and checking DOM updates.
+The entire page is behind an auth check. Unauthenticated users see `<app-login />`.
+
+```html
+@if (!auth.isLoggedIn()) {
+  <app-login />
+} @else {
+  <div class="page">...</div>
+}
+```
+
+- `auth.isLoggedIn()` is a signal from `AuthService`
+- JWT stored in localStorage as `specview_jwt`
+- Login component is a standalone component imported by AppComponent
+
+### F2 — Masthead
+
+Editorial newspaper header with three regions:
+
+| Element | Content | Typography |
+|---------|---------|------------|
+| Edition | "Spec Doc" | Sans, small |
+| Date | Today's date (e.g. "Tuesday, May 12, 2026") | Sans, muted |
+| Title | "Specview" | 64px Playfair Display |
+| Tagline | "All the Specs Fit to Read" | Source Serif 4, italic |
+| Actions | "+ New" button, theme toggle (☀/☾), "Sign out" | Sans |
+
+- Dark mode toggle via `toggleTheme()` / `isDark()` signal
+- New project button opens create modal
+
+### F3 — Section Navigation
+
+Sticky horizontal nav bar with section tabs:
+
+| Section | Content filter | Count badge |
+|---------|---------------|-------------|
+| Context | Context files (builder, principles, codebase, references, quality, versions) | Static count (6) |
+| All | All projects grouped by section | — |
+| Active | Projects with running AI jobs | Dynamic |
+| Ready to build | Projects with architecture.md or epic.md but no impl guide | Dynamic |
+| Specced | Projects with implementation-guide.md | Dynamic |
+| Braindumps | Projects with braindump.md only | Dynamic |
+| Archive | Archived projects | Dynamic |
+
+- `activeSection()` signal tracks which tab is selected
+- Count badges are grey pills with `section-count` class
+- Badges pulse on count change via `pulsingSections()` signal + `section-count-pulse` class
+- 3px ink top border (nameplate rule) above the nav bar
+- Clicking a tab calls `selectSection(s.id)`
+
+### F4 — Status Bar
+
+Always-visible inline bar between nav and search, four states:
+
+| State | Visual | Content |
+|-------|--------|---------|
+| Idle | Green dot + "specview · idle — ready" | Default |
+| Active | Amber shimmer + thinking dots + project name + step | During generation |
+| Success | Green + project name + "done" | After completion |
+| Failure | Red + "error" + message + retry button | On error |
+
+- `mode()` signal: `'idle' | 'active' | 'success-flash' | 'failure'`
+- `specGenProjectName()` and `specGenStep()` signals for active generation
+- `statusFailureMsg()` for error text
+- Retry button calls `retryLastOp()`
+- Shimmer animation on `.gen-status-track` during active state
+
+### F5 — Search & Filter
+
+Full-width search input with count label:
+
+- `searchQuery()` signal bound to input value
+- `filteredProjects()` computed signal filters by query
+- Count label: "N projects" when no query, "N matches" when filtering
+- Hidden when viewing a single project or the context section
+- `onSearch(value)` updates the signal
+
+### F6 — All-Sections Grid (default view)
+
+When `activeSection() === 'all'`, projects are grouped by taxonomy section in canonical order (Active → Ready to build → Specced → Braindumps → Archive):
+
+Each section group has:
+- Colored overline title via `[data-section]` attribute (Active=green, Specced=blue, Braindumps=muted)
+- Section count pill badge
+- Card grid using `auto-fill minmax(280px, 1fr)`
+
+### F7 — Hero Grid (Active section)
+
+The Active section uses a special `2fr 1fr 1fr` layout:
+- First card (`hero-main`): 28px title, 4-line teaser clamp
+- Remaining cards (`hero-secondary`): 16px title, 3-line clamp
+- Only applies when `group.section === 'Active'`
+- Falls back to single-card layout when only 1 active project
+
+### F8 — Featured First Card
+
+In every section, the first card gets enhanced styling:
+- `.featured` class: 17px title (vs 15px regular)
+- 3-line teaser clamp (vs 2-line regular)
+
+### F9 — Project Cards
+
+Each card in the grid:
+- Title: `p.name`
+- Teaser: `teaserFor(p)` — state-aware text from `project-teaser.ts`
+- Meta: file count badge + section label
+- Click: `selectProject(p.id)` opens the project
+- Vertical-only separators (border-left, no horizontal borders)
+- 20px 24px padding
+- Hover: subtle background tint (`rgba(0,0,0,0.025)`)
+
+### F10 — Section Taxonomy (Pure Logic)
+
+`section-taxonomy.service.ts` classifies projects into sections based on file state:
+
+```
+archived flag → Archive
+hasActiveJob → Active
+has implementation-guide.md → Specced
+has architecture.md or epic.md → Ready to build
+default → Braindumps
+```
+
+Five canonical sections in display order: Active, Ready to build, Specced, Braindumps, Archive.
+
+### F11 — Project Teasers (Pure Logic)
+
+`project-teaser.ts` produces one-line teaser strings:
+
+| Section | Teaser |
+|---------|--------|
+| Active + step known | "generating {step}..." |
+| Specced + task count | "Implementation guide ready · N tasks" |
+| Specced/Ready/Braindumps + content | First non-heading sentence from lead file |
+| Braindumps (no content) | "Braindump — ready to generate" |
+| Archive + date | "Archived {date}" |
+
+`firstNonHeadingSentence(content)` skips `# - * > |` lines, returns first sentence (up to `.!?`), truncates at 120 chars.
+
+### F12 — Single-Section View
+
+When a specific section tab is clicked (not "All"):
+- 3-column newspaper layout: `.file-column` with `border-right` dividers
+- Column header: section label + count badge (first column only)
+- Projects distributed across columns via `columns()` computed signal
+- Same card structure as all-sections view
+
+### F13 — Polling Error State
+
+When project polling fails repeatedly:
+- `pollingError()` signal set after `POLL_MAX_RETRIES` (30) retries
+- Renders `[data-test="polling-error"]` div with error message
+- "Error" overline label
+
+### F14 — Update Banner
+
+Dismissible notification banner:
+- `updateBanner()` signal contains message text
+- Dismiss button clears the signal
+
+### F15 — Create Project Modal
+
+`+ New` button in masthead opens a modal for creating a new project.
+- `openCreateModal()` triggers the modal
+- Form collects project name + initial braindump content
+
+### F16 — Dark Mode
+
+Toggle between light and dark themes:
+- `isDark()` signal tracks state
+- `toggleTheme()` switches
+- Icon: ☀ (dark mode active, click for light) / ☾ (light mode active, click for dark)
+- CSS custom properties switch between cream/ink and dark equivalents
+
+### F17 — Context Section
+
+Special non-project section for configuration files:
+- 6 context cards: Builder, Principles, Codebase, References, Quality, Versions
+- Grid layout distinct from project cards
+- Click opens context editor
+- Static count (not derived from projects)
 
 ---
 
-## Task 4 — E2E Tests
+## Testing Architecture
 
-### Framework choice
-- **Cypress** — mature, good DX, but heavy
-- **Playwright** — faster, cross-browser, better for CI
-- Recommendation: **Playwright** — lighter weight, Angular has first-party support via `@angular/e2e`
+### Layer 1 — Feature Specifications (this document)
 
-### Core flows to cover
+Features F1-F17 above. Updated when UX changes. Source of truth for what the overview page does.
 
-**Flow 1: Login**
-1. Navigate to app
-2. See login form
-3. Enter credentials
-4. Submit → redirected to project list
-5. Auth token stored
+### Layer 2 — Gherkin Scenarios (generated from features)
 
-**Flow 2: Browse projects**
-1. Login
-2. See project grid with sections
-3. Click section tab → filtered view
-4. Type in search → projects filter by name
-5. Click project card → expanded panel opens
+One `.feature` file per functional area. Gherkin describes user-facing behavior in Given/When/Then. These change rarely — only when features fundamentally change.
 
-**Flow 3: Create project**
-1. Login
-2. Click "New Project" (or equivalent)
-3. Enter project name
-4. Paste braindump content
-5. Project appears in list
+**New feature files needed for the overview page:**
 
-**Flow 4: Generate specs**
-1. Login
-2. Open a project with braindump only
-3. Click "Generate" button
-4. Status bar shows "generating" state
-5. Poll until pipeline completes
-6. New files appear (analysis.md, epic.md, architecture.md, timeline.md)
-7. Status bar shows "complete"
+```
+e2e/features/overview-auth.feature          ← F1
+e2e/features/overview-navigation.feature    ← F3, F12
+e2e/features/overview-status-bar.feature    ← F4
+e2e/features/overview-search.feature        ← F5
+e2e/features/overview-grid.feature          ← F6, F7, F8, F9
+e2e/features/overview-polling.feature       ← F13
+```
 
-**Flow 5: Text operations**
-1. Login
-2. Open a project, select a file
-3. Click an AI op chip (e.g., "Expand")
-4. Diff view appears with red/green blocks
-5. Click "Apply" → file content updated
-6. Click "Dismiss" → diff view closes, original content preserved
+Existing features stay (brainstorm, bootstrap-pipeline, epic-guide, billing-gate, pro-check). They test backend flows; the new files test frontend layout/interaction.
 
-### Test data
-- Seed a test project with known braindump content
-- Use mock provider (`CHAIN_PROVIDER=mock`) for deterministic AI responses
-- E2E tests run against local docker compose
+### Layer 3 — E2E Tests (generated from Gherkin)
+
+Playwright step definitions executing against docker compose (CHAIN_PROVIDER=mock). These are the most stable tests — they verify user-visible behavior through a real browser. They should rarely change.
+
+One step file per feature file, sharing common steps from `e2e/steps/common_steps.py`.
+
+### Layer 4 — Unit + Component Tests (Angular Karma/Jasmine)
+
+These test internal logic and DOM rendering. They change more often as implementation evolves.
+
+**Pure function tests (highest value, cheapest to write):**
+
+```
+web-ng/src/app/services/section-taxonomy.service.spec.ts
+  - archived project → Archive
+  - active job → Active
+  - has implementation-guide.md → Specced
+  - has architecture.md → Ready to build
+  - has epic.md → Ready to build
+  - braindump.md only → Braindumps
+  - empty specs array → Braindumps
+
+web-ng/src/app/services/project-teaser.spec.ts
+  - firstNonHeadingSentence: empty → ''
+  - firstNonHeadingSentence: headers only → ''
+  - firstNonHeadingSentence: sentence after header → returns sentence
+  - firstNonHeadingSentence: multi-sentence → first only
+  - firstNonHeadingSentence: long line → truncated at 120 + '…'
+  - firstNonHeadingSentence: skips bullets, quotes, tables
+  - projectTeaser: Active + step → "generating {step}…"
+  - projectTeaser: Specced + taskCount → "Implementation guide ready · N tasks"
+  - projectTeaser: Braindumps + content → first sentence
+  - projectTeaser: Braindumps + empty → "Braindump — ready to generate"
+  - projectTeaser: Archive + date → "Archived {date}"
+  - countTasks: counts ## Task headings
+```
+
+**Component/template tests (verify DOM rendering + signal reactivity):**
+
+```
+web-ng/src/app/app.component.spec.ts (extend existing)
+  - masthead renders title, date, tagline
+  - section nav renders all 7 tabs
+  - clicking a tab updates activeSection signal
+  - section count badges show correct numbers
+  - search input filters projects
+  - search count label updates
+  - all-sections view groups projects by section
+  - hero grid applies to Active section only
+  - featured class on first card per section
+  - status bar shows correct state (idle/active/success/failure)
+  - dark mode toggle switches icon
+  - create modal opens on "+ New" click
+  - login component shown when not authenticated
+  - polling error renders data-test attribute
+```
+
+### Layer 5 — Visual Regression (stretch goal, not now)
+
+Playwright screenshot comparison for key states. Catches CSS regressions in the newspaper aesthetic. Defer until E2E is stable.
 
 ---
 
-## Task 5 — Visual Regression Tests (Stretch Goal)
+## Gherkin Scenarios for Overview Page
 
-The newspaper aesthetic is a core differentiator. Visual regression catches when CSS changes break the design.
+### overview-auth.feature
 
-- Use Playwright's screenshot comparison
-- Capture key states: overview grid, expanded panel, diff view, status bar states
-- Compare against baseline screenshots
-- Run on PR to catch visual regressions
+```gherkin
+Feature: Overview — Authentication Gate
+
+  Scenario: Unauthenticated user sees login form
+    Given the app is loaded
+    And the user is not logged in
+    Then the login form is visible
+    And the project grid is not visible
+
+  Scenario: Authenticated user sees the overview page
+    Given the app is loaded
+    And the user is logged in
+    Then the masthead title "Specview" is visible
+    And the section navigation is visible
+    And the project grid is visible
+```
+
+### overview-navigation.feature
+
+```gherkin
+Feature: Overview — Section Navigation
+
+  Scenario: Default view shows all sections grouped
+    Given the user is logged in
+    And projects exist in multiple sections
+    When the app loads
+    Then the "All" tab is active
+    And projects are grouped by section with headers
+
+  Scenario: Clicking a section tab filters to that section
+    Given the user is logged in
+    And projects exist in "Specced" section
+    When the user clicks the "Specced" tab
+    Then only specced projects are visible
+    And the view switches to 3-column layout
+
+  Scenario: Section count badges reflect project counts
+    Given the user is logged in
+    And 3 projects are in "Braindumps"
+    And 5 projects are in "Specced"
+    Then the "Braindumps" badge shows "3"
+    And the "Specced" badge shows "5"
+
+  Scenario: Clicking "All" returns to grouped view
+    Given the user is on the "Specced" tab
+    When the user clicks the "All" tab
+    Then projects are grouped by section with headers
+```
+
+### overview-status-bar.feature
+
+```gherkin
+Feature: Overview — Status Bar
+
+  Scenario: Idle state shows ready message
+    Given the user is logged in
+    And no generation is running
+    Then the status bar shows "specview · idle — ready"
+    And the status bar has the idle style
+
+  Scenario: Active generation shows project and step
+    Given the user is logged in
+    And a spec generation is running for "My Project" at step "architecture"
+    Then the status bar shows "My Project · architecture"
+    And the status bar has the active style with shimmer
+
+  Scenario: Generation failure shows error with retry
+    Given the user is logged in
+    And a generation has failed with "AI provider error"
+    Then the status bar shows "error · AI provider error"
+    And a retry button is visible
+```
+
+### overview-search.feature
+
+```gherkin
+Feature: Overview — Search & Filter
+
+  Scenario: Search filters projects by name
+    Given the user is logged in
+    And 10 projects are loaded
+    When the user types "auth" in the search bar
+    Then only projects with "auth" in the name are visible
+    And the count label shows the number of matches
+
+  Scenario: Empty search shows all projects
+    Given the user is logged in
+    And the search bar contains "auth"
+    When the user clears the search bar
+    Then all projects are visible
+    And the count label shows total project count
+
+  Scenario: Search with no matches shows empty state
+    Given the user is logged in
+    When the user types "zzz-nonexistent" in the search bar
+    Then the empty state message is visible
+```
+
+### overview-grid.feature
+
+```gherkin
+Feature: Overview — Project Grid
+
+  Scenario: Active section uses hero grid layout
+    Given the user is logged in
+    And 3 projects are in the "Active" section
+    Then the Active section uses the hero grid layout
+    And the first card has the hero-main style
+
+  Scenario: First card in each section is featured
+    Given the user is logged in
+    And projects exist in "Specced" section
+    Then the first card in "Specced" has the featured style
+
+  Scenario: Project cards show name, teaser, and file count
+    Given the user is logged in
+    And a project "Auth Reliability" exists with 8 files
+    Then the card for "Auth Reliability" shows the project name
+    And the card shows a teaser from the braindump
+    And the card shows a badge with "8"
+
+  Scenario: Clicking a project card opens it
+    Given the user is logged in
+    And a project "Auth Reliability" exists
+    When the user clicks the "Auth Reliability" card
+    Then the project detail view is visible
+
+  Scenario: Cards have vertical-only separators
+    Given the user is logged in
+    And projects are visible in the grid
+    Then cards have left borders but no top or bottom borders
+```
+
+### overview-polling.feature
+
+```gherkin
+Feature: Overview — Polling & Error Recovery
+
+  Scenario: Polling error displayed after max retries
+    Given the user is logged in
+    And the API is unreachable
+    When polling exceeds the maximum retry count
+    Then the polling error message is visible
+    And it contains "Refresh to resume"
+
+  Scenario: Successful load clears any previous error
+    Given the user is logged in
+    And a polling error was previously shown
+    When the API becomes reachable again
+    Then the polling error message is not visible
+```
 
 ---
 
-## Priority Order
+## What the UX Epics Encoded (must be tested)
 
-1. **Testing infrastructure** (Task 1) — unblocks everything else
-2. **Service unit tests** (Task 2) — highest value per effort, pure logic
-3. **E2E for core flows** (Task 4) — catches integration issues
-4. **Component tests** (Task 3) — fills the gap between unit and E2E
-5. **Visual regression** (Task 5) — stretch goal, nice to have
+These UX decisions were made across 5+ epic branches and are now baked into CSS/template. They are not currently tested by anything. The Gherkin scenarios above cover the behavioral aspects; the component/unit tests cover the implementation details.
+
+| UX Decision | Source Epic | Test Coverage |
+|-------------|------------|---------------|
+| 280px min card width, vertical-only separators | ux-grid-polish | overview-grid E2E + visual |
+| Section color via `[data-section]` attribute | ux-grid-polish | component test: data-section present |
+| Real braindump teasers (first prose sentence) | ux-grid-polish | project-teaser.spec.ts unit tests |
+| Hero grid `2fr 1fr 1fr` for Active | app-ui-mockups | overview-grid E2E |
+| Featured first card per section | app-ui-mockups | component test: `.featured` class |
+| Status bar 4 states (idle/active/success/failure) | app-ui-mockups | overview-status-bar E2E |
+| Grey pill count badges | ux-landing-grid-polish | component test: `.section-count` rendered |
+| 3px ink nameplate rule | ux-polish-newspaper | visual regression (stretch) |
+| Source Serif 4 teasers at 14px | app-ui-mockups | visual regression (stretch) |
+| Taxonomy: file-state logic replaces ID-prefix | ux-reader-textops | section-taxonomy.spec.ts unit tests |
+| Teaser: section-aware, state-aware copy | ux-reader-textops | project-teaser.spec.ts unit tests |
+| Polling error after 30 retries | app.component.spec.ts | Already tested (extend) |
+| Section count badge pulse on change | ux-grid-polish | component test: pulsing class |
 
 ---
 
-## Files to Create
+## Execution Order
 
-| File | Purpose |
-|------|---------|
-| `web-ng/src/app/app.component.spec.ts` | Component smoke + signal tests |
-| `web-ng/src/app/services/section-taxonomy.service.spec.ts` | Section classification logic |
-| `web-ng/src/app/services/project-teaser.spec.ts` | Teaser extraction logic |
-| `web-ng/src/app/services/projects.service.spec.ts` | HTTP service tests |
-| `web-ng/e2e/` | Playwright E2E test directory |
-| `web-ng/e2e/login.spec.ts` | Login flow |
-| `web-ng/e2e/browse.spec.ts` | Project browsing |
-| `web-ng/e2e/generate.spec.ts` | Spec generation pipeline |
-| `web-ng/e2e/text-ops.spec.ts` | Text operations + diff view |
-| `web-ng/playwright.config.ts` | Playwright configuration |
+1. **Pure function unit tests first** — `section-taxonomy.service.spec.ts` and `project-teaser.spec.ts`. Highest value per effort. No DOM, no async, no mocks. Just inputs and outputs.
 
-## Existing CI Reference
+2. **Extend `app.component.spec.ts`** — Add template tests for masthead, nav, search, grid rendering, status bar states. Uses existing mock infrastructure.
 
-The `ci-test-quality` project (`data/projects/ci-test-quality-1778239000/`) already identified the missing test files and some E2E gaps. This project builds on that analysis with a complete implementation plan.
+3. **Gherkin feature files** — Write the 6 new `.feature` files above. These are the stable contract.
+
+4. **E2E step definitions** — Implement Playwright steps for the new Gherkin scenarios. Run against `docker compose` with `CHAIN_PROVIDER=mock`.
+
+5. **CI integration** — Add `ng test --watch=false --browsers=ChromeHeadless` to the GitHub Actions pipeline. Fail the build on test failure.
+
+6. **Visual regression** (stretch) — Playwright screenshots for overview page states. Baseline + diff on PR.
