@@ -511,3 +511,53 @@ All seven phases must pass. Only then:
 4. Deploy to VPS via Coolify
 5. SSH into VPS, run `docker compose exec -it api claude login` once
 6. Verify with `/api/health/anthropic` on production domain
+
+---
+
+## Post-Deploy Cleanup — Coolify Environment
+
+**Status:** Code merged (commits `20b3fda` through `7dfe2b2`), but Coolify still has stale env vars from the old auth mechanism. These must be cleaned up or they conflict with the new persistent-session approach.
+
+### Stale env vars to remove from Coolify
+
+| Env var | Why it must go |
+|---------|---------------|
+| `CLAUDE_CREDENTIALS_JSON` | The old entrypoint.sh wrote this to `.credentials.json` on every boot, overwriting the CLI's self-managed session. The entrypoint seeding logic has been removed in commit `5fd169e`, but if the var is still set, a future entrypoint regression could reintroduce the overwrite. Remove it so there's no ambiguity — credentials are owned by `claude login`, not by env vars. |
+
+### Verify after cleanup
+
+```bash
+# SSH into VPS
+ssh root@72.62.150.237
+
+# 1. Remove CLAUDE_CREDENTIALS_JSON in Coolify UI
+#    → Service → Environment Variables → delete the row
+
+# 2. Redeploy from Coolify (creates fresh container)
+
+# 3. Check env is clean
+docker exec <new-container> env | grep -E 'ANTHROPIC|CLAUDE_CRED'
+# Expected: no output (neither ANTHROPIC_CLI_KEY nor CLAUDE_CREDENTIALS_JSON)
+
+# 4. Check if persistent volume exists
+docker inspect <new-container> | grep -A10 Mounts
+# Expected: volume mount at /home/appuser/.claude
+
+# 5. If volume has credentials from previous login, test:
+docker exec <new-container> claude -p "say ok" --output-format text
+# If this works → done, session persisted through redeploy
+
+# 6. If no credentials (fresh volume), login:
+docker exec -it <new-container> claude login
+# Complete OAuth flow, then verify:
+docker exec <new-container> claude -p "say ok" --output-format text
+```
+
+### Coolify compose alignment
+
+Coolify may be using its own generated compose file that doesn't include the `claude-credentials` named volume from our `docker-compose.yml`. If step 4 above shows no volume mount, the Coolify service configuration needs to be updated to add the volume. Check Coolify's "Persistent Storage" settings for the API service and add:
+
+```
+Source: claude-credentials (named volume)
+Destination: /home/appuser/.claude
+```
