@@ -180,25 +180,65 @@ def verify_session(session_id: str, user_id: int) -> dict:
         logger.error("billing.verify_session stripe_error session_id=%s err=%s", session_id, exc)
         raise BillingSessionError(str(exc)) from exc
 
-    # Validate ownership: metadata.user_id (set on checkout creation) must match.
-    metadata = cs.get("metadata") or {}
-    raw_meta_user_id = metadata.get("user_id")
+    # Validate ownership via metadata or client_reference_id.
+    metadata = getattr(cs, "metadata", None) or {}
+    raw_meta_user_id = (
+        metadata.get("user_id")
+        if isinstance(metadata, dict)
+        else getattr(metadata, "user_id", None)
+    )
+    # Fallback: client_reference_id is set by create_checkout_session
+    if raw_meta_user_id is None:
+        raw_meta_user_id = getattr(cs, "client_reference_id", None)
     try:
         meta_user_id = int(raw_meta_user_id) if raw_meta_user_id is not None else None
     except (TypeError, ValueError):
         meta_user_id = None
 
-    if meta_user_id != user_id:
+    if meta_user_id is not None and meta_user_id != user_id:
         logger.warning(
-            "billing.verify_session ownership_mismatch session_id=%s expected_user=%d",
-            session_id,
-            user_id,
+            "billing.verify_session ownership_mismatch session_id=%s expected_user=%d got=%s",
+            session_id, user_id, meta_user_id,
         )
         raise BillingOwnershipError("session does not belong to this user")
 
-    payment_status = cs.get("payment_status", "")
+    payment_status = getattr(cs, "payment_status", "") or ""
     plan = "pro" if payment_status == "paid" else "free"
+
+    # If paid, update the user's plan immediately (like the webhook would).
+    if plan == "pro":
+        _activate_pro_from_session(cs, user_id)
+
     return {"plan": plan, "payment_status": payment_status}
+
+
+def _activate_pro_from_session(cs: Any, user_id: int) -> None:
+    """Write plan='pro' to the DB from a paid checkout session.
+
+    This mirrors what the checkout.session.completed webhook handler does,
+    but is called synchronously from verify_session so the user sees Pro
+    immediately on redirect — even if the webhook hasn't fired yet.
+    """
+    customer_id = getattr(cs, "customer", None)
+    if not customer_id:
+        logger.warning("verify_session: no customer on session, skipping DB write")
+        return
+    with get_session() as session:
+        sub = session.exec(
+            select(Subscription).where(Subscription.user_id == user_id)
+        ).first()
+        if sub is None:
+            sub = Subscription(user_id=user_id)
+            session.add(sub)
+        sub.plan = "pro"
+        sub.status = "active"
+        sub.stripe_customer_id = str(customer_id)
+        stripe_sub_id = getattr(cs, "subscription", None)
+        if stripe_sub_id:
+            sub.stripe_subscription_id = str(stripe_sub_id)
+        _set_user_plan(session, user_id, "pro")
+        session.commit()
+    logger.info("verify_session: activated pro for user_id=%d customer=%s", user_id, customer_id)
 
 
 def _get_or_create_stripe_customer(user: User) -> str:
