@@ -11,6 +11,7 @@ import { AiService } from './services/ai.service';
 import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
 import { projectTeaser, countTasks } from './services/project-teaser';
 import { WordCountPipe } from './word-count.pipe';
+import { UsageMeterComponent } from './components/usage-meter/usage-meter.component';
 
 interface ParagraphDiff {
   type: 'keep' | 'add' | 'remove';
@@ -71,7 +72,7 @@ const GEN_POLL_INTERVAL = 10_000;
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, WordCountPipe],
+  imports: [RouterOutlet, WordCountPipe, UsageMeterComponent],
   templateUrl: './app.component.html',
   animations: [
     trigger('panelEnter', [

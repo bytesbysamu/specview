@@ -203,8 +203,8 @@ def test_invoice_payment_succeeded_sets_active_and_bumps_period(db_session):
 # ── invoice.payment_failed (Option B — 0-day grace) ─────────────────────────
 
 
-def test_invoice_payment_failed_reverts_plan_to_free_immediately(db_session):
-    """Locked decision: Option B writes User.plan = 'free' on FIRST failed payment."""
+def test_invoice_payment_failed_reverts_plan_to_lapsed_immediately(db_session):
+    """Locked decision: Option B writes User.plan = 'lapsed' on FIRST failed payment."""
     user = H.seed(
         db_session,
         customer_id="cus_pd",
@@ -221,8 +221,8 @@ def test_invoice_payment_failed_reverts_plan_to_free_immediately(db_session):
 
     sub = H.sub(db_session, user.id)
     assert sub.status == "past_due"
-    assert sub.plan == "free"
-    assert H.user(db_session, user.id).plan == "free"
+    assert sub.plan == "lapsed"
+    assert H.user(db_session, user.id).plan == "lapsed"
 
 
 def test_invoice_payment_failed_noop_when_subscription_unknown(db_session):
@@ -288,7 +288,7 @@ def test_handle_webhook_dispatches_to_registered_handler(monkeypatch, db_session
 
     sub = H.sub(db_session, user.id)
     assert sub.status == "past_due"
-    assert H.user(db_session, user.id).plan == "free"
+    assert H.user(db_session, user.id).plan == "lapsed"
 
 
 def test_handle_webhook_ignores_unregistered_event_types(monkeypatch):
@@ -347,3 +347,63 @@ def test_create_portal_session_returns_stripe_url(monkeypatch):
     portal_create.assert_called_once()
     assert portal_create.call_args.kwargs["customer"] == "cus_zzz"
     assert portal_create.call_args.kwargs["return_url"].endswith("/settings")
+
+
+# ── verify_session ───────────────────────────────────────────────────────────
+
+
+def test_verify_session_returns_pro_for_paid_session(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    fake_cs = {
+        "payment_status": "paid",
+        "metadata": {"user_id": "42"},
+    }
+    with patch.object(
+        billing_service.stripe.checkout.Session, "retrieve", return_value=fake_cs
+    ) as retrieve:
+        result = billing_service.verify_session("cs_test_abc", 42)
+
+    retrieve.assert_called_once_with("cs_test_abc")
+    assert result["plan"] == "pro"
+    assert result["payment_status"] == "paid"
+
+
+def test_verify_session_returns_free_for_unpaid_session(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    fake_cs = {
+        "payment_status": "unpaid",
+        "metadata": {"user_id": "7"},
+    }
+    with patch.object(
+        billing_service.stripe.checkout.Session, "retrieve", return_value=fake_cs
+    ):
+        result = billing_service.verify_session("cs_test_xyz", 7)
+
+    assert result["plan"] == "free"
+    assert result["payment_status"] == "unpaid"
+
+
+def test_verify_session_raises_ownership_error_on_user_mismatch(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    fake_cs = {
+        "payment_status": "paid",
+        "metadata": {"user_id": "99"},
+    }
+    with patch.object(
+        billing_service.stripe.checkout.Session, "retrieve", return_value=fake_cs
+    ):
+        with pytest.raises(billing_service.BillingOwnershipError):
+            billing_service.verify_session("cs_test_mismatch", 42)
+
+
+def test_verify_session_raises_session_error_on_invalid_id(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    import stripe as _stripe
+
+    with patch.object(
+        billing_service.stripe.checkout.Session,
+        "retrieve",
+        side_effect=_stripe.error.InvalidRequestError("No such session", "session_id"),
+    ):
+        with pytest.raises(billing_service.BillingSessionError):
+            billing_service.verify_session("cs_bad_id", 1)

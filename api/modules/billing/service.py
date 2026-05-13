@@ -145,6 +145,56 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
         session.commit()
 
 
+class BillingOwnershipError(Exception):
+    """Session client_reference_id does not match the authenticated user; route returns 403."""
+
+
+class BillingSessionError(Exception):
+    """Session ID is invalid or cannot be retrieved; route returns 400."""
+
+
+def verify_session(session_id: str, user_id: int) -> dict:
+    """Retrieve a Checkout session from Stripe and verify ownership.
+
+    Returns a dict with ``plan`` reflecting the session payment status:
+      - ``'pro'``    if payment_status == 'paid'
+      - ``'free'``   otherwise
+
+    Raises:
+      BillingSessionError    — if session_id is invalid or Stripe call fails.
+      BillingOwnershipError  — if the session belongs to a different user.
+    """
+    _ensure_api_key()
+    try:
+        cs = stripe.checkout.Session.retrieve(session_id)
+    except stripe.error.InvalidRequestError as exc:
+        logger.warning("billing.verify_session invalid session_id=%s err=%s", session_id, exc)
+        raise BillingSessionError(str(exc)) from exc
+    except stripe.error.StripeError as exc:
+        logger.error("billing.verify_session stripe_error session_id=%s err=%s", session_id, exc)
+        raise BillingSessionError(str(exc)) from exc
+
+    # Validate ownership: metadata.user_id (set on checkout creation) must match.
+    metadata = cs.get("metadata") or {}
+    raw_meta_user_id = metadata.get("user_id")
+    try:
+        meta_user_id = int(raw_meta_user_id) if raw_meta_user_id is not None else None
+    except (TypeError, ValueError):
+        meta_user_id = None
+
+    if meta_user_id != user_id:
+        logger.warning(
+            "billing.verify_session ownership_mismatch session_id=%s expected_user=%d",
+            session_id,
+            user_id,
+        )
+        raise BillingOwnershipError("session does not belong to this user")
+
+    payment_status = cs.get("payment_status", "")
+    plan = "pro" if payment_status == "paid" else "free"
+    return {"plan": plan, "payment_status": payment_status}
+
+
 def _get_or_create_stripe_customer(user: User) -> str:
     """Return the User's Stripe customer ID, creating one lazily on first call."""
     with get_session() as session:
@@ -300,13 +350,13 @@ def _on_invoice_payment_succeeded(session: Session, obj) -> None:
 
 @_register("invoice.payment_failed")
 def _on_invoice_payment_failed(session: Session, obj) -> None:
-    """Locked decision (Option B): revert User.plan = 'free' on FIRST failed
+    """Locked decision (Option B): revert User.plan = 'lapsed' on FIRST failed
     payment. 0-day grace period — no soft window."""
     user = _user_for_subscription(session, obj.get("subscription"))
     if user is None:
         return
-    _upsert_subscription(session, user.id, plan="free", status="past_due")
-    _set_user_plan(session, user.id, "free")
+    _upsert_subscription(session, user.id, plan="lapsed", status="past_due")
+    _set_user_plan(session, user.id, "lapsed")
 
 
 @_register("invoice.upcoming")

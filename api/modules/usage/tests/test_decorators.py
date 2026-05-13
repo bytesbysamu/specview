@@ -117,7 +117,9 @@ def test_free_user_under_cap_runs_handler_and_increments(app, fake_session_ctx):
                     def handler():
                         return jsonify({"result": "ok"}), 200
 
-                    body, status = handler()
+                    result = handler()
+                    # Decorator injects X-Usage-Remaining, returning a 3-tuple.
+                    body, status = result[0], result[1]
                     assert status == 200
                     assert body.get_json()["result"] == "ok"
                     mock_inc.assert_called_once()
@@ -232,7 +234,9 @@ def test_counter_incremented_on_202_response(app, fake_session_ctx):
                     def handler():
                         return jsonify({"job_id": "x"}), 202
 
-                    _, status = handler()
+                    result = handler()
+                    # Decorator injects X-Usage-Remaining, returning a 3-tuple.
+                    status = result[1]
                     assert status == 202
                     mock_inc.assert_called_once()
 
@@ -258,3 +262,72 @@ def test_status_code_from_response_object():
 def test_status_code_defaults_to_200_for_bare_body():
     body = MagicMock(spec=[])  # no status_code attribute
     assert getstatus(body) == 200
+
+
+# --- X-Usage-Remaining header ------------------------------------------------
+
+
+def test_x_usage_remaining_header_on_successful_free_user_response(app, fake_session_ctx):
+    """Successful responses for free users carry X-Usage-Remaining: {used}/{limit}."""
+    with app.test_request_context("/"):
+        g.current_user = mkuser(plan="free", uid=3)
+        with patch("modules.usage.decorators.get_session", fake_session_ctx):
+            with patch("modules.usage.decorators.get_remaining", return_value=5):
+                with patch("modules.usage.decorators.increment"):
+
+                    @gate("bootstrap")
+                    def handler():
+                        return jsonify({"ok": True}), 200
+
+                    result = handler()
+                    # Decorator returns (body, status, headers) for free-user success.
+                    assert isinstance(result, tuple) and len(result) == 3
+                    body, status, headers = result
+                    assert status == 200
+                    assert "X-Usage-Remaining" in headers
+                    remaining_val = headers["X-Usage-Remaining"]
+                    # remaining was 5, after increment it's 4; limit is CAPS["bootstrap"]
+                    limit = CAPS["bootstrap"]
+                    assert remaining_val == f"4/{limit}"
+
+
+def test_x_usage_remaining_header_not_added_on_error_response(app, fake_session_ctx):
+    """Error responses must NOT carry the X-Usage-Remaining header."""
+    with app.test_request_context("/"):
+        g.current_user = mkuser(plan="free", uid=4)
+        with patch("modules.usage.decorators.get_session", fake_session_ctx):
+            with patch("modules.usage.decorators.get_remaining", return_value=3):
+                with patch("modules.usage.decorators.increment") as mock_inc:
+
+                    @gate("bootstrap")
+                    def handler():
+                        return jsonify({"error": "boom"}), 500
+
+                    result = handler()
+                    # On error, the original tuple is returned unchanged (no header).
+                    if isinstance(result, tuple) and len(result) == 3:
+                        _, _, hdrs = result
+                        assert "X-Usage-Remaining" not in hdrs
+                    elif isinstance(result, tuple):
+                        # Two-element tuple — no headers dict at all.
+                        assert len(result) == 2
+                    mock_inc.assert_not_called()
+
+
+def test_x_usage_remaining_header_at_zero_remaining_after_decrement(app, fake_session_ctx):
+    """When only 1 request remains, after consuming it the header shows 0/{limit}."""
+    with app.test_request_context("/"):
+        g.current_user = mkuser(plan="free", uid=5)
+        with patch("modules.usage.decorators.get_session", fake_session_ctx):
+            with patch("modules.usage.decorators.get_remaining", return_value=1):
+                with patch("modules.usage.decorators.increment"):
+
+                    @gate("bootstrap")
+                    def handler():
+                        return jsonify({"ok": True}), 200
+
+                    result = handler()
+                    assert isinstance(result, tuple) and len(result) == 3
+                    _, _, headers = result
+                    limit = CAPS["bootstrap"]
+                    assert headers["X-Usage-Remaining"] == f"0/{limit}"
