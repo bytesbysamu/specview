@@ -14,6 +14,7 @@ except ImportError:
 def app():
     import os
     os.environ.setdefault("CHAIN_PROVIDER", "mock")
+    os.environ.setdefault("CORS_ORIGINS", "http://localhost:4200")
     from create_app import create_app as _ca
     return _ca({"TESTING": True})
 

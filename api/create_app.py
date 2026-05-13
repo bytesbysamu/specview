@@ -162,6 +162,10 @@ def _run_startup_migration(app) -> None:
     guaranteed to be present by the time create_app() is called in
     production.
     """
+    if app.config.get("TESTING"):
+        logger.debug("startup_migration: TESTING=True — skipping")
+        return
+
     owner_email = os.environ.get("MIGRATION_OWNER_EMAIL", DEFAULT_OWNER_EMAIL)
     try:
         from sqlmodel import Session, select, func
