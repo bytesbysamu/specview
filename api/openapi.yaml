@@ -1128,50 +1128,24 @@ paths:
 
   /api/auth/login:
     post:
-      summary: Request a magic-link email for the supplied address.
-      operationId: requestMagicLink
+      summary: Authenticate with email and password; returns a JWT.
+      operationId: loginUser
       tags: [auth]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MagicLinkRequest'
-      responses:
-        '202':
-          description: Magic-link dispatch accepted by Neon Auth.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MagicLinkResponse'
-
-  /api/auth/verify:
-    post:
-      summary: Exchange a one-time magic-link token for a session JWT.
-      operationId: verifyMagicLink
-      tags: [auth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifyRequest'
+              $ref: '#/components/schemas/AuthCredentials'
       responses:
         '200':
-          description: Token exchanged for JWT plus hydrated user row.
+          description: Login successful; returns JWT and email.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VerifyResponse'
-
-  /api/auth/logout:
-    post:
-      summary: Acknowledge client-side session discard.
-      operationId: signOut
-      tags: [auth]
-      responses:
-        '204':
-          description: Client-side discard acknowledged; Neon Auth owns session lifecycle.
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          description: Invalid email or password.
 
   /api/auth/me:
     get:
@@ -1187,6 +1161,77 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeResponse'
+
+  /api/auth/register:
+    post:
+      summary: Register a new user account with email and password.
+      operationId: registerUser
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCredentials'
+      responses:
+        '201':
+          description: User created; returns a JWT and the registered email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          description: Missing fields or password policy violation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/refresh:
+    post:
+      summary: Issue a fresh JWT for the currently authenticated user.
+      operationId: refreshToken
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: New JWT issued for the same user identity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/health/security:
+    get:
+      summary: >
+        Security configuration probe — verifies SKIP_AUTH is not active
+        outside of development environments.
+      operationId: healthSecurity
+      tags: [health]
+      responses:
+        '200':
+          description: Security configuration is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityHealthResponse'
+        '503':
+          description: >
+            SKIP_AUTH is active in a non-development environment
+            (misconfigured).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityHealthResponse'
 
 components:
 
@@ -1879,6 +1924,51 @@ components:
             Truncated upstream error message (max 100 chars). Present
             only when status=degraded.
 
+    AuthCredentials:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    AuthTokenResponse:
+      type: object
+      required: [token, email]
+      properties:
+        token:
+          type: string
+          description: Signed JWT for use as Authorization Bearer.
+        email:
+          type: string
+          description: Canonical email of the authenticated user.
+
+    SecurityHealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, misconfigured]
+        skip_auth_bypassed:
+          type: boolean
+          description: >
+            True when SKIP_AUTH is active and the environment is development
+            (acceptable). Present only on a 200 response.
+        error:
+          type: string
+          description: >
+            Human-readable description of the misconfiguration. Present only
+            when status=misconfigured.
+        flask_env:
+          type: string
+          description: >
+            Value of FLASK_ENV at probe time. Present only when
+            status=misconfigured.
+
     AiStatsResponse:
       type: object
       description: >
@@ -1902,43 +1992,6 @@ components:
         provider:
           type: string
           description: Resolved provider name at request time.
-
-    MagicLinkRequest:
-      type: object
-      required: [email]
-      properties:
-        email:
-          type: string
-          format: email
-          description: Address that will receive the magic-link email.
-
-    MagicLinkResponse:
-      type: object
-      required: [request_id]
-      properties:
-        request_id:
-          type: string
-          description: >
-            Opaque identifier returned by Neon Auth for the dispatched
-            magic-link request. Useful for support diagnostics.
-
-    VerifyRequest:
-      type: object
-      required: [token]
-      properties:
-        token:
-          type: string
-          description: One-time token extracted from the magic-link URL fragment.
-
-    VerifyResponse:
-      type: object
-      required: [jwt, user]
-      properties:
-        jwt:
-          type: string
-          description: Session JWT issued by Neon Auth. Pass as Authorization Bearer.
-        user:
-          $ref: '#/components/schemas/MeResponse'
 
     MeResponse:
       type: object

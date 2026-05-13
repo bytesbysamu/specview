@@ -93,6 +93,7 @@ jobs:
         env:
           CHAIN_PROVIDER: mock
         run: |
+          set -o pipefail
           python -m pytest \
             --cov=modules \
             --cov-report=xml:coverage.xml \
@@ -201,6 +202,7 @@ jobs:
           CHAIN_PROVIDER: mock
           PYTHONPATH: .
         run: |
+          set -o pipefail
           python -m pytest e2e/ \
             --tb=short \
             -v \
