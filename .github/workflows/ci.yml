@@ -77,7 +77,7 @@ jobs:
           cache: pip
           cache-dependency-path: api/requirements.txt
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-cov ruff datamodel-code-generator==0.45.0
+        run: pip install -r requirements.txt -r requirements-dev.txt pytest pytest-cov ruff datamodel-code-generator==0.45.0
       - name: Generate Python DTOs
         run: |
           python -m datamodel_code_generator \
