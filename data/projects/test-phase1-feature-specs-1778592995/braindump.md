@@ -290,3 +290,57 @@ Decisions encoded in CSS/template across 5+ UX epic branches. None currently hav
 | Teaser: section-aware state-aware copy | ux-reader-textops | F11 teaser logic |
 | Canonical section order in "All" view | ux-reader-textops | F6 section grouping |
 | 3-column layout in single-section view | ux-polish-newspaper | F12 column layout |
+
+---
+
+## SaaS Features (from Phase 2a/2b, shipped 2026-05-13)
+
+These features were added after the original F1-F17 inventory. They need to be documented as testable specs alongside the overview page features. The spec pipeline should assign feature numbers and integrate them into the full feature inventory.
+
+### Project Isolation (Phase 2a)
+
+**User-scoped project listing:**
+`GET /api/projects` returns only projects owned by the authenticated user. The `@require_project_ownership` decorator is on all 9 project routes. The listing uses `repository.list_for_user(g.current_user.id)` instead of a global filesystem scan.
+
+**Ownership enforcement (403):**
+Any authenticated user trying to access, edit, or delete a project they don't own receives a 403 "access denied" response. This applies to GET, PUT, DELETE, repair, coherence, and all 3 file-history routes.
+
+**Access denied UI:**
+When the frontend receives a 403 from the projects API, it shows a "You don't have access to this project" message with a "Back to projects" button, via the `accessDenied` signal on `AppComponent`. This is an `AccessDeniedError` subclass thrown by `ProjectsService.getProject()`.
+
+**Dual-write project creation:**
+`POST /api/projects` creates both a DB row (with `user_id`) via `SqlProjectRepository.create()` and a filesystem directory. If the DB write fails, nothing is created. If the filesystem fails, the DB row is rolled back.
+
+**Auto-migration on startup:**
+`create_app.py` checks if the `project` table is empty on startup. If so, it migrates all filesystem projects to DB rows assigned to `sam@specview.app` (overridable via `MIGRATION_OWNER_EMAIL`). Idempotent — skips if rows exist.
+
+### Billing & Upgrade (Phase 2b)
+
+**Upgrade button in masthead:**
+Free users see an "Upgrade" button in `.masthead-actions` next to the "+ New" button. Hidden for Pro users via `@if (!subscription.isPro())`. Uses router navigation to `/upgrade`.
+
+**Upgrade page (`/upgrade`):**
+Standalone component rendered via `<router-outlet />` when `isFullPageRoute()` is true. Three states based on `subscription.plan()`:
+- `free`: Pricing comparison (Free vs Pro), "Upgrade to Pro — $29/mo" button → `startCheckout()`
+- `lapsed`: "Update your payment method" messaging, CTA → Stripe Customer Portal
+- `pro`: "You're on Pro" confirmation, "Manage subscription" → Customer Portal
+
+**Post-checkout verification:**
+When the URL contains `?session_id=...` (Stripe redirects here after payment), the component calls `subscription.verifySession(sessionId)` which hits `GET /api/billing/verify-session`. This endpoint retrieves the session from Stripe, validates ownership via `metadata.user_id`, and writes `plan='pro'` to the DB if paid. Then calls `subscription.refresh()` to update the plan signal. Shows "Welcome to Pro" on success.
+
+**SubscriptionService (signal-based):**
+`plan = signal<Plan>('free')` where `Plan = 'free' | 'pro' | 'lapsed'`. `isPro = computed(() => this.plan() === 'pro')`. Methods: `refresh()` (GET /api/billing/status), `startCheckout()` (POST → Stripe redirect), `verifySession(sessionId)`. Constructor calls `refresh()` on injection.
+
+**Usage meter pill:**
+`<app-usage-meter />` in `.masthead-actions`. Reads from `usageRemaining` signal (populated by billing interceptor from `X-Usage-Remaining` response header). Shows "N/M remaining". Hidden when `isPro()` or when signal is null. Warning styling (red) at remaining ≤ 1.
+
+**Billing interceptor:**
+Dedicated `billingInterceptor` (separate from auth). Registered after `authInterceptor` in `app.config.ts`. Two responsibilities:
+1. Reads `X-Usage-Remaining` header from every response → updates `usageRemaining` signal
+2. Catches 429 responses → reads plan from `SubscriptionService` → navigates to `/upgrade?reason=limit_reached&feature=...` (free) or `/upgrade?reason=payment_lapsed` (lapsed). Pro users getting 429 logs a warning but doesn't navigate.
+
+**Lapsed plan state:**
+`invoice.payment_failed` webhook writes `plan='lapsed'` (not 'free') to `User.plan`. This distinguishes "never paid" from "payment failed". The upgrade page shows different messaging and CTA for lapsed vs free. The `billing_status()` route maps `lapsed` → `free` for the OpenAPI Plan enum while the internal DB carries the tri-state.
+
+**Usage limits:**
+`@check_usage_limit(feature)` decorator on AI routes. Daily caps: `bootstrap=30, task_gen=100, spec_gen=50, text=50, skill=20`. Pro users bypass entirely. Returns 429 with `{error, feature, limit, reset_at, upgrade_url}`. Emits `X-Usage-Remaining: {remaining}/{limit}` header on successful responses.
