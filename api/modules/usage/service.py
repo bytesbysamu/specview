@@ -35,6 +35,8 @@ LIMITS: Dict[str, int] = {
     "bootstrap": 30,
     "task_gen": 100,
     "spec_gen": 50,
+    "text": 50,
+    "skill": 20,
 }
 
 

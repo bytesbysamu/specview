@@ -1,5 +1,7 @@
 @if (!auth.isLoggedIn()) {
   <router-outlet />
+} @else if (isFullPageRoute()) {
+  <router-outlet />
 } @else {
 <div class="page">
 
@@ -14,6 +16,9 @@
       </div>
       <div class="masthead-actions">
         <app-usage-meter />
+        @if (!subscription.isPro()) {
+          <button class="upgrade-btn" (click)="navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
+        }
         <button class="new-project-btn" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
         <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
           @if (isDark()) {

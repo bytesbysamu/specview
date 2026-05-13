@@ -52,13 +52,22 @@ export class UpgradeComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
+      // Try session verification first (direct Stripe API check)
       await this.subscription.verifySession(sessionId);
-      this.verified.set(true);
     } catch {
-      this.error.set('Could not confirm your subscription. Please refresh or contact support.');
-    } finally {
-      this.loading.set(false);
+      // Fallback: webhook may have already updated the plan — just refresh
     }
+    // Always refresh from /api/billing/status to get the latest state
+    // (webhook usually fires before browser returns from Stripe)
+    try {
+      await this.subscription.refresh();
+    } catch { /* ignore */ }
+    if (this.subscription.isPro()) {
+      this.verified.set(true);
+    } else {
+      this.error.set('Could not confirm your subscription. Please refresh or contact support.');
+    }
+    this.loading.set(false);
   }
 
   async upgrade(): Promise<void> {

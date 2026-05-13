@@ -96,7 +96,7 @@ def create_checkout_session(user: User) -> str:
         customer=customer_id,
         mode="subscription",
         line_items=[{"price": _pro_price_id(), "quantity": 1}],
-        success_url=f"{_frontend_url()}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        success_url=f"{_frontend_url()}/upgrade?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{_frontend_url()}/upgrade",
         metadata={"auth_user_id": user.auth_user_id, "user_id": str(user.id)},
     )
@@ -121,12 +121,18 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
     (Stripe sends events the app doesn't subscribe to in some account configs).
     """
     _ensure_api_key()
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, _webhook_secret()
-        )
-    except stripe.error.SignatureVerificationError as exc:
-        raise BillingSignatureError(str(exc)) from exc
+    secret = _webhook_secret()
+    if secret:
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, secret)
+        except stripe.error.SignatureVerificationError as exc:
+            raise BillingSignatureError(str(exc)) from exc
+    else:
+        # No webhook secret configured — parse without signature verification.
+        # Acceptable for local dev; production MUST set STRIPE_WEBHOOK_SECRET.
+        logger.warning("webhook: STRIPE_WEBHOOK_SECRET not set — skipping signature verification")
+        import json as _json
+        event = _json.loads(payload)
 
     event_type = event["type"] if isinstance(event, dict) else event.type
     obj = (

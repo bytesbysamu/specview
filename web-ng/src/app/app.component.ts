@@ -4,7 +4,8 @@ import { trigger, transition, style, animate, query, group } from '@angular/anim
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-import { RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
 import { AiService } from './services/ai.service';
@@ -12,6 +13,7 @@ import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.
 import { projectTeaser, countTasks } from './services/project-teaser';
 import { WordCountPipe } from './word-count.pipe';
 import { UsageMeterComponent } from './components/usage-meter/usage-meter.component';
+import { SubscriptionService } from './services/subscription.service';
 
 interface ParagraphDiff {
   type: 'keep' | 'add' | 'remove';
@@ -106,6 +108,20 @@ export class AppComponent implements OnInit, OnDestroy {
   private projectsSvc = inject(ProjectsService);
   private aiSvc = inject(AiService);
   auth = inject(AuthService);
+  subscription = inject(SubscriptionService);
+  private router = inject(Router);
+
+  /** Routes that render via router-outlet instead of the app shell. */
+  private static FULL_PAGE_ROUTES = ['/upgrade'];
+  isFullPageRoute = signal(false);
+
+  private _routeSub = this.router.events.pipe(
+    filter((e): e is NavigationEnd => e instanceof NavigationEnd)
+  ).subscribe(e => {
+    this.isFullPageRoute.set(
+      AppComponent.FULL_PAGE_ROUTES.includes(e.urlAfterRedirects.split('?')[0])
+    );
+  });
 
   readonly sections = NAV_SECTIONS;
   readonly contextFiles = CONTEXT_FILES;
@@ -325,6 +341,11 @@ export class AppComponent implements OnInit, OnDestroy {
   expandedProject = computed(() => this.contextContent() !== null ? 'Context' : (this.activeProject()?.name ?? ''));
 
   constructor() {
+    // Set initial full-page route state for direct navigation (e.g. /upgrade)
+    this.isFullPageRoute.set(
+      AppComponent.FULL_PAGE_ROUTES.includes(this.router.url.split('?')[0])
+    );
+
     // Reload projects immediately whenever the user becomes logged in
     effect(() => {
       if (this.auth.isLoggedIn()) {
@@ -1004,6 +1025,10 @@ export class AppComponent implements OnInit, OnDestroy {
     } finally {
       this.epicGuideLoading.set(false);
     }
+  }
+
+  navigateToUpgrade() {
+    this.router.navigate(['/upgrade']);
   }
 
   logout() {
