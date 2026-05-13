@@ -1,0 +1,99 @@
+<div class="upgrade-wrap">
+  <div class="upgrade-card">
+
+    @if (loading()) {
+      <div class="upgrade-loading">
+        <div class="upgrade-loading-text">Confirming your subscription…</div>
+      </div>
+    } @else {
+
+      <div class="upgrade-header">
+        <div class="upgrade-overline">Specview Pro</div>
+        <h1 class="upgrade-heading">{{ headingText() }}</h1>
+      </div>
+
+      @if (error()) {
+        <div class="upgrade-error" data-test="upgrade-error">{{ error() }}</div>
+      }
+
+      @if (verified()) {
+        <div class="upgrade-confirmed" data-test="upgrade-confirmed">
+          <p class="upgrade-desc">
+            Your Pro plan is now active. You have unlimited spec generation and access to all features.
+          </p>
+          <a href="/" class="upgrade-btn upgrade-btn--primary" data-test="upgrade-go-home">
+            Go to Specview
+          </a>
+        </div>
+
+      } @else if (isPro()) {
+        <div data-test="upgrade-pro-view">
+          <p class="upgrade-desc">
+            Your Pro subscription is active. You have unlimited spec generation.
+          </p>
+          <div class="upgrade-actions">
+            <a href="/api/billing/portal" class="upgrade-btn upgrade-btn--secondary" data-test="upgrade-manage-btn">
+              Manage Subscription
+            </a>
+          </div>
+        </div>
+
+      } @else if (plan() === 'lapsed') {
+        <div data-test="upgrade-lapsed-view">
+          <p class="upgrade-desc">
+            Your Pro subscription payment failed. Update your payment method to restore access.
+          </p>
+          <div class="upgrade-actions">
+            <a href="/api/billing/portal" class="upgrade-btn upgrade-btn--primary" data-test="upgrade-portal-btn">
+              Update Payment Method
+            </a>
+          </div>
+        </div>
+
+      } @else {
+        <div data-test="upgrade-free-view">
+          @if (reason() === 'limit_reached' && feature()) {
+            <p class="upgrade-notice" data-test="upgrade-limit-notice">
+              You have reached the free-tier limit for <strong>{{ feature() }}</strong>.
+            </p>
+          }
+
+          <div class="upgrade-plans">
+            <div class="upgrade-plan upgrade-plan--free">
+              <div class="upgrade-plan-name">Free</div>
+              <div class="upgrade-plan-price">$0 / mo</div>
+              <ul class="upgrade-plan-features">
+                <li>5 spec generations / month</li>
+                <li>Basic AI chain</li>
+                <li>Community support</li>
+              </ul>
+            </div>
+
+            <div class="upgrade-plan upgrade-plan--pro">
+              <div class="upgrade-plan-badge">Current offer</div>
+              <div class="upgrade-plan-name">Pro</div>
+              <div class="upgrade-plan-price">$29 / mo</div>
+              <ul class="upgrade-plan-features">
+                <li>Unlimited spec generations</li>
+                <li>Full AI chain (all steps)</li>
+                <li>Text ops &amp; rewrite tools</li>
+                <li>Priority support</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="upgrade-actions">
+            <button
+              class="upgrade-btn upgrade-btn--primary"
+              [disabled]="loading()"
+              (click)="upgrade()"
+              data-test="upgrade-checkout-btn"
+            >
+              {{ loading() ? 'Redirecting…' : 'Upgrade to Pro — $29/mo' }}
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

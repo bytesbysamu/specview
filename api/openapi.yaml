@@ -1063,6 +1063,56 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/billing/verify-session:
+    get:
+      summary: >
+        Verify a Stripe Checkout session and return the resolved plan state.
+        Used post-checkout to confirm payment before trusting the webhook-driven
+        plan field, which may lag by one delivery cycle.
+      operationId: verifyCheckoutSession
+      tags: [billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          description: Stripe Checkout session ID (cs_…).
+          schema:
+            type: string
+            example: cs_test_abc123
+      responses:
+        '200':
+          description: >
+            Session resolved. `plan` reflects the payment outcome — 'pro' when
+            payment_status=paid, 'free' otherwise.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [plan, payment_status]
+                properties:
+                  plan:
+                    type: string
+                    enum: [free, pro]
+                  payment_status:
+                    type: string
+                    example: paid
+        '400':
+          description: session_id query parameter missing or session ID invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session belongs to a different authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/ai/stats:
     get:
       summary: Org-wide AI usage and cost snapshot (in-process, resets on restart).

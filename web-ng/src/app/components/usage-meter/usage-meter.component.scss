@@ -1,0 +1,28 @@
+.usage-meter {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  background: transparent;
+  white-space: nowrap;
+  line-height: 1.6;
+
+  &--warning {
+    color: var(--red);
+    border-color: var(--red);
+    font-weight: 600;
+  }
+}
+
+[data-theme="dark"] .usage-meter {
+  border-color: var(--border);
+  color: var(--ink-muted);
+
+  &--warning {
+    color: var(--red);
+    border-color: var(--red);
+  }
+}

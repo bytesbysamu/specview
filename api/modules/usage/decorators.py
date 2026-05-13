@@ -113,6 +113,21 @@ def check_usage_limit(feature: str) -> Callable:
             if _status_code(response) < 400:
                 with get_session() as session:
                     increment(user_id, feature, session)
+                limit = LIMITS.get(feature, 0)
+                # remaining was checked before the handler ran; after increment
+                # the true remaining is one less. Use remaining - 1, floored at 0.
+                header_remaining = max(remaining - 1, 0)
+                header_value = f"{header_remaining}/{limit}"
+                if isinstance(response, tuple):
+                    # Normalise to (body, status, headers) and inject the header.
+                    if len(response) >= 3:
+                        body, status, hdrs = response[0], response[1], dict(response[2])
+                    else:
+                        body, status, hdrs = response[0], response[1], {}
+                    hdrs["X-Usage-Remaining"] = header_value
+                    response = (body, status, hdrs)
+                else:
+                    response.headers["X-Usage-Remaining"] = header_value
 
             return response
 

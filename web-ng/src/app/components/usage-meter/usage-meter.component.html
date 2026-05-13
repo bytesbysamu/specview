@@ -1,0 +1,8 @@
+@if (isVisible()) {
+  <span
+    class="usage-meter"
+    [class.usage-meter--warning]="isWarning()"
+    data-test="usage-meter">
+    {{ usage()!.remaining }}/{{ usage()!.limit }} remaining
+  </span>
+}

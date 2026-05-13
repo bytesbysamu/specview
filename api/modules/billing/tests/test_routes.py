@@ -156,3 +156,90 @@ def test_status_returns_401_without_auth(client, monkeypatch):
     # explicit-empty-Authorization opt-out rationale.
     resp = client.get("/api/billing/status", headers={"Authorization": ""})
     assert resp.status_code == 401
+
+
+def test_status_for_lapsed_user_surfaces_as_free_plan(client, db_session, make_user):
+    """A lapsed user (plan='lapsed') must be represented as plan='free' in the response.
+
+    The BillingStatusResponse DTO only accepts 'free' | 'pro' — 'lapsed' is an
+    internal DB state not exposed via the openapi contract.
+    """
+    from modules.billing.models import Subscription
+
+    user = make_user(auth_user_id="test-user", email="test@example.com")
+    sub = Subscription(
+        user_id=user.id,
+        plan="lapsed",
+        status="past_due",
+        stripe_customer_id=None,
+        stripe_subscription_id="sub_lapsed",
+    )
+    db_session.add(sub)
+    db_session.commit()
+
+    resp = client.get("/api/billing/status")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["plan"] == "free"
+    assert body["status"] == "past_due"
+
+
+# ── GET /api/billing/verify-session ─────────────────────────────────────────
+
+
+class TestVerifySession:
+    def test_returns_400_when_session_id_missing(self, client):
+        resp = client.get("/api/billing/verify-session")
+        assert resp.status_code == 400
+        assert resp.get_json()["error"] == "missing session_id"
+
+    def test_returns_200_with_plan_pro_on_paid_session(self, client, make_user):
+        with patch(
+            "modules.billing.routes.verify_session",
+            return_value={"plan": "pro", "payment_status": "paid"},
+        ) as mock_vs:
+            resp = client.get(
+                "/api/billing/verify-session?session_id=cs_test_abc"
+            )
+
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert body["plan"] == "pro"
+        assert body["payment_status"] == "paid"
+        mock_vs.assert_called_once()
+
+    def test_returns_403_when_session_belongs_to_other_user(self, client):
+        from modules.billing.service import BillingOwnershipError
+
+        with patch(
+            "modules.billing.routes.verify_session",
+            side_effect=BillingOwnershipError("session does not belong to this user"),
+        ):
+            resp = client.get(
+                "/api/billing/verify-session?session_id=cs_other"
+            )
+
+        assert resp.status_code == 403
+        assert "belong" in resp.get_json()["error"]
+
+    def test_returns_400_when_session_is_invalid(self, client):
+        from modules.billing.service import BillingSessionError
+
+        with patch(
+            "modules.billing.routes.verify_session",
+            side_effect=BillingSessionError("No such session"),
+        ):
+            resp = client.get(
+                "/api/billing/verify-session?session_id=cs_bad"
+            )
+
+        assert resp.status_code == 400
+        body = resp.get_json()
+        assert "No such session" in body["error"]
+
+    def test_returns_401_without_auth(self, client):
+        resp = client.get(
+            "/api/billing/verify-session?session_id=cs_test_abc",
+            headers={"Authorization": ""},
+        )
+        assert resp.status_code == 401

@@ -13,6 +13,7 @@
         <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
       </div>
       <div class="masthead-actions">
+        <app-usage-meter />
         <button class="new-project-btn" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
         <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
           @if (isDark()) {
