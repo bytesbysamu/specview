@@ -96,6 +96,9 @@ def create_app(config=None):
         Path(__file__).parent / "modules"
     )
 
+    from modules.data.projects.repository import SqlProjectRepository
+    app.project_repository = SqlProjectRepository()
+
     @app.get('/api/health')
     def health():
         return jsonify({'status': 'ok'})

@@ -4,7 +4,7 @@
 Walks every slug directory under PROJECTS_DIR, and for each one not already
 present as a Project row:
 
-  1. Bootstrap-creates a User row (if one for --owner-email is missing)
+  1. Looks up the User row for --owner-email (exits 1 if not found)
   2. Calls SqlProjectRepository.create() which atomically writes the
      Project row AND initialises the per-project git repo at
      GIT_REPOS_DIR/<project_id>/ (rolls back the row on git failure).
@@ -27,8 +27,9 @@ Exit code: 0 on full success, 1 if any project errored.
 Deviations from task-5 spec (see commit body):
   - SqlProjectRepository.create() requires git_repo_path as a 4th arg
   - get_session lives at modules.data.db.session (not modules.db.session)
-  - Instantiate SqlProjectRepository() directly (create_app.py does not
-    yet wire current_app.project_repository — out of scope to add)
+  - Instantiate SqlProjectRepository() directly (create_app.py wires
+    current_app.project_repository, but the script runs outside an app
+    context so it must construct the repository directly)
   - User.id is int (not UUID); we pass project.user_id as int.
 """
 from __future__ import annotations
@@ -46,11 +47,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from modules.data import git_store  # noqa: E402  – adapter boundary
 
 
-def _get_or_create_owner(email: str) -> int:
-    """Find or bootstrap-create a User row; return its integer PK.
+def _lookup_owner(email: str) -> int:
+    """Look up an existing User row by email; return its integer PK.
 
-    Bootstrap users are tagged `auth_user_id="bootstrap:<email>"` so the
-    auth epic can later distinguish them from real Neon Auth-issued IDs.
+    Exits with code 1 (via SystemExit) if no matching User row is found.
+    We require the user to exist so that migrated projects are owned by a
+    real authenticated account, not a bootstrap placeholder.
     """
     from sqlmodel import select  # local import to defer DB engine warm-up
 
@@ -60,15 +62,13 @@ def _get_or_create_owner(email: str) -> int:
     with get_session() as session:
         user = session.exec(select(User).where(User.email == email)).first()
         if user is None:
-            user = User(
-                auth_user_id=f"bootstrap:{email}",
-                email=email,
-                plan="free",
+            print(
+                f"ERROR: no User row found for email '{email}'. "
+                "Register the account first, then re-run this script.",
+                file=sys.stderr,
             )
-            session.add(user)
-            session.commit()
-            session.refresh(user)
-        assert user.id is not None, "User.id must be assigned after commit"
+            sys.exit(1)
+        assert user.id is not None, "User.id must be assigned"
         return int(user.id)
 
 
@@ -172,7 +172,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     p.add_argument(
         "--owner-email",
         required=True,
-        help="Email of the project owner (User row created if absent).",
+        help="Email of the project owner (must already exist as a User row).",
     )
     p.add_argument(
         "--projects-dir",
@@ -206,7 +206,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     repo = _build_repo()
     owner_id = (
-        _get_or_create_owner(args.owner_email) if not args.dry_run else 0
+        _lookup_owner(args.owner_email) if not args.dry_run else 0
     )
 
     counts = {"migrated": 0, "skipped": 0, "error": 0}
@@ -223,10 +223,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         tag = "DRY  " if args.dry_run and status == "migrated" else ""
         print(f"  {tag}{status.upper():9s}  {slug_dir.name}")
 
+    fs_dirs = sum(1 for d in projects_dir.iterdir() if d.is_dir())
     print(
         f"\nImported {counts['migrated']} projects, {files_total} files, "
         f"{counts['skipped']} skipped, {counts['error']} errors"
     )
+    if not args.dry_run:
+        db_count = len(repo.list_for_user(owner_id))
+        print(
+            f"Verification: {db_count} DB rows for owner"
+            f" vs {fs_dirs} filesystem directories under {projects_dir}"
+        )
     return 1 if counts["error"] else 0
 
 

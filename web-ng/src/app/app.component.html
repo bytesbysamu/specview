@@ -330,6 +330,16 @@
       <!-- Main content -->
       <div class="expanded-main">
 
+        <!-- Access denied (403) state -->
+        @if (accessDenied()) {
+          <div class="access-denied-state" data-test="access-denied-message">
+            <span class="overline">Access Denied</span>
+            <p class="access-denied-heading">You don't have access to this project.</p>
+            <p class="access-denied-sub">This project belongs to another account. Only the owner can view or edit it.</p>
+            <button class="access-denied-back" (click)="closeExpanded()">Back to projects</button>
+          </div>
+        }
+
         <!-- Result toolbar (project files only) — only renders when a result is active -->
         @if (activeProject() && currentSpec()) {
           @if (aiResult()) {

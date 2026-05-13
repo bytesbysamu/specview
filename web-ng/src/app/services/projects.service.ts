@@ -1,6 +1,15 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+
+export class AccessDeniedError extends Error {
+  readonly status = 403;
+  readonly type = 'access_denied';
+  constructor() {
+    super('You do not have access to this project.');
+    this.name = 'AccessDeniedError';
+  }
+}
 
 export interface Spec {
   filename: string;
@@ -73,7 +82,10 @@ export class ProjectsService {
   getProject(id: string): Promise<Project> {
     return firstValueFrom(this.http.get<Project>(`/api/projects/${id}`)).then(
       p => ({ ...p, specs: sortSpecs(p.specs) })
-    );
+    ).catch((err: HttpErrorResponse) => {
+      if (err?.status === 403) throw new AccessDeniedError();
+      throw err;
+    });
   }
 
   getContext(key: string): Promise<{ content: string; text?: string }> {

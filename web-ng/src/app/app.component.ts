@@ -6,7 +6,7 @@ import DOMPurify from 'dompurify';
 
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { ProjectsService, Project, Spec, GeneratedFile } from './services/projects.service';
+import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
 import { AiService } from './services/ai.service';
 import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
 import { projectTeaser, countTasks } from './services/project-teaser';
@@ -138,6 +138,9 @@ export class AppComponent implements OnInit, OnDestroy {
   specGenError = signal<string | null>(null);
   specGenStep = signal<string | null>(null);
   specGenProjectName = signal<string | null>(null);
+
+  // Access denied (403) state
+  accessDenied = signal(false);
 
   // Epic guide generation
   epicGuideLoading = signal(false);
@@ -315,8 +318,8 @@ export class AppComponent implements OnInit, OnDestroy {
   });
 
 
-  showGrid = computed(() => !this.activeProject() && this.contextContent() === null);
-  showExpanded = computed(() => !!this.activeProject() || this.contextContent() !== null);
+  showGrid = computed(() => !this.activeProject() && this.contextContent() === null && !this.accessDenied());
+  showExpanded = computed(() => !!this.activeProject() || this.contextContent() !== null || this.accessDenied());
   expandedTitle = computed(() => this.contextContent() !== null ? this.contextTitle() : (this.currentSpec()?.label ?? ''));
   expandedProject = computed(() => this.contextContent() !== null ? 'Context' : (this.activeProject()?.name ?? ''));
 
@@ -514,12 +517,24 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // ── Project grid ──────────────────────────────────
   async selectProject(id: string) {
-    const proj = await this.projectsSvc.getProject(id);
-    this.activeProject.set(proj);
-    this.activeFile.set(proj.specs?.[0]?.filename ?? null);
-    this.contextContent.set(null);
-    this.aiResult.set(null);
-    
+    this.accessDenied.set(false);
+    try {
+      const proj = await this.projectsSvc.getProject(id);
+      this.activeProject.set(proj);
+      this.activeFile.set(proj.specs?.[0]?.filename ?? null);
+      this.contextContent.set(null);
+      this.aiResult.set(null);
+    } catch (err: any) {
+      if (err instanceof AccessDeniedError) {
+        this.accessDenied.set(true);
+        // Keep expanded panel open so the access-denied block is visible
+        this.activeProject.set(null);
+        this.activeFile.set(null);
+        this.contextContent.set(null);
+      } else {
+        throw err;
+      }
+    }
   }
 
   closeExpanded() {
@@ -527,7 +542,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeFile.set(null);
     this.contextContent.set(null);
     this.aiResult.set(null);
-    
+    this.accessDenied.set(false);
+
   }
 
   selectFile(filename: string) {

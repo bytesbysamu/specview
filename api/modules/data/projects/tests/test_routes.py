@@ -48,9 +48,15 @@ def client(app):
 # Stubs
 # ---------------------------------------------------------------------------
 class _StubProject:
-    """Mimics modules.data.projects.models.Project enough for the routes."""
+    """Mimics modules.data.projects.models.Project enough for the routes.
+
+    user_id must match the fake user id injected by conftest._auth_bypass
+    (_FAKE_USER_ID = 1) so that @require_project_ownership passes the
+    ownership check during tests.
+    """
 
     id = 42
+    user_id = 1  # must match conftest._FAKE_USER_ID
     slug = "my-project"
     file_count = 3
 
