@@ -11,18 +11,28 @@ Specview has observability infrastructure that's built but not activated, health
 
 ---
 
-## Current state (fact-checked 2026-05-12)
+## Current state (fact-checked 2026-05-13)
 
-**Built but not activated:**
+**Sentry — partially activated (2026-05-13):**
+- Two Sentry projects created: `specview-api` (Python/Flask) and `specview-web` (JavaScript/Angular)
+- API DSN set in `api/.env` → `SENTRY_DSN=https://acd82d9009a74adeafbcfe5ce982c720@o4511382072197120.ingest.de.sentry.io/4511382101360720`
+- Web DSN saved in root `.env` → `SENTRY_DSN_WEB=https://c2995d9090468dcfe2b1158afaa3d738@o4511382072197120.ingest.de.sentry.io/4511382096511056`
+- **Backend Sentry is receiving errors** — Python exceptions visible in Sentry dashboard. `init_sentry(app)` is wired in `create_app.py` and reads `SENTRY_DSN`.
+- **Frontend Sentry is NOT wired yet** — the Angular app has no Sentry SDK integration. The DSN is saved but no code initializes it. No frontend errors flow to Sentry. Zero visibility into client-side crashes, Angular rendering errors, or HTTP failures from the user's browser.
+- **`set_sentry_user()` not wired** — after `@require_auth` sets `g.current_user`, Sentry should call `sentry_sdk.set_user({"id": user.id, "email": user.email})` so every error has user context. This call doesn't exist yet — backend errors in Sentry show the stack trace but not which user was affected.
+- **No `APP_RELEASE` tag** — Sentry errors aren't tied to a deploy/commit. Can't tell which release introduced a bug.
+- Sentry free tier: 5K errors/month, 1 user — sufficient for launch.
+
+**Built and working:**
 - `api/modules/observability/logging.py` — structlog with JSON output, contextvars, request_id propagation. `init_logging()` is wired in `create_app.py`. Working.
-- `api/modules/observability/sentry.py` — `init_sentry(app)` reads `SENTRY_DSN`, silent no-op if unset. `set_sentry_user()` stub ready for auth middleware integration. Not activated — `SENTRY_DSN` not set anywhere.
+- `api/modules/observability/sentry.py` — `init_sentry(app)` reads `SENTRY_DSN`, active when DSN is set. `set_sentry_user()` stub ready for auth middleware integration.
 - `api/modules/observability/errors.py` — JSON error handlers for HTTPException, ValidationError, unhandled exceptions. Registered in `create_app.py`. Working.
 - `api/modules/observability/health.py` — `GET /api/health/anthropic` validates Claude auth via `count_tokens` (5s timeout). Returns `ok`, `degraded`, or `skipped`.
 - Chain adapter: `adapter.py` has in-process usage accumulator (`_USAGE` dict) with per-model cost tracking. `GET /api/ai/stats` returns cumulative totals.
 
 **Stubbed health probes:**
 - `GET /api/health/neon` — returns `{"status": "skipped"}` always. Should probe database connectivity.
-- `GET /api/health/stripe` — returns `{"status": "skipped"}` always. Should validate Stripe API key.
+- `GET /api/health/stripe` — returns `{"status": "skipped"}` always. Should validate Stripe API key. (Stripe keys are now configured in `.env` — this probe just needs to call `stripe.Balance.retrieve()`)
 - Docker healthcheck uses `/api/health` (process liveness) not `/api/health/anthropic` (auth validity). The P0 project identified this gap but fix hasn't landed.
 
 **Missing reliability features:**
