@@ -83,7 +83,24 @@ Scan these files for the complete feature surface:
 
 The list below is the known inventory. Features may have been added, changed, or removed since this was written. Number them during spec generation, not before.
 
-Previously documented from: `app.component.html`, `app.component.ts`, `styles.css`, `section-taxonomy.service.ts`, `project-teaser.ts`. Cross-referenced against UX epics: `ux-grid-polish`, `ux-landing-grid-polish`, `ux-polish-newspaper`, `app-ui-mockups`, `ux-reader-textops`.
+Additionally, review the `implementation-guide.md` and `exec-guide-summary.md` from every executed project to verify what was actually shipped. These are the projects with confirmed implementations (as of 2026-05-13):
+
+| Project | What it shipped |
+|---------|----------------|
+| `auth-reliability-p0-1778576448` | JWT auth, credential persistence, @require_auth |
+| `saas-phase1-security-auth-1778590275` | Login/register, token lifecycle, auth interceptor, security headers |
+| `saas-phase2-isolation-billing-1778590276` | Project isolation, ownership decorator, 403 access denied UI, auto-migration |
+| `saas-phase2b-billing-ui-1778665933` | SubscriptionService, upgrade page, billing interceptor, usage meter, lapsed state |
+| `test-phase3-unit-component-1778592997` | 146 unit tests, section-taxonomy + project-teaser coverage |
+| `ux-reader-textops-1778237000` | Reader view, text operations, navigation |
+| `ux-grid-polish-1778368175` | Card grid layout, vertical separators, section colors |
+| `ux-polish-newspaper-1778238000` | Newspaper typography, nameplate rule, column layout |
+| `landing-phase3-polish-1778355280` | Landing page polish |
+| `landing-polish-newspaper` | Landing newspaper feel |
+
+Each of these may have introduced features not captured in the F1-F17 list below. The spec pipeline should read their impl guides to build the complete feature inventory.
+
+Previously documented from: `app.component.html`, `app.component.ts`, `styles.css`, `section-taxonomy.service.ts`, `project-teaser.ts`. Cross-referenced against UX epics.
 
 ### F1 — Auth Gate
 
