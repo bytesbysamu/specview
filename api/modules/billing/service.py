@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime
-from typing import Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import stripe
 from sqlmodel import Session, select

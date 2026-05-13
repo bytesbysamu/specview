@@ -19,7 +19,7 @@ import pytest
 # Force mock provider before create_app imports the chain module.
 os.environ.setdefault("CHAIN_PROVIDER", "mock")
 
-from modules.runtime.workflows.execution import ExecutionStatus, WorkflowExecution
+from modules.runtime.workflows.execution import WorkflowExecution
 
 
 # ---------------------------------------------------------------------------
@@ -302,7 +302,7 @@ def test_bootstrap_retry_returns_202_with_new_job_id(client):
     mock_workflow = MagicMock()
     mock_thread = MagicMock()
 
-    with patch("modules.ai.routes.text.threading.Thread", return_value=mock_thread) as MockThread, \
+    with patch("modules.ai.routes.text.threading.Thread", return_value=mock_thread), \
          patch.object(client.application, "workflow_repository") as mock_repo:
         mock_repo.get.return_value = mock_workflow
         response = client.post(
