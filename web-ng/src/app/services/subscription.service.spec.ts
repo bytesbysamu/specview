@@ -96,15 +96,16 @@ describe('SubscriptionService', () => {
 
   describe('startCheckout()', () => {
     it('calls POST /api/billing/create-checkout-session', async () => {
-      // Cannot redefine window.location in modern Chrome — spy on the
-      // service's redirect instead by verifying the HTTP call fires.
-      const checkoutPromise = service.startCheckout().catch(() => {
-        /* redirect will throw in test env — ignore */
-      });
+      // Spy on the protected redirect method to prevent a real page reload
+      const redirectSpy = spyOn(service as any, 'redirect');
+
+      const checkoutPromise = service.startCheckout();
       const req = httpMock.expectOne('/api/billing/create-checkout-session');
       expect(req.request.method).toBe('POST');
       req.flush({ url: 'https://checkout.stripe.com/pay/test_123' });
       await checkoutPromise;
+
+      expect(redirectSpy).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test_123');
     });
   });
 });

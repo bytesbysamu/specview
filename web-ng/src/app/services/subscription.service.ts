@@ -32,7 +32,12 @@ export class SubscriptionService {
     const res = await firstValueFrom(
       this.http.post<CheckoutSessionResponse>('/api/billing/create-checkout-session', {})
     );
-    window.location.href = res.url;
+    this.redirect(res.url);
+  }
+
+  /** Extracted for testability — overridden in specs to prevent page reload. */
+  protected redirect(url: string): void {
+    window.location.href = url;
   }
 
   async verifySession(sessionId: string): Promise<void> {
