@@ -33,8 +33,8 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:3101/api/health/anthropic"]
       interval: 300s
-      timeout: 30s
-      retries: 2
+      timeout: 10s
+      retries: 3
       start_period: 120s
     restart: unless-stopped
     networks:

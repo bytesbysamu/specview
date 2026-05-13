@@ -38,7 +38,7 @@ CAPS = svc.LIMITS
 
 
 def test_limits_contains_only_three_locked_features():
-    assert CAPS == {"bootstrap": 30, "task_gen": 100, "spec_gen": 50, "text": 50, "skill": 20}
+    assert CAPS == {"bootstrap": 30, "task_gen": 100, "spec_gen": 50}
 
 
 @pytest.mark.parametrize(

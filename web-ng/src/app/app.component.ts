@@ -156,11 +156,6 @@ export class AppComponent implements OnInit, OnDestroy {
   specGenStep = signal<string | null>(null);
   specGenProjectName = signal<string | null>(null);
 
-  // Cancel / retry state
-  cancelling = signal(false);
-  specGenJobId = signal<string | null>(null);
-  specGenFailedStep = signal<string | null>(null);
-
   // Access denied (403) state
   accessDenied = signal(false);
 
@@ -746,8 +741,6 @@ export class AppComponent implements OnInit, OnDestroy {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
       this.specGenProjectName.set(null);
-      this.specGenJobId.set(null);
-      this.cancelling.set(false);
       this._stopGenPoll();
     }
   }
@@ -861,7 +854,6 @@ export class AppComponent implements OnInit, OnDestroy {
     onFile?: (file: GeneratedFile) => Promise<void>,
   ): Promise<GeneratedFile[]> {
     const { job_id } = await this.projectsSvc.startBootstrap(projectName, braindump);
-    this.specGenJobId.set(job_id);
     const saved = new Set<string>();
     let pollFailures = 0;
     const MAX_POLL_FAILURES = 5;
@@ -894,69 +886,10 @@ export class AppComponent implements OnInit, OnDestroy {
       }
 
       if (status.done) {
-        if (status.failed_step) this.specGenFailedStep.set(status.failed_step);
         if (status.error) throw new Error(status.error);
         // Return only files not already saved incrementally
         return (status.files ?? []).filter(f => !saved.has(f.filename));
       }
-    }
-  }
-
-  async onCancel(): Promise<void> {
-    const jobId = this.specGenJobId();
-    if (!jobId || this.cancelling()) return;
-    this.cancelling.set(true);
-    try {
-      await this.projectsSvc.cancelBootstrap(jobId);
-      // Poll loop will pick up the CANCELLING -> CANCELLED state transition naturally
-    } catch {
-      // If cancel fails (e.g. 409 already completed), reset cancelling flag
-      this.cancelling.set(false);
-    }
-  }
-
-  async onRetry(): Promise<void> {
-    const jobId = this.specGenJobId();
-    const step = this.specGenFailedStep();
-    if (!jobId || !step) return;
-
-    this.specGenFailedStep.set(null);
-    this.cancelling.set(false);
-    this.specGenError.set(null);
-    this.specGenStep.set(null);
-    this.specGenLoading.set(true);
-    this._setStatusActive();
-    this._startGenPoll();
-
-    try {
-      const { job_id: newJobId } = await this.projectsSvc.retryBootstrapStep(jobId, step);
-      this.specGenJobId.set(newJobId);
-      // Poll the new job until done
-      while (true) {
-        await new Promise(r => setTimeout(r, 2500));
-        let status: Awaited<ReturnType<typeof this.projectsSvc.pollBootstrap>>;
-        try {
-          status = await this.projectsSvc.pollBootstrap(newJobId);
-        } catch {
-          continue;
-        }
-        if (status.current_step) this.specGenStep.set(status.current_step);
-        if (status.done) {
-          if (status.failed_step) this.specGenFailedStep.set(status.failed_step);
-          if (status.error) throw new Error(status.error);
-          this._setStatusSuccess();
-          break;
-        }
-      }
-    } catch (err: any) {
-      const msg = err?.message || 'Retry failed — check connection and try again.';
-      this.specGenError.set(msg);
-      this._setStatusFailure(msg);
-    } finally {
-      this.specGenLoading.set(false);
-      this.specGenStep.set(null);
-      this._stopGenPoll();
-      this.cancelling.set(false);
     }
   }
 
@@ -1019,8 +952,6 @@ export class AppComponent implements OnInit, OnDestroy {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
       this.specGenProjectName.set(null);
-      this.specGenJobId.set(null);
-      this.cancelling.set(false);
       this._stopGenPoll();
     }
   }
@@ -1062,8 +993,6 @@ export class AppComponent implements OnInit, OnDestroy {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
       this.specGenProjectName.set(null);
-      this.specGenJobId.set(null);
-      this.cancelling.set(false);
       this._stopGenPoll();
     }
   }

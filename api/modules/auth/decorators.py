@@ -11,7 +11,6 @@ from sqlmodel import Session
 from modules.auth.models import User
 from modules.auth.service import verify_token
 from modules.data.db.engine import get_engine
-from modules.observability.sentry import set_sentry_user
 
 
 def _load_user(user_id: int) -> User | None:
@@ -44,7 +43,6 @@ def require_auth(fn):
             return jsonify({"error": "user not found"}), 401
 
         g.current_user = user
-        set_sentry_user(str(user.id), getattr(user, 'email', None))
         return fn(*args, **kwargs)
 
     return wrapper
