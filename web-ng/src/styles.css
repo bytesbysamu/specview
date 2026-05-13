@@ -1131,6 +1131,41 @@ body {
 }
 .gen-status-retry:hover { opacity: 1; }
 
+.gen-status-cancel {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: inherit;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.gen-status-cancel:hover { opacity: 1; }
+.gen-status-cancel:disabled { opacity: 0.45; cursor: default; }
+
+.gen-retry-step-btn {
+  display: inline-block;
+  margin-top: 6px;
+  background: none;
+  border: 1px solid var(--ink-light, rgba(0,0,0,0.3));
+  color: inherit;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 11px;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.gen-retry-step-btn:hover { opacity: 1; }
+
 .gen-status-idle {
   font-size: 11px;
   opacity: 0.85;

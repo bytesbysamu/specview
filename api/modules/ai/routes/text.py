@@ -226,12 +226,7 @@ Focus on WHY. Explain trade-offs. No code blocks."""
 
 
 def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
-    """Background thread body. Drives the three-step chain; state machine via WorkflowExecution.
-
-    Cooperative cancellation: checks execution.status between each step boundary.
-    When the status is CANCELLING, the thread calls execution.cancel() and returns,
-    preserving the outputs accumulated so far.
-    """
+    """Background thread body. Drives the three-step chain; state machine via WorkflowExecution."""
     t0 = time.monotonic()
     inputs = execution.inputs
     try:
@@ -242,10 +237,9 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
         analysis = chain_adapter.generate(system, prompt).text
         execution.outputs["analysis"] = analysis
 
-        # Cancellation check: exit cleanly between analysis and epic.
         if execution.status is ExecutionStatus.CANCELLING:
-            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
             execution.cancel()
+            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
             return
 
         execution.current_step_name = "epic"
@@ -256,10 +250,9 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
         epic = chain_adapter.generate(system, prompt).text
         execution.outputs["epic"] = epic
 
-        # Cancellation check: exit cleanly between epic and architecture.
         if execution.status is ExecutionStatus.CANCELLING:
-            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
             execution.cancel()
+            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
             return
 
         execution.current_step_name = "architecture"
@@ -383,10 +376,10 @@ def bootstrap_status(job_id: str):
             ]
             body["files"] = [f.model_dump() for f in files]
             body["latencyMs"] = outputs.get("latency_ms", 0)
-        elif execution.error:
-            body["error"] = execution.error
-            if execution.current_step_name:
-                body["failed_step"] = execution.current_step_name
+        elif execution.status is ExecutionStatus.ERROR:
+            if execution.error:
+                body["error"] = execution.error
+            body["failed_step"] = execution.current_step_name
 
     return jsonify(body)
 
@@ -461,8 +454,7 @@ def bootstrap_retry(job_id: str):
     The prior execution's outputs become inputs for the new run — epic retry
     re-uses the prior analysis text; architecture retry re-uses both. Returns
     202 + a fresh job_id; the caller resumes polling the status endpoint with
-    the new id. Counts as one bootstrap usage call (covered by the existing
-    ``@check_usage_limit("bootstrap")`` decorator on the parent route).
+    the new id. Each retry counts against the daily bootstrap quota.
     """
     try:
         req = RetryBootstrapRequest.model_validate(

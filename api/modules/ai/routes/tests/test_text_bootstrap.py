@@ -5,8 +5,9 @@ Tests verify:
   - Input validation (422 on missing required fields)
   - Happy-path 202 acceptance
   - Status and cancel/retry route guards
-  - Usage limit enforcement on retry endpoint
-  - Cooperative cancellation state machine
+  - Retry usage-limit enforcement (429 on quota exhaustion)
+  - Retry 404 when job_id not registered
+  - Retry 202 with fresh job_id on valid request
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ import pytest
 os.environ.setdefault("CHAIN_PROVIDER", "mock")
 
 from modules.runtime.workflows.execution import WorkflowExecution
+from modules.runtime.workflows.workflow import Workflow
 
 
 # ---------------------------------------------------------------------------
@@ -229,84 +231,90 @@ def test_bootstrap_retry_returns_401_without_auth(client):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/ai/text/bootstrap-project/<job_id>/retry — Task 3: usage limit
+# POST /api/ai/text/bootstrap-project/<job_id>/retry — usage limit
 # ---------------------------------------------------------------------------
 
-def test_bootstrap_retry_returns_429_when_usage_limit_hit(client, monkeypatch):
-    """Retry endpoint returns 429 when free-tier user has exhausted daily quota.
-
-    The autouse _auth_bypass fixture returns plan='pro'; we override _load_user
-    here to return a free-tier user so check_usage_limit actually enforces the cap.
-    """
+def test_bootstrap_retry_returns_429_when_quota_exhausted(client, monkeypatch):
+    """Free-tier user with no remaining quota gets 429 from the retry route."""
     from modules.ai.routes.text import _BOOTSTRAP_JOBS
-    import modules.auth.decorators as _decorators
     from modules.auth.models import User
 
-    def _free_user(user_id: int):
-        return User(id=user_id, auth_user_id="free-test", email="free@example.com", plan="free")
-
-    monkeypatch.setattr(_decorators, "_load_user", _free_user)
-
+    # Seed a prior job so we get past the job-lookup guard.
     prior = WorkflowExecution(
         workflow_ref="ai/bootstrap-project",
-        inputs={"project_name": "P"},
+        inputs={"project_name": "P", "braindump": "b"},
     )
-    prior.start()
-    _BOOTSTRAP_JOBS["retry-limit-test"] = prior
+    _BOOTSTRAP_JOBS["quota-retry-job"] = prior
 
-    mock_session = MagicMock()
+    # Override the fake user injected by conftest with a free-tier user so
+    # check_usage_limit will not short-circuit for pro plan.
+    free_user = User(id=99, auth_user_id="free-user", email="free@example.com", plan="free")
+    import modules.auth.decorators as _decorators
+    monkeypatch.setattr(_decorators, "_load_user", lambda uid: free_user)
 
+    # Drive the usage decorator: DB session is mocked; remaining = 0 triggers 429.
     @contextmanager
-    def _fake_session_ctx():
-        yield mock_session
+    def _fake_get_session():
+        yield MagicMock()
 
-    with patch("modules.usage.decorators.get_remaining", return_value=0), \
-         patch("modules.usage.decorators.get_session", _fake_session_ctx):
-        response = client.post(
-            "/api/ai/text/bootstrap-project/retry-limit-test/retry",
-            json={"step": "analysis"},
-        )
+    monkeypatch.setattr("modules.usage.decorators.get_session", _fake_get_session)
+    monkeypatch.setattr("modules.usage.decorators.get_remaining", lambda uid, feat, sess: 0)
 
+    response = client.post(
+        "/api/ai/text/bootstrap-project/quota-retry-job/retry",
+        json={"step": "analysis"},
+    )
     assert response.status_code == 429, (
         f"Expected 429; got {response.status_code} body={response.get_json()}"
     )
     body = response.get_json()
     assert body.get("error") == "free_tier_limit_reached"
+    assert body.get("feature") == "bootstrap"
 
 
 def test_bootstrap_retry_returns_404_when_job_not_found(client):
-    """Retry endpoint returns 404 when job_id does not exist."""
+    """Retry for an unknown job_id returns 404 — _BOOTSTRAP_JOBS miss."""
     response = client.post(
-        "/api/ai/text/bootstrap-project/no-such-job/retry",
-        json={"step": "analysis"},
+        "/api/ai/text/bootstrap-project/no-such-job-xyz/retry",
+        json={"step": "epic"},
     )
     assert response.status_code == 404, (
         f"Expected 404; got {response.status_code} body={response.get_json()}"
     )
+    body = response.get_json()
+    assert "job not found" in body.get("error", "")
 
 
-def test_bootstrap_retry_returns_202_with_new_job_id(client):
-    """Retry endpoint returns 202 with a fresh job_id distinct from the original."""
+def test_bootstrap_retry_returns_202_with_new_job_id(client, app):
+    """Valid retry against a completed job returns 202 with a fresh job_id."""
     from modules.ai.routes.text import _BOOTSTRAP_JOBS
 
+    # Seed a completed prior execution that has an analysis output — the
+    # "epic" retry step needs this as its upstream dependency.
     prior = WorkflowExecution(
         workflow_ref="ai/bootstrap-project",
-        inputs={"project_name": "P"},
+        inputs={
+            "project_name": "RetryP",
+            "braindump": "build a thing",
+            "builder": "",
+            "principles": "",
+            "codebase": "",
+            "references": "",
+        },
     )
-    prior.start()
-    # Seed prior analysis output so epic retry has its dependency
-    prior.outputs["analysis"] = MagicMock(text="analysis content")
-    prior.outputs["epic"] = MagicMock(text="epic content")
-    _BOOTSTRAP_JOBS["retry-202-test"] = prior
+    prior.outputs["analysis"] = MagicMock(text="## Analysis content")
+    _BOOTSTRAP_JOBS["prior-complete-job"] = prior
 
-    mock_workflow = MagicMock()
-    mock_thread = MagicMock()
+    # Stub workflow_repository so the route can resolve the sub-workflow ref.
+    stub_workflow = MagicMock(spec=Workflow)
+    app.workflow_repository = MagicMock()
+    app.workflow_repository.get.return_value = stub_workflow
 
-    with patch("modules.ai.routes.text.threading.Thread", return_value=mock_thread), \
-         patch.object(client.application, "workflow_repository") as mock_repo:
-        mock_repo.get.return_value = mock_workflow
+    with patch("modules.ai.routes.text.threading.Thread") as MockThread:
+        MockThread.return_value = MagicMock()
+
         response = client.post(
-            "/api/ai/text/bootstrap-project/retry-202-test/retry",
+            "/api/ai/text/bootstrap-project/prior-complete-job/retry",
             json={"step": "epic"},
         )
 
@@ -315,87 +323,109 @@ def test_bootstrap_retry_returns_202_with_new_job_id(client):
     )
     body = response.get_json()
     assert "job_id" in body
-    assert body["job_id"] != "retry-202-test", "New job_id must differ from original"
-    mock_thread.start.assert_called_once()
+    new_job_id = body["job_id"]
+    assert isinstance(new_job_id, str) and len(new_job_id) > 0
+    # The new job_id must differ from the original.
+    assert new_job_id != "prior-complete-job"
+    # A new WorkflowExecution must be registered for the returned job_id.
+    assert new_job_id in _BOOTSTRAP_JOBS
+    # The retry route must have constructed and started exactly one daemon thread.
+    assert MockThread.call_count == 1, (
+        f"Expected 1 Thread construction; got {MockThread.call_count}"
+    )
+    MockThread.return_value.start.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
-# Task 4: Cooperative cancellation — status endpoint state machine
+# Cooperative cancellation — Task 4
 # ---------------------------------------------------------------------------
 
-def test_bootstrap_status_reflects_cancelling_state(client):
-    """Status endpoint returns 'cancelling' status when execution is in CANCELLING state."""
-    from modules.ai.routes.text import _BOOTSTRAP_JOBS
+class TestCancellation:
+    """Tests for cooperative cancellation wiring in _run_bootstrap_thread and bootstrap_status."""
 
-    execution = WorkflowExecution(
-        workflow_ref="ai/bootstrap-project",
-        inputs={"project_name": "P"},
-    )
-    execution.start()
-    execution.request_cancel()  # IN_PROGRESS -> CANCELLING
-    _BOOTSTRAP_JOBS["cancelling-test"] = execution
+    def test_status_response_includes_status_field_when_cancelling(self, client):
+        """Poll response always includes `status` field; CANCELLING is visible before terminal."""
+        from modules.ai.routes.text import _BOOTSTRAP_JOBS
+        from modules.runtime.workflows.execution import ExecutionStatus
 
-    response = client.get("/api/ai/text/bootstrap-project/status/cancelling-test")
-    assert response.status_code == 200
-    body = response.get_json()
-    assert body.get("status") == "CANCELLING"
+        execution = WorkflowExecution(
+            workflow_ref="ai/bootstrap-project",
+            inputs={"project_name": "CancelP"},
+        )
+        execution.start()
+        execution.request_cancel()  # IN_PROGRESS -> CANCELLING
+        _BOOTSTRAP_JOBS["cancelling-job"] = execution
 
+        response = client.get("/api/ai/text/bootstrap-project/status/cancelling-job")
+        assert response.status_code == 200
+        body = response.get_json()
+        assert "status" in body, "poll response must always include 'status'"
+        assert body["status"] == ExecutionStatus.CANCELLING.value
+        # Not yet terminal — done must be False.
+        assert body["done"] is False
 
-def test_bootstrap_status_reflects_cancelled_terminal_state(client):
-    """Status endpoint returns done=true and status='cancelled' after cancellation completes."""
-    from modules.ai.routes.text import _BOOTSTRAP_JOBS
+    def test_status_response_done_true_and_status_cancelled_on_terminal(self, client):
+        """Once cancelled (terminal), done=true and status=CANCELLED in poll response."""
+        from modules.ai.routes.text import _BOOTSTRAP_JOBS
+        from modules.runtime.workflows.execution import ExecutionStatus
 
-    execution = WorkflowExecution(
-        workflow_ref="ai/bootstrap-project",
-        inputs={"project_name": "P"},
-    )
-    execution.start()
-    execution.request_cancel()  # IN_PROGRESS -> CANCELLING
-    execution.cancel()          # CANCELLING -> CANCELLED
-    _BOOTSTRAP_JOBS["cancelled-test"] = execution
+        execution = WorkflowExecution(
+            workflow_ref="ai/bootstrap-project",
+            inputs={"project_name": "CancelP"},
+        )
+        execution.start()
+        execution.request_cancel()  # IN_PROGRESS -> CANCELLING
+        execution.cancel()          # CANCELLING -> CANCELLED
+        _BOOTSTRAP_JOBS["cancelled-job"] = execution
 
-    response = client.get("/api/ai/text/bootstrap-project/status/cancelled-test")
-    assert response.status_code == 200
-    body = response.get_json()
-    assert body["done"] is True
-    assert body.get("status") == "CANCELLED"
+        response = client.get("/api/ai/text/bootstrap-project/status/cancelled-job")
+        assert response.status_code == 200
+        body = response.get_json()
+        assert body["done"] is True
+        assert body["status"] == ExecutionStatus.CANCELLED.value
 
+    def test_status_response_includes_failed_step_on_error(self, client):
+        """When status is ERROR, poll response contains `failed_step` set to current_step_name."""
+        from modules.ai.routes.text import _BOOTSTRAP_JOBS
+        from modules.runtime.workflows.execution import ExecutionStatus
 
-def test_bootstrap_status_includes_failed_step_on_error(client):
-    """Status endpoint includes 'failed_step' when execution is in ERROR state."""
-    from modules.ai.routes.text import _BOOTSTRAP_JOBS
+        execution = WorkflowExecution(
+            workflow_ref="ai/bootstrap-project",
+            inputs={"project_name": "ErrorP"},
+        )
+        execution.start()
+        execution.current_step_name = "epic"
+        execution.fail("chain timeout")  # IN_PROGRESS -> ERROR
+        _BOOTSTRAP_JOBS["error-job"] = execution
 
-    execution = WorkflowExecution(
-        workflow_ref="ai/bootstrap-project",
-        inputs={"project_name": "P"},
-    )
-    execution.start()
-    execution.current_step_name = "epic"
-    execution.fail("chain call failed")
-    _BOOTSTRAP_JOBS["error-step-test"] = execution
+        response = client.get("/api/ai/text/bootstrap-project/status/error-job")
+        assert response.status_code == 200
+        body = response.get_json()
+        assert body["done"] is True
+        assert body["status"] == ExecutionStatus.ERROR.value
+        assert "failed_step" in body, "ERROR response must include 'failed_step'"
+        assert body["failed_step"] == "epic"
+        assert body.get("error") == "chain timeout"
 
-    response = client.get("/api/ai/text/bootstrap-project/status/error-step-test")
-    assert response.status_code == 200
-    body = response.get_json()
-    assert body["done"] is True
-    assert body.get("failed_step") == "epic"
+    def test_cancel_returns_409_when_job_already_completed(self, client):
+        """POST cancel on a COMPLETED job returns 409 — cannot cancel a terminal execution."""
+        from modules.ai.routes.text import _BOOTSTRAP_JOBS
+        from modules.runtime.workflows.execution import ExecutionStatus
 
+        execution = WorkflowExecution(
+            workflow_ref="ai/bootstrap-project",
+            inputs={"project_name": "DoneP"},
+        )
+        execution.start()
+        execution.complete()  # IN_PROGRESS -> COMPLETED
+        _BOOTSTRAP_JOBS["completed-job"] = execution
 
-def test_bootstrap_cancel_returns_409_when_already_completed(client):
-    """Cancel endpoint returns 409 when job has already completed."""
-    from modules.ai.routes.text import _BOOTSTRAP_JOBS
-
-    execution = WorkflowExecution(
-        workflow_ref="ai/bootstrap-project",
-        inputs={"project_name": "P"},
-    )
-    execution.start()
-    execution.complete()  # IN_PROGRESS -> COMPLETED
-    _BOOTSTRAP_JOBS["cancel-completed-test"] = execution
-
-    response = client.post(
-        "/api/ai/text/bootstrap-project/cancel-completed-test/cancel"
-    )
-    assert response.status_code == 409, (
-        f"Expected 409; got {response.status_code} body={response.get_json()}"
-    )
+        response = client.post(
+            "/api/ai/text/bootstrap-project/completed-job/cancel"
+        )
+        assert response.status_code == 409, (
+            f"Expected 409 for completed job; got {response.status_code} body={response.get_json()}"
+        )
+        body = response.get_json()
+        assert "cannot cancel" in body.get("error", "")
+        assert body.get("status") == ExecutionStatus.COMPLETED.value

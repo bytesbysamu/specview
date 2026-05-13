@@ -44,7 +44,7 @@ def require_auth(fn):
             return jsonify({"error": "user not found"}), 401
 
         g.current_user = user
-        set_sentry_user(str(user.id), getattr(user, 'email', None))
+        set_sentry_user(str(user.id), getattr(user, "email", None))
         return fn(*args, **kwargs)
 
     return wrapper

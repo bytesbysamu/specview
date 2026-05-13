@@ -155,11 +155,9 @@ export class AppComponent implements OnInit, OnDestroy {
   specGenError = signal<string | null>(null);
   specGenStep = signal<string | null>(null);
   specGenProjectName = signal<string | null>(null);
-
-  // Cancel / retry state
-  cancelling = signal(false);
   specGenJobId = signal<string | null>(null);
   specGenFailedStep = signal<string | null>(null);
+  cancelling = signal(false);
 
   // Access denied (403) state
   accessDenied = signal(false);
@@ -452,6 +450,33 @@ export class AppComponent implements OnInit, OnDestroy {
     this.statusFailureMsg.set(null);
   }
 
+  async onCancel() {
+    const jobId = this.specGenJobId();
+    if (!jobId || this.cancelling()) return;
+    this.cancelling.set(true);
+    try {
+      await this.projectsSvc.cancelBootstrap(jobId);
+    } catch { /* ignore — the poll loop will detect the cancelled state */ }
+  }
+
+  async onRetry() {
+    const jobId = this.specGenJobId();
+    const failedStep = this.specGenFailedStep();
+    if (!jobId || !failedStep) return;
+    try {
+      const { job_id } = await this.projectsSvc.retryBootstrapStep(jobId, failedStep);
+      this.specGenJobId.set(job_id);
+      this.specGenFailedStep.set(null);
+      this.specGenError.set(null);
+      this.cancelling.set(false);
+      this._setStatusActive();
+    } catch (err: any) {
+      const msg = err?.message || 'Retry failed — check connection and try again.';
+      this.specGenError.set(msg);
+      this._setStatusFailure(msg);
+    }
+  }
+
   // ── Per-file dot helpers ──────────────────────
   private _setFileRunning(filename: string | null) {
     this.activeOpFile.set(filename);
@@ -723,6 +748,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(proj.name);
+    this.specGenJobId.set(null);
+    this.specGenFailedStep.set(null);
+    this.cancelling.set(false);
     this._setStatusActive();
     this._startGenPoll();
     try {
@@ -871,7 +899,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
       let status: Awaited<ReturnType<typeof this.projectsSvc.pollBootstrap>>;
       try {
-        status = await this.projectsSvc.pollBootstrap(job_id);
+        status = await this.projectsSvc.pollBootstrap(this.specGenJobId()!);
         pollFailures = 0; // reset on success
       } catch {
         pollFailures++;
@@ -882,6 +910,11 @@ export class AppComponent implements OnInit, OnDestroy {
       }
 
       if (status.current_step) this.specGenStep.set(status.current_step);
+
+      // Capture the failed step from the poll response (Task 4 field)
+      if (status.failed_step !== undefined) {
+        this.specGenFailedStep.set(status.failed_step ?? null);
+      }
 
       // Save incremental files as each AI step completes
       if (onFile && status.partial_files) {
@@ -894,69 +927,11 @@ export class AppComponent implements OnInit, OnDestroy {
       }
 
       if (status.done) {
-        if (status.failed_step) this.specGenFailedStep.set(status.failed_step);
+        if (status.status === 'CANCELLED') throw new Error('Generation cancelled');
         if (status.error) throw new Error(status.error);
         // Return only files not already saved incrementally
         return (status.files ?? []).filter(f => !saved.has(f.filename));
       }
-    }
-  }
-
-  async onCancel(): Promise<void> {
-    const jobId = this.specGenJobId();
-    if (!jobId || this.cancelling()) return;
-    this.cancelling.set(true);
-    try {
-      await this.projectsSvc.cancelBootstrap(jobId);
-      // Poll loop will pick up the CANCELLING -> CANCELLED state transition naturally
-    } catch {
-      // If cancel fails (e.g. 409 already completed), reset cancelling flag
-      this.cancelling.set(false);
-    }
-  }
-
-  async onRetry(): Promise<void> {
-    const jobId = this.specGenJobId();
-    const step = this.specGenFailedStep();
-    if (!jobId || !step) return;
-
-    this.specGenFailedStep.set(null);
-    this.cancelling.set(false);
-    this.specGenError.set(null);
-    this.specGenStep.set(null);
-    this.specGenLoading.set(true);
-    this._setStatusActive();
-    this._startGenPoll();
-
-    try {
-      const { job_id: newJobId } = await this.projectsSvc.retryBootstrapStep(jobId, step);
-      this.specGenJobId.set(newJobId);
-      // Poll the new job until done
-      while (true) {
-        await new Promise(r => setTimeout(r, 2500));
-        let status: Awaited<ReturnType<typeof this.projectsSvc.pollBootstrap>>;
-        try {
-          status = await this.projectsSvc.pollBootstrap(newJobId);
-        } catch {
-          continue;
-        }
-        if (status.current_step) this.specGenStep.set(status.current_step);
-        if (status.done) {
-          if (status.failed_step) this.specGenFailedStep.set(status.failed_step);
-          if (status.error) throw new Error(status.error);
-          this._setStatusSuccess();
-          break;
-        }
-      }
-    } catch (err: any) {
-      const msg = err?.message || 'Retry failed — check connection and try again.';
-      this.specGenError.set(msg);
-      this._setStatusFailure(msg);
-    } finally {
-      this.specGenLoading.set(false);
-      this.specGenStep.set(null);
-      this._stopGenPoll();
-      this.cancelling.set(false);
     }
   }
 
@@ -981,6 +956,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(name);
+    this.specGenJobId.set(null);
+    this.specGenFailedStep.set(null);
+    this.cancelling.set(false);
     nameEl.value = '';
     braindumpEl.value = '';
     this._setStatusActive();
@@ -1039,6 +1017,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(proj.name);
+    this.specGenJobId.set(null);
+    this.specGenFailedStep.set(null);
+    this.cancelling.set(false);
     this._setStatusActive();
     this._startGenPoll();
     try {

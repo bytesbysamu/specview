@@ -17,7 +17,6 @@ Environment variables:
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -45,15 +44,21 @@ def init_sentry(app) -> None:
     )
 
 
-def set_sentry_user(user_id: str, email: Optional[str] = None) -> None:
+def set_sentry_user(user_id: str, email: str | None = None) -> None:
     """Populate per-user Sentry scope.
 
-    Called from ``require_auth`` after ``g.current_user`` is populated so that
-    every authenticated request — and every error raised during that request —
-    carries user identity in Sentry scope. ``sentry_sdk.set_user`` is safe to
-    call unconditionally — when Sentry is not initialised it is a no-op.
+    Called by the ``require_auth`` decorator after ``g.current_user`` is set so
+    every authenticated request carries user identity in the Sentry scope.
+    ``sentry_sdk.set_user`` is safe to call unconditionally — when Sentry is
+    not initialised it is a no-op.
+
+    Args:
+        user_id: String representation of the authenticated user's primary key.
+        email:   User e-mail address. Omitted from the Sentry payload when None
+                 to respect ``send_default_pii=False`` on installations that do
+                 not opt in to PII transmission.
     """
-    user_context: dict = {"id": user_id}
+    payload: dict = {"id": user_id}
     if email is not None:
-        user_context["email"] = email
-    sentry_sdk.set_user(user_context)
+        payload["email"] = email
+    sentry_sdk.set_user(payload)

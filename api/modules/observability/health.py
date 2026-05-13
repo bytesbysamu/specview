@@ -14,12 +14,16 @@ Contract:
         - succeeds                      -> 200 {"status": "ok"}
         - exception (incl. timeout)     -> 503 {"status": "degraded", "error": ...}
     * neither                          -> 200 {"status": "skipped"}
-- `GET /api/health/neon`             -> 200 {"status": "skipped"} (stub)
-- `GET /api/health/stripe`           -> 200 {"status": "skipped"} (stub)
-
-Stubs return `skipped` until those dependencies are actually wired in;
-the endpoint shape is stable today so monitoring can be configured against
-the final URLs without a contract change later.
+- `GET /api/health/neon` — database connectivity probe.
+    * `DATABASE_URL` not set           -> 200 {"status": "skipped"}
+    * configured                       -> executes `SELECT 1` with 5s timeout
+        - succeeds                     -> 200 {"status": "ok"}
+        - exception                    -> 503 {"status": "degraded", "error": ...}
+- `GET /api/health/stripe` — Stripe API probe.
+    * `STRIPE_SECRET_KEY` not set      -> 200 {"status": "skipped"}
+    * configured                       -> calls `stripe.Balance.retrieve()`
+        - succeeds                     -> 200 {"status": "ok"}
+        - exception                    -> 503 {"status": "degraded", "error": ...}
 
 Anthropic SDK call uses `Anthropic(timeout=5.0)` to bound the probe; importing
 the SDK lazily inside the handler keeps test collection fast and keeps the
@@ -28,15 +32,28 @@ import out of the cold-start path when the env var is unset.
 CLI probe uses `subprocess.run` with a 15-second timeout. The subprocess exit
 code is authoritative — stdout/stderr are captured and the first 100 chars of
 combined output are surfaced in degraded responses.
+
+Neon probe executes a trivial `SELECT 1` via SQLAlchemy with a 5-second
+connect_timeout (passed through the query string for Postgres URLs). On any
+exception the probe degrades and surfaces a truncated error message.
+
+Stripe probe lazily imports the `stripe` SDK and calls `Balance.retrieve()`
+with a 5-second request timeout. Lazy import keeps the dependency optional
+so the app starts cleanly when Stripe is not wired.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 
 import sqlalchemy
 from flask import Blueprint, jsonify
+
+from modules.data.db.engine import get_engine
+
+logger = logging.getLogger(__name__)
 
 # url_prefix matches the openapi.yaml paths exactly; do not append a trailing
 # slash to the route strings or Flask's strict_slashes will produce 308s that
@@ -137,15 +154,14 @@ def anthropic_health():
 
 @health_bp.get("/neon")
 def neon_health():
-    """Live probe of the Neon (Postgres) database via a trivial SELECT 1 query.
+    """Database connectivity probe — executes SELECT 1 via SQLAlchemy.
 
-    When DATABASE_URL is not configured, returns skipped. When configured,
-    executes SELECT 1 with a 5-second connection timeout. On success returns
-    "ok"; on any exception returns "degraded" with a 503.
+    When DATABASE_URL is not configured the probe returns skipped (200) so
+    the health endpoint stays green in local dev environments without a
+    database.  When configured a trivial query is issued with a 5-second
+    connect_timeout; any exception degrades the probe to 503.
     """
-    from modules.data.db.engine import get_engine
-
-    database_url = os.environ.get("DATABASE_URL", "")
+    database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         return jsonify({"status": "skipped"}), 200
 
@@ -155,6 +171,7 @@ def neon_health():
             conn.execute(sqlalchemy.text("SELECT 1"))
         return jsonify({"status": "ok"}), 200
     except Exception as exc:  # noqa: BLE001 — probe must survive all failure modes
+        logger.warning("neon health probe degraded: %s", str(exc)[:_MAX_ERROR_CHARS])
         return (
             jsonify({"status": "degraded", "error": str(exc)[:_MAX_ERROR_CHARS]}),
             503,
@@ -163,25 +180,29 @@ def neon_health():
 
 @health_bp.get("/stripe")
 def stripe_health():
-    """Live probe of the Stripe API via stripe.Balance.retrieve().
+    """Stripe API probe — calls Balance.retrieve() as a lightweight auth check.
 
-    When STRIPE_SECRET_KEY is not configured, returns skipped. When configured,
-    calls stripe.Balance.retrieve() with a 5-second timeout. On success returns
-    "ok"; on any exception returns "degraded" with a 503.
+    When STRIPE_SECRET_KEY is not set the probe returns skipped (200).  When
+    set, the probe calls stripe.Balance.retrieve() with a 5-second timeout.
+    The stripe SDK is imported lazily so the app starts cleanly when Stripe is
+    not wired.
     """
-    stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
-    if not stripe_key:
+    secret_key = os.environ.get("STRIPE_SECRET_KEY")
+    if not secret_key:
         return jsonify({"status": "skipped"}), 200
 
     try:
-        # Lazy import: stripe is a heavy SDK; importing at module top would
-        # add cold-start cost to every request even when the key is unset.
-        import stripe  # noqa: PLC0415
+        import stripe  # noqa: PLC0415 — lazy import by design
 
-        stripe.api_key = stripe_key
-        stripe.Balance.retrieve(timeout=5)
+        stripe.Balance.retrieve(
+            stripe_version=None,
+            api_key=secret_key,
+            stripe_account=None,
+            timeout=5,
+        )
         return jsonify({"status": "ok"}), 200
-    except Exception as exc:  # noqa: BLE001 — probe must catch every failure mode
+    except Exception as exc:  # noqa: BLE001 — probe must survive all failure modes
+        logger.warning("stripe health probe degraded: %s", str(exc)[:_MAX_ERROR_CHARS])
         return (
             jsonify({"status": "degraded", "error": str(exc)[:_MAX_ERROR_CHARS]}),
             503,

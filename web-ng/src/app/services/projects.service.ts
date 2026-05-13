@@ -33,12 +33,12 @@ export interface GeneratedFile {
 export interface PollStatusResponse {
   running: boolean;
   done: boolean;
-  status?: string;
   current_step: string | null;
   partial_files?: GeneratedFile[];
   files?: GeneratedFile[];
   error?: string;
-  failed_step?: string;
+  status?: string;
+  failed_step?: string | null;
 }
 
 export interface PollResultResponse {
@@ -111,17 +111,13 @@ export class ProjectsService {
 
   cancelBootstrap(jobId: string): Promise<{ status: string }> {
     return firstValueFrom(
-      this.http.post<{ status: string }>(
-        `/api/ai/text/bootstrap-project/${jobId}/cancel`, {}
-      )
+      this.http.post<{ status: string }>(`/api/ai/text/bootstrap-project/${jobId}/cancel`, {})
     );
   }
 
   retryBootstrapStep(jobId: string, step: string): Promise<{ job_id: string }> {
     return firstValueFrom(
-      this.http.post<{ job_id: string }>(
-        `/api/ai/text/bootstrap-project/${jobId}/retry`, { step }
-      )
+      this.http.post<{ job_id: string }>(`/api/ai/text/bootstrap-project/${jobId}/retry`, { step })
     );
   }
 
