@@ -1,219 +1,87 @@
-# SaaS Phase 2: Project Isolation + Billing Wiring
+# SaaS Phase 2a: Project Isolation & Multi-Tenancy
 
-> **Priority**: P1 — second launch gate. Users can register (Phase 1) but see each other's projects and can't pay.
-> **Effort**: ~3 days.
-> **Blocks**: Phase 4 (onboarding needs per-user project creation).
-> **Depends on**: Phase 1 (signup must exist; `@require_auth` + interceptor must be wired).
+> **Priority**: P1 — the multi-tenancy security gate. Without this, User A sees User B's projects.
+> **Effort**: ~1.5 days.
+> **Blocks**: Phase 2b (billing UI assumes per-user state), Phase 4 (onboarding needs per-user project creation).
+> **Depends on**: Phase 1 (auth — `@require_auth` + `g.current_user` must be wired).
 
-## What this is
+## The problem
 
-Wire the per-user project filtering that the database models already support but routes ignore, and set up the Stripe credentials so the existing billing code actually charges money.
+Every authenticated user sees all 41 projects. The `Project` model has a `user_id` FK and a `ProjectRepository` protocol with `list_for_user()`, `get_by_slug()`, etc. — but the actual routes bypass all of it. They call a filesystem-only `service.py` that reads `project.json` files from disk with zero user filtering. The `g.current_user` is set on every request by `@require_auth` but never consulted for project access.
 
----
-
-## Current State (fact-checked 2026-05-12)
-
-**What exists and works:**
-- `api/modules/billing/routes.py` — 3 Stripe routes: `POST /api/billing/create-checkout-session`, `POST /api/billing/webhook`, `GET /api/billing/status`
-- `api/modules/billing/service.py` — complete Stripe adapter (ELA #1 pattern), 6 webhook handlers, sole writer of `User.plan`, lazy Stripe customer creation
-- `api/modules/billing/models.py` — `Subscription` model with `user_id`, `plan`, `status`, `stripe_customer_id`, `stripe_subscription_id`, `current_period_start/end`, `canceled_at`
-- `api/modules/usage/` — complete: `UsageCounter` model, `@check_usage_limit` decorator, daily caps (bootstrap=30, task_gen=100, spec_gen=50), atomic upsert, pro bypass
-- `api/modules/data/projects/models.py` — `Project` model exists in DB migration with `user_id` FK
-- Database: `user`, `subscription`, `usage_counter` tables all created in `0001_initial_schema.py`
-
-**What's broken or missing:**
-- **Project routes don't filter by user_id.** `api/modules/data/projects/routes.py` uses `@require_auth` but every route calls `service.py` functions that read from the filesystem globally. The `user_id` FK on the Project model is never checked. All 41 projects are visible to all authenticated users.
-- **Project routes use filesystem service, not ProjectRepository.** Routes call `service.list_projects(projects_dir)` which reads `project.json` files from disk. The SQLModel `Project` + `ProjectRepository` pattern exists in the models but is not wired into routes.
-- **Stripe env vars not set.** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `FRONTEND_URL` are not in docker-compose.yml or .env. The billing service reads them at call time (`_stripe_secret_key()` returns empty string), so Stripe calls will fail silently.
-- **No Angular SubscriptionService.** The generated DTO `BillingStatusResponse` exists from openapi codegen, but there's no Angular service to call `/api/billing/status` or trigger checkout. No upgrade page, no usage meter component.
+This is the single biggest blocker for multi-user specview. Ship this before anything else.
 
 ---
 
-## Task 1 — Per-User Project Isolation
+## Current state (fact-checked 2026-05-12)
 
-> **Effort**: 1 day
-> **This is the multi-tenancy gate.** Without it, User A sees User B's projects.
+**What exists:**
+- `api/modules/data/projects/models.py` — `Project` SQLModel with `user_id` FK, `slug` (unique), `name`, `git_repo_path`, `file_count`, timestamps.
+- `ProjectRepository` protocol defined with methods: `create()`, `get_by_slug()`, `list_for_user()`, `touch()`, `delete()`. This is the intended interface — no SQL implementation wired yet.
+- `api/modules/data/projects/routes.py` — all routes use `@require_auth` (so `g.current_user` is populated) but every route delegates to `service.py` functions that ignore the user entirely.
+- `api/modules/data/projects/service.py` — pure filesystem: `list_projects(projects_dir)` iterates `data/projects/*/project.json`. No user_id parameter, no ownership check, no DB queries.
+- Database: `project` table exists in migration `0001_initial_schema.py` with `user_id` FK to `user` table. Table is empty — no rows for the 41 filesystem projects.
+- File history routes (Pers-T4) already reference `current_app.project_repository` — they're designed for the repository seam but it's not connected.
 
-### Current route → service flow (broken)
-
-```
-GET /api/projects → @require_auth → service.list_projects(PROJECTS_DIR)
-                    g.current_user exists but is NEVER used for filtering
-```
-
-### What needs to change
-
-**Option A — Wire ProjectRepository into routes (clean, more work):**
-Replace filesystem `service.py` calls with `ProjectRepository` calls that filter by `g.current_user.id`. This means the SQLModel `Project` table becomes the source of truth for project metadata, and the filesystem stores the markdown files.
-
-**Option B — Add user_id filter to filesystem service (quick, less clean):**
-Add `user_id` parameter to `service.list_projects()`, store `user_id` in `project.json`, filter at read time.
-
-**Recommended: Option A.** The ProjectRepository and Project model already exist. This is the intended architecture. Option B would be a temporary hack that delays the inevitable migration.
-
-### Changes for Option A
-
-1. Wire `ProjectRepository` as the project listing source:
-```python
-# routes.py
-@projects_bp.get("/")
-@require_auth
-def list_all():
-    user_id = g.current_user.id
-    projects = project_repository.list_for_user(user_id)
-    return jsonify([p.dict() for p in projects])
-```
-
-2. Every route that accesses a project must verify ownership:
-```python
-@projects_bp.get("/<project_id>")
-@require_auth
-def get_project_route(project_id):
-    project = project_repository.get_by_slug(g.current_user.id, project_id)
-    if not project:
-        return jsonify({"error": "not found"}), 404
-    # ... read files from filesystem using project.id
-```
-
-3. Filesystem remains the file content store: `data/projects/<slug>/braindump.md` etc. The DB stores metadata + ownership.
-
-### Migration of existing projects
-
-All 41 existing projects need rows in the `project` table assigned to Sam's user:
-
-```python
-# scripts/migrate_filesystem_to_db.py
-"""For each data/projects/<slug>/ on disk:
-    1. Read project.json for name, createdAt
-    2. Insert Project row: user_id=1 (Sam), slug=<dir-name>, name=<from json>
-    3. Count .md files → file_count
-"""
-```
-
-Idempotent (skip if slug exists). Run once after deploy.
+**What's broken:**
+- `GET /api/projects` returns all 41 projects regardless of who's logged in.
+- `GET /api/projects/<id>`, `PUT`, `DELETE` — no ownership verification. Any authenticated user can read/modify/delete any project.
+- `POST /api/projects` creates on filesystem but doesn't write a `Project` row to DB with `user_id`.
+- The 41 existing filesystem projects have no corresponding rows in the `project` table.
 
 ---
 
-## Task 2 — Stripe Credentials + Activation
+## Learnings from other projects
 
-> **Effort**: 0.5 days
-> **No code changes needed.** The billing module is complete — it just needs credentials.
+**Trendfy (Flask + Angular, closest stack):**
+Trendfy uses an explicit `_check_ownership(record)` helper in routes that returns 403 if `record.user_id != g.user_id`. This is better than only filtering at query level — it gives a clear 403 "Forbidden" instead of a silent 404 or empty result, which is important for debugging and for the frontend to show the right error. Every route that touches an order calls this check after loading the record.
 
-### Steps
+Database queries also filter by user_id: `SELECT * FROM orders WHERE user_id = %s`. Belt and suspenders — filter at query time AND verify ownership after load.
 
-1. Create a Stripe account (or use existing test mode)
-2. Create a Product "Specview Pro" with a Price of $29/mo
-3. Set up webhook endpoint in Stripe Dashboard pointing to `https://specview.app/api/billing/webhook`
-4. Subscribe to events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`, `invoice.upcoming`
-5. Add to `.env` and Coolify:
+**Springular (Spring Boot SaaS template):**
+Uses `AuthenticatedUserProvider.getAuthenticatedUser()` (equivalent to our `g.current_user`) to scope every query. Every controller that touches user-scoped data calls this. The provider is injected as a dependency — clean pattern, easy to test. User lookup supports multiple keys: `findByEmail`, `findByStripeCustomerId`, `findByEmailAndProvider` — useful when webhooks need to find users by different identifiers.
 
-```
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRO_PRICE_ID=price_...
-FRONTEND_URL=https://specview.app
-```
-
-6. Test locally with Stripe CLI:
-```bash
-stripe listen --forward-to localhost:8095/api/billing/webhook
-stripe trigger checkout.session.completed
-```
-
-7. Verify `GET /api/billing/status` returns `{"plan": "pro", "status": "active", ...}` after a successful checkout.
+**Bubls (Flask, similar middleware):**
+Repository functions take `user_id` as an explicit parameter: `find_active_lora_for_user(db, user_id)`, `list_generations_for_user(db, user_id)`. Routes extract `g.user.id` and pass it down. No implicit filtering — the user scoping is visible in every call signature.
 
 ---
 
-## Task 3 — Angular Subscription UI
+## Architecture direction
 
-> **Effort**: 1 day
-> **Port from**: bubls Angular billing components (near-verbatim).
+**DB as ownership source of truth, filesystem for content.** The `ProjectRepository` protocol already defines the right interface. Wire a SQL implementation that stores project metadata + `user_id` in the `project` table. The filesystem (`data/projects/<slug>/`) stays as the content store for markdown files. Routes go through the repository for listing/ownership, then read files from the filesystem path.
 
-### SubscriptionService
+**Ownership check on every route.** Not just filtering — explicit 403 when a user tries to access a project they don't own. Following trendfy's pattern: load record, check `record.user_id == g.current_user.id`, return 403 if not.
 
-```typescript
-@Injectable({ providedIn: 'root' })
-export class SubscriptionService {
-  plan = signal<'free' | 'pro'>('free');
-  isPro = computed(() => this.plan() === 'pro');
+**Migration script for existing projects.** One-shot idempotent script that reads each `data/projects/<slug>/project.json`, creates a `Project` row in the DB with `user_id=1` (Sam). Skip if slug already exists. Run once after deploy.
 
-  constructor(private http: HttpClient) {}
-
-  async refresh(): Promise<void> {
-    const res = await firstValueFrom(
-      this.http.get<BillingStatusResponse>('/api/billing/status')
-    );
-    this.plan.set(res.plan);
-  }
-
-  async startCheckout(): Promise<void> {
-    const res = await firstValueFrom(
-      this.http.post<{ url: string }>('/api/billing/create-checkout-session', {})
-    );
-    window.location.href = res.url;
-  }
-}
-```
-
-### Upgrade page
-
-Simple page with pricing copy + "Upgrade to Pro" button that calls `subscriptionService.startCheckout()`. No custom payment form — Stripe Checkout handles everything.
-
-### Usage meter
-
-"X/N remaining" pill in the status bar area. Hidden for Pro users. Red when at ≤1 remaining.
-
-### 429 interceptor
-
-Catch 429 responses from `@check_usage_limit` → navigate to `/upgrade` with a message.
+**Project creation writes to both.** `POST /api/projects` creates the filesystem directory AND inserts a `Project` row with the authenticated user's ID.
 
 ---
 
-## Task 4 — Existing Projects Migration Script
+## Testing baseline to maintain
 
-> **Effort**: 0.5 days
+Phase 3 established 146 tests across 9 spec files (39% statement coverage, 21% branch coverage). Any new code in this project must maintain or improve that baseline:
 
-```python
-# scripts/migrate_filesystem_to_db.py
-"""One-shot migration: filesystem projects → DB metadata rows.
-
-For each data/projects/<slug>/ on disk:
-    1. Read project.json for name, createdAt, priority
-    2. Count .md files
-    3. INSERT into project table: user_id=1, slug=<dir-name>, name=<from json>
-    4. Skip if slug already exists (idempotent)
-
-After running:
-    - All 41 projects belong to user_id=1 (Sam)
-    - Routes can now filter by user_id
-    - Filesystem still stores the actual markdown content
-"""
-```
-
-Run before deploy. Verify with `SELECT count(*) FROM project` = 41.
+- **Backend:** New repository implementation needs pytest coverage. Ownership check logic (403 on wrong user, 404 on missing project) needs test cases. The migration script needs a test verifying idempotency.
+- **Frontend:** If any Angular service changes are needed (e.g. handling 403 responses), add cases to the relevant `.spec.ts` file following the co-located mock convention.
+- **Structural:** `test_structural.py` enforces adapter boundaries — make sure repository imports don't leak into route handlers in a way that violates conventions.
+- **E2E:** `e2e/features/` has 5 feature files covering core flows. Project isolation should not break any existing scenarios. Consider adding a scenario to `billing-gate.feature` or a new feature file verifying that user A cannot see user B's projects.
 
 ---
 
-## Files to Change
+## Files involved
 
-| File | Change |
-|------|--------|
-| `api/modules/data/projects/routes.py` | Wire ProjectRepository, add user_id filtering to every route |
-| `api/modules/data/projects/repository.py` | Implement ProjectRepository Protocol (if not already) |
-| `.env` | Add `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `FRONTEND_URL` |
-| `docker-compose.override.yml` | Add Stripe env var references |
-| `web-ng/src/app/services/subscription.service.ts` | New — plan signal, checkout, refresh |
-| `web-ng/src/app/components/upgrade/` | New — upgrade page with pricing |
-| `web-ng/src/app/app.component.html` | Add usage meter pill |
-| `scripts/migrate_filesystem_to_db.py` | New — one-shot filesystem → DB migration |
+- `api/modules/data/projects/routes.py` — wire repository, add ownership checks
+- `api/modules/data/projects/repository.py` — SQL implementation of ProjectRepository protocol
+- `api/modules/data/projects/service.py` — filesystem functions stay for file content reads
+- `scripts/migrate_filesystem_to_db.py` — one-shot migration of 41 projects to DB
 
-## Success Criteria
+## Success criteria
 
-- [ ] User A cannot see User B's projects
-- [ ] All 41 existing projects assigned to Sam's user_id in DB
-- [ ] `GET /api/projects` returns only projects owned by the authenticated user
-- [ ] Stripe test mode checkout completes end-to-end ($29 charge)
-- [ ] Webhook flips `User.plan` from "free" to "pro" after checkout
-- [ ] `@check_usage_limit` blocks 4th bootstrap for free-tier user with clear upgrade prompt
-- [ ] Angular shows plan status, usage meter, and upgrade button
-- [ ] 429 response navigates to upgrade page
+- User A cannot see User B's projects via any route
+- User A gets 403 trying to access User B's project by ID
+- All 41 existing projects have rows in `project` table assigned to Sam
+- `POST /api/projects` creates both filesystem dir and DB row with user_id
+- `DELETE /api/projects/<id>` verifies ownership before deleting
+- Existing E2E test suite passes without regression
+- New repository logic has pytest coverage

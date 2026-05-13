@@ -61,3 +61,75 @@ def test_feature_modules_must_not_branch_on_chain_provider():
         "Feature modules must not reference CHAIN_PROVIDER directly; "
         f"violators: {offenders}"
     )
+
+
+def test_project_slug_routes_have_ownership_decorator():
+    """Every route handler that accepts a slug path parameter must be wrapped
+    with @require_project_ownership.
+
+    The assertion works by parsing routes.py with the ast module and
+    inspecting the decorator list of each function definition.  The listing
+    route (list_projects_route) and the create route (create_project_route)
+    accept no slug parameter and are explicitly excluded.  The internal
+    helper _resolve_project also accepts project_id but is not a route
+    handler and is excluded by the leading underscore convention.
+
+    This test catches the case where a new slug-accepting route is added
+    without the ownership decorator being applied — a class of bug that
+    code review may miss.
+    """
+    import ast
+
+    api_root = pathlib.Path(__file__).resolve().parents[4]  # api/
+    routes_path = api_root / "modules" / "data" / "projects" / "routes.py"
+    source = routes_path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    # Route handlers that intentionally do NOT use @require_project_ownership
+    # because they do not accept a per-project slug parameter:
+    #   list_projects_route — lists all projects for the current user
+    #   create_project_route — creates a new project (no slug yet)
+    # Internal helpers (leading underscore) are also excluded.
+    excluded = {"list_projects_route", "create_project_route"}
+
+    slug_param_names = {"id", "project_id"}
+
+    missing = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        name = node.name
+        # Skip internal helpers (not route handlers).
+        if name.startswith("_"):
+            continue
+        # Skip routes that legitimately omit the decorator.
+        if name in excluded:
+            continue
+        # Only care about route handlers that accept a slug parameter.
+        arg_names = {a.arg for a in node.args.args}
+        if not arg_names & slug_param_names:
+            continue
+
+        # Collect the names of all decorators applied to this function.
+        decorator_names: set[str] = set()
+        for dec in node.decorator_list:
+            if isinstance(dec, ast.Name):
+                decorator_names.add(dec.id)
+            elif isinstance(dec, ast.Attribute):
+                decorator_names.add(dec.attr)
+            elif isinstance(dec, ast.Call):
+                func = dec.func
+                if isinstance(func, ast.Name):
+                    decorator_names.add(func.id)
+                elif isinstance(func, ast.Attribute):
+                    decorator_names.add(func.attr)
+
+        if "require_project_ownership" not in decorator_names:
+            missing.append(name)
+
+    assert missing == [], (
+        "The following slug-accepting route handlers are missing "
+        "@require_project_ownership: "
+        f"{missing}. "
+        "Add the decorator immediately after @require_auth on each handler."
+    )

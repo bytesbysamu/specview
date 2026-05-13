@@ -15,11 +15,12 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 from pydantic import ValidationError
 
 from config import PROJECTS_DIR
 from modules.auth.decorators import require_auth
+from .ownership import require_project_ownership
 from dtos.models import (
     CommitEntry,
     FileDiffResponse,
@@ -52,17 +53,35 @@ _PROJECTS_PATH = Path(PROJECTS_DIR)
 @projects_bp.get("")
 @require_auth
 def list_projects_route():
-    return jsonify(list_projects(_PROJECTS_PATH))
+    # When SKIP_AUTH=1 is active in dev mode, g.current_user is None.
+    # Fall back to the full filesystem scan so local development still works.
+    if g.current_user is None:
+        return jsonify(list_projects(_PROJECTS_PATH))
+
+    repo = getattr(current_app, "project_repository", None)
+    if repo is None:
+        return jsonify(list_projects(_PROJECTS_PATH))
+
+    projects = repo.list_for_user(g.current_user.id)
+    # Delegate to the filesystem service for per-project content/metadata.
+    results = []
+    for p in projects:
+        project_data = get_project(_PROJECTS_PATH, p.slug)
+        if project_data is not None:
+            results.append(project_data)
+    return jsonify(results)
 
 
 @projects_bp.get("/<id>")
 @require_auth
+@require_project_ownership
 def get_project_route(id: str):
+    # g.project verified by @require_project_ownership; load filesystem content.
     try:
-        project = get_project(_PROJECTS_PATH, id)
-        if project is None:
+        project_data = get_project(_PROJECTS_PATH, id)
+        if project_data is None:
             raise ProjectNotFoundError(id)
-        return jsonify(project)
+        return jsonify(project_data)
     except (ProjectNotFoundError, ValueError):
         logger.warning("get_project not_found project_id=%s", id)
         return jsonify({"error": "Project not found"}), 404
@@ -72,12 +91,35 @@ def get_project_route(id: str):
 @require_auth
 def create_project_route():
     req = ProjectCreateRequest.model_validate(request.get_json(force=True) or {})
+
+    # Write files to filesystem first to generate the slug/project_id.
     result = create_project(_PROJECTS_PATH, req.name, [f.model_dump() for f in req.files])
+
+    # Dual-write to DB when a real user is authenticated and the repository is
+    # available. When SKIP_AUTH=1 is active (g.current_user is None), we skip
+    # the DB write so local development still works without a running database.
+    repo = getattr(current_app, "project_repository", None)
+    if repo is not None and g.current_user is not None:
+        try:
+            repo.create(
+                user_id=g.current_user.id,
+                name=result["name"],
+                slug=result["id"],
+                git_repo_path=str(_PROJECTS_PATH / result["id"]),
+            )
+        except Exception:
+            logger.exception(
+                "create_project db_write_failed slug=%s", result["id"]
+            )
+            # Non-fatal: filesystem write succeeded. The DB row can be
+            # back-filled by a repair job; surface the error in logs only.
+
     return jsonify(result), 201
 
 
 @projects_bp.put("/<id>/files/<filename>")
 @require_auth
+@require_project_ownership
 def update_file_route(id: str, filename: str):
     req = FileUpdateRequest.model_validate(request.get_json(force=True) or {})
     try:
@@ -92,11 +134,15 @@ def update_file_route(id: str, filename: str):
 
 @projects_bp.delete("/<id>")
 @require_auth
+@require_project_ownership
 def delete_project_route(id: str):
     try:
         found = delete_project(_PROJECTS_PATH, id)
         if not found:
             raise ProjectNotFoundError(id)
+        repo = getattr(current_app, "project_repository", None)
+        if repo is not None:
+            repo.delete(g.project.id)
         return jsonify(SuccessResponse(success=True).model_dump())
     except (ProjectNotFoundError, ValueError):
         logger.warning("delete_project not_found project_id=%s", id)
@@ -105,6 +151,7 @@ def delete_project_route(id: str):
 
 @projects_bp.post("/<id>/repair")
 @require_auth
+@require_project_ownership
 def repair_project_route(id: str):
     try:
         repaired = repair_project(_PROJECTS_PATH, id)
@@ -118,22 +165,16 @@ def repair_project_route(id: str):
 
 @projects_bp.post("/<id>/coherence")
 @require_auth
+@require_project_ownership
 def coherence_route(id: str):
     """POST /api/projects/<id>/coherence — run the multi-doc coherence pass.
 
     Returns {flags: [...], summary: str}.
-    get_project validates existence and triggers the same path-traversal guard
-    (_safe_path) used by all other handlers; project_path is safe to construct
-    directly once the check passes.
+    Ownership is already verified by @require_project_ownership; g.project
+    is the verified Project row. The path-traversal guard is preserved via
+    the same _safe_path used by the filesystem helpers.
     """
     if ".." in id or "/" in id:
-        return jsonify({"error": "Project not found"}), 404
-    try:
-        project = get_project(_PROJECTS_PATH, id)
-        if project is None:
-            raise ProjectNotFoundError(id)
-    except (ProjectNotFoundError, ValueError):
-        logger.warning("coherence not_found project_id=%s", id)
         return jsonify({"error": "Project not found"}), 404
 
     project_path = _PROJECTS_PATH / id
@@ -199,11 +240,9 @@ def _to_iso(ts) -> str:
 
 @projects_bp.get("/<project_id>/files/<filename>/history")
 @require_auth
+@require_project_ownership
 def get_file_history_route(project_id: str, filename: str):
-    project = _resolve_project(project_id)
-    if project is None:
-        logger.warning("get_file_history not_found project_id=%s", project_id)
-        return jsonify({"error": "Project not found"}), 404
+    project = g.project  # verified by @require_project_ownership
     limit = request.args.get("limit", 20, type=int)
     try:
         rows = git_store.get_history(str(project.id), filename, limit)
@@ -223,11 +262,9 @@ def get_file_history_route(project_id: str, filename: str):
 
 @projects_bp.get("/<project_id>/files/<filename>/diff")
 @require_auth
+@require_project_ownership
 def get_file_diff_route(project_id: str, filename: str):
-    project = _resolve_project(project_id)
-    if project is None:
-        logger.warning("get_file_diff not_found project_id=%s", project_id)
-        return jsonify({"error": "Project not found"}), 404
+    project = g.project  # verified by @require_project_ownership
     from_sha = request.args.get("from_sha") or request.args.get("from")
     to_sha = request.args.get("to_sha") or request.args.get("to")
     if not from_sha or not to_sha:
@@ -243,11 +280,9 @@ def get_file_diff_route(project_id: str, filename: str):
 
 @projects_bp.post("/<project_id>/files/<filename>/revert")
 @require_auth
+@require_project_ownership
 def revert_file_route(project_id: str, filename: str):
-    project = _resolve_project(project_id)
-    if project is None:
-        logger.warning("revert_file not_found project_id=%s", project_id)
-        return jsonify({"error": "Project not found"}), 404
+    project = g.project  # verified by @require_project_ownership
     body = request.get_json(silent=True) or {}
     try:
         req = FileRevertRequest.model_validate(body)
