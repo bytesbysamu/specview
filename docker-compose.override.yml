@@ -14,6 +14,9 @@ services:
       SPEC_DOC_DIR: /data/spec-doc
       PLUGIN_DIR: /app/plugin
       CORS_ORIGINS: "http://localhost:4200,http://localhost:8095"
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID}
+      FRONTEND_URL: "http://localhost:4200"
     volumes:
       - claude-credentials:/home/appuser/.claude
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw

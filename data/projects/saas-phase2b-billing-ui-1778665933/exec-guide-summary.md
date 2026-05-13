@@ -114,3 +114,36 @@ Pill component in masthead. Reads `usageRemaining` signal from billing intercept
 2. **Expected:** shows "You're on Pro" with "Manage subscription" button
 3. Click "Manage subscription"
 4. **Expected:** opens Stripe Customer Portal in new tab where you can cancel, update payment, download invoices
+
+## Post-merge fixes (2026-05-13, afternoon session)
+
+### Issues found during live frontend testing
+
+| Issue | Root cause | Fix | Commit |
+|-------|-----------|-----|--------|
+| Usage meter shows "0/0 remaining" | `LIMITS` dict missing `"text"` and `"skill"` features — `LIMITS.get("text", 0)` returned 0 | Added `"text": 50` and `"skill": 20` to LIMITS | `d4cf3d3` |
+| No upgrade button for free users | No visible CTA in the overview to reach `/upgrade` | Added "Upgrade" button in masthead (hidden for Pro), uses router navigation | `d4cf3d3` |
+| `/upgrade` route showed overview page instead of upgrade component | `<router-outlet />` only rendered when NOT logged in — authenticated users always saw the app shell | Added `isFullPageRoute` signal that listens to `NavigationEnd` events; `/upgrade` renders via router-outlet instead of app shell | `d4cf3d3` |
+| Checkout 500 after Docker restart | Stripe env vars were in `docker-compose.override.yml` with hardcoded secrets — reverted to avoid GitHub push protection | Changed to `${STRIPE_SECRET_KEY}` env var references in override, actual secrets in `.env` (gitignored) | `499f070` |
+| `verify-session` 500: `AttributeError: get` | Stripe SDK objects use attribute access (`cs.payment_status`), not dict `.get()` | Replaced all `.get()` with `getattr()` on Stripe objects | `499f070` |
+| Plan stays "free" after successful Stripe payment | `verify-session` returned the plan but never wrote it to the DB — it relied on the webhook which can't reach localhost | `verify-session` now writes `plan='pro'` to User + Subscription (mirrors webhook handler) when payment_status is "paid" | `499f070` |
+| Webhook rejected without `STRIPE_WEBHOOK_SECRET` | Signature verification fails when secret is empty | Skip signature verification when `STRIPE_WEBHOOK_SECRET` is unset (dev mode only, logs warning) | `d4cf3d3` |
+| `success_url` redirected to `/billing/success` (nonexistent) | Mismatch between backend URL and frontend route | Changed `success_url` to `/upgrade?session_id={CHECKOUT_SESSION_ID}` | `d4cf3d3` |
+
+### Learnings from humanize-me applied
+
+1. **Webhook fires before browser returns** — in practice there's no race condition. But for localhost dev (where webhook can't reach), `verify-session` now writes the plan directly as a fallback.
+2. **Success URL goes to a page that fetches fresh state** — not a dedicated success route. The upgrade component calls `refresh()` after `verifySession()` to get the latest plan from `/api/billing/status`.
+3. **No polling or timers** — single API call on page load. If plan is updated, UI reflects it.
+4. **Plan badge in header** — "Upgrade" button visible for free users, hidden for Pro. Future: add "Pro" badge.
+
+### Verified end-to-end flow (manual, 2026-05-13)
+
+1. Login as `sam@specview.app` → see 51 projects + "Upgrade" button in masthead
+2. Click "Upgrade" → `/upgrade` page with pricing comparison
+3. Click "Upgrade to Pro — $29/mo" → Stripe Checkout (test mode)
+4. Pay with `4242 4242 4242 4242` → redirect to `/upgrade?session_id=cs_test_...`
+5. `verify-session` confirms payment, writes `plan='pro'` to DB
+6. Page shows "Welcome to Pro"
+7. Navigate to overview → "Upgrade" button gone, usage meter hidden
+8. API confirms: `GET /api/auth/me` returns `plan=pro`, `GET /api/billing/status` returns `plan=pro, status=active`
