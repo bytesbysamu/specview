@@ -41,6 +41,9 @@ RUN chmod +x /entrypoint.sh
 # directory ownership into empty named volumes).
 RUN mkdir -p /home/appuser/.claude && chown appuser:appgroup /home/appuser/.claude
 
+ARG APP_RELEASE=dev
+ENV APP_RELEASE=${APP_RELEASE}
+
 USER appuser
 ENV HOME=/home/appuser
 

@@ -35,6 +35,7 @@ from __future__ import annotations
 import os
 import subprocess
 
+import sqlalchemy
 from flask import Blueprint, jsonify
 
 # url_prefix matches the openapi.yaml paths exactly; do not append a trailing
@@ -136,11 +137,52 @@ def anthropic_health():
 
 @health_bp.get("/neon")
 def neon_health():
-    """Stub — returns skipped until Neon SQL connection wiring lands."""
-    return jsonify({"status": "skipped"}), 200
+    """Live probe of the Neon (Postgres) database via a trivial SELECT 1 query.
+
+    When DATABASE_URL is not configured, returns skipped. When configured,
+    executes SELECT 1 with a 5-second connection timeout. On success returns
+    "ok"; on any exception returns "degraded" with a 503.
+    """
+    from modules.data.db.engine import get_engine
+
+    database_url = os.environ.get("DATABASE_URL", "")
+    if not database_url:
+        return jsonify({"status": "skipped"}), 200
+
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute(sqlalchemy.text("SELECT 1"))
+        return jsonify({"status": "ok"}), 200
+    except Exception as exc:  # noqa: BLE001 — probe must survive all failure modes
+        return (
+            jsonify({"status": "degraded", "error": str(exc)[:_MAX_ERROR_CHARS]}),
+            503,
+        )
 
 
 @health_bp.get("/stripe")
 def stripe_health():
-    """Stub — returns skipped until Stripe SDK is configured in production."""
-    return jsonify({"status": "skipped"}), 200
+    """Live probe of the Stripe API via stripe.Balance.retrieve().
+
+    When STRIPE_SECRET_KEY is not configured, returns skipped. When configured,
+    calls stripe.Balance.retrieve() with a 5-second timeout. On success returns
+    "ok"; on any exception returns "degraded" with a 503.
+    """
+    stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not stripe_key:
+        return jsonify({"status": "skipped"}), 200
+
+    try:
+        # Lazy import: stripe is a heavy SDK; importing at module top would
+        # add cold-start cost to every request even when the key is unset.
+        import stripe  # noqa: PLC0415
+
+        stripe.api_key = stripe_key
+        stripe.Balance.retrieve(timeout=5)
+        return jsonify({"status": "ok"}), 200
+    except Exception as exc:  # noqa: BLE001 — probe must catch every failure mode
+        return (
+            jsonify({"status": "degraded", "error": str(exc)[:_MAX_ERROR_CHARS]}),
+            503,
+        )
