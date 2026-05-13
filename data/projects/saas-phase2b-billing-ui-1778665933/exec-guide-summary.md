@@ -65,3 +65,52 @@ Pill component in masthead. Reads `usageRemaining` signal from billing intercept
 - Test locally: `stripe listen --forward-to localhost:5001/api/billing/webhook`
 - Complete manual E2E verification (Task 5): signup → generate → hit limit → upgrade → checkout → Pro
 - Reconcile `success_url` in `service.py` to redirect to `/upgrade?session_id={CHECKOUT_SESSION_ID}`
+
+## Manual test guide — Phase 2b: Billing UI
+
+### Prerequisites
+1. Local stack running: `docker compose up -d`
+2. Stripe CLI installed: `brew install stripe/stripe-cli/stripe`
+3. Stripe test-mode credentials in `api/.env`:
+   ```
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   STRIPE_PRO_PRICE_ID=price_...
+   FRONTEND_URL=http://localhost:8095
+   ```
+4. Webhook forwarding: `stripe listen --forward-to localhost:5001/api/billing/webhook`
+
+### Test 1: Free tier usage limit → upgrade prompt
+1. Log in at `http://localhost:8095`
+2. Create a project and paste a braindump
+3. Click "Generate specs" repeatedly until the daily limit is hit (bootstrap=30 for free tier — or temporarily lower the limit in `api/modules/usage/service.py` LIMITS dict to 1 for testing)
+4. **Expected:** 429 response → billing interceptor catches it → navigates to `/upgrade` with "You've used all N daily generations" message
+5. **Verify:** usage meter pill in masthead shows "0/N remaining" with red warning styling
+
+### Test 2: Stripe checkout flow
+1. On the `/upgrade` page, verify you see the pricing comparison (Free vs Pro)
+2. Click "Upgrade to Pro — $29/mo"
+3. **Expected:** redirect to Stripe Checkout (test mode)
+4. Use test card `4242 4242 4242 4242`, any future expiry, any CVC
+5. Complete payment
+6. **Expected:** redirect back to app, brief "Verifying..." state, then "Welcome to Pro"
+7. **Verify:** `stripe listen` terminal shows `checkout.session.completed` webhook delivered
+8. **Verify:** `GET /api/billing/status` returns `{"plan": "pro", "status": "active", ...}`
+
+### Test 3: Pro user bypasses limits
+1. After upgrading, generate specs again
+2. **Expected:** no 429, no usage meter (hidden for Pro), unlimited generations
+3. **Verify:** `X-Usage-Remaining` header is NOT present in responses (Pro users skip the decorator)
+
+### Test 4: Lapsed state (payment failure)
+1. In a separate terminal: `stripe trigger invoice.payment_failed`
+2. **Expected:** webhook fires, user's plan flips to `lapsed` in DB
+3. Navigate to `/upgrade`
+4. **Expected:** message says "Update your payment method to restore Pro access" (not "Upgrade to Pro")
+5. **Expected:** CTA button opens Stripe Customer Portal (not checkout)
+
+### Test 5: Manage subscription (Customer Portal)
+1. As a Pro user, navigate to `/upgrade`
+2. **Expected:** shows "You're on Pro" with "Manage subscription" button
+3. Click "Manage subscription"
+4. **Expected:** opens Stripe Customer Portal in new tab where you can cancel, update payment, download invoices
