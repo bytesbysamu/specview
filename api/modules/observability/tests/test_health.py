@@ -57,41 +57,120 @@ def client(app: Flask):
 
 
 # ---------------------------------------------------------------------------
-# Neon stub — permanent skipped contract.
+# Neon — live probe: ok / degraded / skipped.
 # ---------------------------------------------------------------------------
 
 
 class TestNeonHealth:
-    def test_returnsSkipped_status(self, client):
+    def test_skipped_whenDatabaseUrlUnset(self, client, monkeypatch):
+        monkeypatch.delenv("DATABASE_URL", raising=False)
         resp = client.get("/api/health/neon")
         assert resp.status_code == 200
         assert resp.get_json() == {"status": "skipped"}
 
-    def test_responseHasNoExtraKeys(self, client):
-        resp = client.get("/api/health/neon")
-        assert set(resp.get_json().keys()) == {"status"}
+    def test_ok_whenConnectionSucceeds(self, client, monkeypatch):
+        monkeypatch.setenv("DATABASE_URL", "postgresql://fake/db")
 
-    def test_returnsJsonContentType(self, client):
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        mock_engine = MagicMock()
+        mock_engine.connect.return_value = mock_conn
+
+        with patch("modules.data.db.engine.get_engine", return_value=mock_engine):
+            resp = client.get("/api/health/neon")
+
+        assert resp.status_code == 200
+        assert resp.get_json() == {"status": "ok"}
+
+    def test_degraded_whenConnectionRaises(self, client, monkeypatch):
+        monkeypatch.setenv("DATABASE_URL", "postgresql://fake/db")
+
+        mock_engine = MagicMock()
+        mock_engine.connect.side_effect = Exception("connection refused")
+
+        with patch("modules.data.db.engine.get_engine", return_value=mock_engine):
+            resp = client.get("/api/health/neon")
+
+        assert resp.status_code == 503
+        body = resp.get_json()
+        assert body["status"] == "degraded"
+        assert "connection refused" in body["error"]
+
+    def test_degraded_truncatesLongErrorMessage(self, client, monkeypatch):
+        monkeypatch.setenv("DATABASE_URL", "postgresql://fake/db")
+
+        mock_engine = MagicMock()
+        mock_engine.connect.side_effect = Exception("x" * 500)
+
+        with patch("modules.data.db.engine.get_engine", return_value=mock_engine):
+            resp = client.get("/api/health/neon")
+
+        assert resp.status_code == 503
+        body = resp.get_json()
+        assert len(body["error"]) == _MAX_ERROR_CHARS
+
+    def test_returnsJsonContentType(self, client, monkeypatch):
+        monkeypatch.delenv("DATABASE_URL", raising=False)
         resp = client.get("/api/health/neon")
         assert "application/json" in resp.content_type
 
 
 # ---------------------------------------------------------------------------
-# Stripe stub — permanent skipped contract.
+# Stripe — live probe: ok / degraded / skipped.
 # ---------------------------------------------------------------------------
 
 
 class TestStripeHealth:
-    def test_returnsSkipped_status(self, client):
+    def test_skipped_whenStripeKeyUnset(self, client, monkeypatch):
+        monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
         resp = client.get("/api/health/stripe")
         assert resp.status_code == 200
         assert resp.get_json() == {"status": "skipped"}
 
-    def test_responseHasNoExtraKeys(self, client):
-        resp = client.get("/api/health/stripe")
-        assert set(resp.get_json().keys()) == {"status"}
+    def test_ok_whenBalanceRetrieveSucceeds(self, client, monkeypatch):
+        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_fake")
 
-    def test_returnsJsonContentType(self, client):
+        mock_stripe = MagicMock()
+        mock_stripe.Balance.retrieve.return_value = MagicMock()
+
+        with patch.dict("sys.modules", {"stripe": mock_stripe}):
+            resp = client.get("/api/health/stripe")
+
+        assert resp.status_code == 200
+        assert resp.get_json() == {"status": "ok"}
+        mock_stripe.Balance.retrieve.assert_called_once_with(timeout=5)
+
+    def test_degraded_whenBalanceRetrieveRaises(self, client, monkeypatch):
+        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_fake")
+
+        mock_stripe = MagicMock()
+        mock_stripe.Balance.retrieve.side_effect = Exception("invalid api key")
+
+        with patch.dict("sys.modules", {"stripe": mock_stripe}):
+            resp = client.get("/api/health/stripe")
+
+        assert resp.status_code == 503
+        body = resp.get_json()
+        assert body["status"] == "degraded"
+        assert "invalid api key" in body["error"]
+
+    def test_degraded_truncatesLongErrorMessage(self, client, monkeypatch):
+        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_fake")
+
+        mock_stripe = MagicMock()
+        mock_stripe.Balance.retrieve.side_effect = Exception("y" * 500)
+
+        with patch.dict("sys.modules", {"stripe": mock_stripe}):
+            resp = client.get("/api/health/stripe")
+
+        assert resp.status_code == 503
+        body = resp.get_json()
+        assert len(body["error"]) == _MAX_ERROR_CHARS
+
+    def test_returnsJsonContentType(self, client, monkeypatch):
+        monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
         resp = client.get("/api/health/stripe")
         assert "application/json" in resp.content_type
 

@@ -226,7 +226,12 @@ Focus on WHY. Explain trade-offs. No code blocks."""
 
 
 def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
-    """Background thread body. Drives the three-step chain; state machine via WorkflowExecution."""
+    """Background thread body. Drives the three-step chain; state machine via WorkflowExecution.
+
+    Cooperative cancellation: checks execution.status between each step boundary.
+    When the status is CANCELLING, the thread calls execution.cancel() and returns,
+    preserving the outputs accumulated so far.
+    """
     t0 = time.monotonic()
     inputs = execution.inputs
     try:
@@ -237,6 +242,12 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
         analysis = chain_adapter.generate(system, prompt).text
         execution.outputs["analysis"] = analysis
 
+        # Cancellation check: exit cleanly between analysis and epic.
+        if execution.status is ExecutionStatus.CANCELLING:
+            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
+            execution.cancel()
+            return
+
         execution.current_step_name = "epic"
         system, prompt = _bootstrap_epic_prompt(
             inputs["braindump"], inputs["project_name"], analysis,
@@ -244,6 +255,12 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
         )
         epic = chain_adapter.generate(system, prompt).text
         execution.outputs["epic"] = epic
+
+        # Cancellation check: exit cleanly between epic and architecture.
+        if execution.status is ExecutionStatus.CANCELLING:
+            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
+            execution.cancel()
+            return
 
         execution.current_step_name = "architecture"
         system, prompt = _bootstrap_architecture_prompt(
@@ -327,6 +344,7 @@ def bootstrap_status(job_id: str):
     body: dict = {
         "running": execution.is_running,
         "done": done,
+        "status": execution.status.value,
         "current_step": execution.current_step_name,
         "partial": partials.get(execution.current_step_name, "") if execution.current_step_name else "",
         "warnings": list(execution.warnings),
@@ -367,8 +385,8 @@ def bootstrap_status(job_id: str):
             body["latencyMs"] = outputs.get("latency_ms", 0)
         elif execution.error:
             body["error"] = execution.error
-        elif execution.status is ExecutionStatus.CANCELLED:
-            body["status"] = "cancelled"
+            if execution.current_step_name:
+                body["failed_step"] = execution.current_step_name
 
     return jsonify(body)
 
@@ -434,6 +452,7 @@ def _run_bootstrap_via_runtime(execution: WorkflowExecution, workflow) -> None:
 
 @ai_bp.post("/bootstrap-project/<job_id>/retry")
 @require_auth
+@check_usage_limit("bootstrap")
 def bootstrap_retry(job_id: str):
     """Retry a single bootstrap step against the matching Rel-T3 sub-workflow.
 

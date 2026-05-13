@@ -14,7 +14,10 @@ Environment variables:
     APP_RELEASE                 ``release`` tag; defaults to "dev".
 """
 
+from __future__ import annotations
+
 import os
+from typing import Optional
 
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -42,12 +45,15 @@ def init_sentry(app) -> None:
     )
 
 
-def set_sentry_user(user_id: str) -> None:
+def set_sentry_user(user_id: str, email: Optional[str] = None) -> None:
     """Populate per-user Sentry scope.
 
-    TODO(auth): Phase-1 auth middleware should call this from a
-    ``before_request`` hook once ``g.current_user`` is populated. Until then
-    this stub is unused. ``sentry_sdk.set_user`` is safe to call
-    unconditionally — when Sentry is not initialised it is a no-op.
+    Called from ``require_auth`` after ``g.current_user`` is populated so that
+    every authenticated request — and every error raised during that request —
+    carries user identity in Sentry scope. ``sentry_sdk.set_user`` is safe to
+    call unconditionally — when Sentry is not initialised it is a no-op.
     """
-    sentry_sdk.set_user({"id": user_id})
+    user_context: dict = {"id": user_id}
+    if email is not None:
+        user_context["email"] = email
+    sentry_sdk.set_user(user_context)
