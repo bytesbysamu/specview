@@ -203,7 +203,6 @@ def _do_filesystem_migration(owner_email: str) -> None:
 
     from modules.auth.models import User
     from modules.data.db.engine import get_engine
-    from modules.data.db.session import get_session
     from modules.data import git_store
     from modules.data.projects.repository import SqlProjectRepository
     from config import PROJECTS_DIR
