@@ -155,6 +155,9 @@ export class AppComponent implements OnInit, OnDestroy {
   specGenError = signal<string | null>(null);
   specGenStep = signal<string | null>(null);
   specGenProjectName = signal<string | null>(null);
+  specGenJobId = signal<string | null>(null);
+  specGenFailedStep = signal<string | null>(null);
+  cancelling = signal(false);
 
   // Access denied (403) state
   accessDenied = signal(false);
@@ -447,6 +450,33 @@ export class AppComponent implements OnInit, OnDestroy {
     this.statusFailureMsg.set(null);
   }
 
+  async onCancel() {
+    const jobId = this.specGenJobId();
+    if (!jobId || this.cancelling()) return;
+    this.cancelling.set(true);
+    try {
+      await this.projectsSvc.cancelBootstrap(jobId);
+    } catch { /* ignore — the poll loop will detect the cancelled state */ }
+  }
+
+  async onRetry() {
+    const jobId = this.specGenJobId();
+    const failedStep = this.specGenFailedStep();
+    if (!jobId || !failedStep) return;
+    try {
+      const { job_id } = await this.projectsSvc.retryBootstrapStep(jobId, failedStep);
+      this.specGenJobId.set(job_id);
+      this.specGenFailedStep.set(null);
+      this.specGenError.set(null);
+      this.cancelling.set(false);
+      this._setStatusActive();
+    } catch (err: any) {
+      const msg = err?.message || 'Retry failed — check connection and try again.';
+      this.specGenError.set(msg);
+      this._setStatusFailure(msg);
+    }
+  }
+
   // ── Per-file dot helpers ──────────────────────
   private _setFileRunning(filename: string | null) {
     this.activeOpFile.set(filename);
@@ -718,6 +748,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(proj.name);
+    this.specGenJobId.set(null);
+    this.specGenFailedStep.set(null);
+    this.cancelling.set(false);
     this._setStatusActive();
     this._startGenPoll();
     try {
@@ -741,6 +774,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
       this.specGenProjectName.set(null);
+      this.specGenJobId.set(null);
+      this.cancelling.set(false);
       this._stopGenPoll();
     }
   }
@@ -854,6 +889,7 @@ export class AppComponent implements OnInit, OnDestroy {
     onFile?: (file: GeneratedFile) => Promise<void>,
   ): Promise<GeneratedFile[]> {
     const { job_id } = await this.projectsSvc.startBootstrap(projectName, braindump);
+    this.specGenJobId.set(job_id);
     const saved = new Set<string>();
     let pollFailures = 0;
     const MAX_POLL_FAILURES = 5;
@@ -863,7 +899,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
       let status: Awaited<ReturnType<typeof this.projectsSvc.pollBootstrap>>;
       try {
-        status = await this.projectsSvc.pollBootstrap(job_id);
+        status = await this.projectsSvc.pollBootstrap(this.specGenJobId()!);
         pollFailures = 0; // reset on success
       } catch {
         pollFailures++;
@@ -874,6 +910,11 @@ export class AppComponent implements OnInit, OnDestroy {
       }
 
       if (status.current_step) this.specGenStep.set(status.current_step);
+
+      // Capture the failed step from the poll response (Task 4 field)
+      if (status.failed_step !== undefined) {
+        this.specGenFailedStep.set(status.failed_step ?? null);
+      }
 
       // Save incremental files as each AI step completes
       if (onFile && status.partial_files) {
@@ -886,6 +927,7 @@ export class AppComponent implements OnInit, OnDestroy {
       }
 
       if (status.done) {
+        if (status.status === 'CANCELLED') throw new Error('Generation cancelled');
         if (status.error) throw new Error(status.error);
         // Return only files not already saved incrementally
         return (status.files ?? []).filter(f => !saved.has(f.filename));
@@ -914,6 +956,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(name);
+    this.specGenJobId.set(null);
+    this.specGenFailedStep.set(null);
+    this.cancelling.set(false);
     nameEl.value = '';
     braindumpEl.value = '';
     this._setStatusActive();
@@ -952,6 +997,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
       this.specGenProjectName.set(null);
+      this.specGenJobId.set(null);
+      this.cancelling.set(false);
       this._stopGenPoll();
     }
   }
@@ -970,6 +1017,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.specGenError.set(null);
     this.specGenStep.set(null);
     this.specGenProjectName.set(proj.name);
+    this.specGenJobId.set(null);
+    this.specGenFailedStep.set(null);
+    this.cancelling.set(false);
     this._setStatusActive();
     this._startGenPoll();
     try {
@@ -993,6 +1043,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.specGenLoading.set(false);
       this.specGenStep.set(null);
       this.specGenProjectName.set(null);
+      this.specGenJobId.set(null);
+      this.cancelling.set(false);
       this._stopGenPoll();
     }
   }

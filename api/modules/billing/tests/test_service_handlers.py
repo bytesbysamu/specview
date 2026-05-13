@@ -257,6 +257,8 @@ def test_invoice_upcoming_does_not_mutate_state(db_session, caplog):
 def test_handle_webhook_raises_billing_signature_error_on_bad_sig(monkeypatch):
     import stripe
 
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
     def _raise(*_a, **_kw):
         raise stripe.error.SignatureVerificationError("bad sig", "sig-header")
 
@@ -266,6 +268,8 @@ def test_handle_webhook_raises_billing_signature_error_on_bad_sig(monkeypatch):
 
 
 def test_handle_webhook_dispatches_to_registered_handler(monkeypatch, db_session):
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
     user = H.seed(
         db_session,
         customer_id="cus_dispatch",
@@ -292,6 +296,8 @@ def test_handle_webhook_dispatches_to_registered_handler(monkeypatch, db_session
 
 
 def test_handle_webhook_ignores_unregistered_event_types(monkeypatch):
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
     event = {"type": "some.other.event", "data": {"object": {}}}
     monkeypatch.setattr(
         "modules.billing.service.stripe.Webhook.construct_event",
@@ -330,7 +336,7 @@ def test_create_checkout_session_invokes_stripe_with_pro_price(monkeypatch, make
     assert kwargs["customer"] == "cus_new"
     assert kwargs["mode"] == "subscription"
     assert kwargs["line_items"] == [{"price": "price_pro_test", "quantity": 1}]
-    assert "billing/success" in kwargs["success_url"]
+    assert "upgrade?session_id=" in kwargs["success_url"]
     assert kwargs["cancel_url"].endswith("/upgrade")
 
 
@@ -354,10 +360,11 @@ def test_create_portal_session_returns_stripe_url(monkeypatch):
 
 def test_verify_session_returns_pro_for_paid_session(monkeypatch):
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
-    fake_cs = {
+    fake_cs = type("CS", (), {
         "payment_status": "paid",
         "metadata": {"user_id": "42"},
-    }
+        "customer": None,
+    })()
     with patch.object(
         billing_service.stripe.checkout.Session, "retrieve", return_value=fake_cs
     ) as retrieve:
@@ -370,10 +377,11 @@ def test_verify_session_returns_pro_for_paid_session(monkeypatch):
 
 def test_verify_session_returns_free_for_unpaid_session(monkeypatch):
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
-    fake_cs = {
+    fake_cs = type("CS", (), {
         "payment_status": "unpaid",
         "metadata": {"user_id": "7"},
-    }
+        "customer": None,
+    })()
     with patch.object(
         billing_service.stripe.checkout.Session, "retrieve", return_value=fake_cs
     ):
@@ -385,10 +393,11 @@ def test_verify_session_returns_free_for_unpaid_session(monkeypatch):
 
 def test_verify_session_raises_ownership_error_on_user_mismatch(monkeypatch):
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
-    fake_cs = {
+    fake_cs = type("CS", (), {
         "payment_status": "paid",
         "metadata": {"user_id": "99"},
-    }
+        "customer": None,
+    })()
     with patch.object(
         billing_service.stripe.checkout.Session, "retrieve", return_value=fake_cs
     ):

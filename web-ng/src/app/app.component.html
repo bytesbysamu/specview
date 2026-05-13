@@ -69,6 +69,15 @@
             <span class="gen-status-sep">·</span>
             <span class="gen-status-step">{{ specGenStep() }}</span>
           }
+          @if (specGenJobId()) {
+            <button
+              class="gen-status-cancel"
+              data-test="cancel-generation-global"
+              [disabled]="cancelling()"
+              (click)="onCancel()">
+              {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
+            </button>
+          }
         </div>
       }
       @case ('success-flash') {
@@ -401,6 +410,13 @@
                 <span class="gen-status-sep">·</span>
                 <span class="gen-status-step">{{ specGenStep() }}</span>
               }
+              <button
+                class="gen-status-cancel"
+                data-test="cancel-generation"
+                [disabled]="cancelling()"
+                (click)="onCancel()">
+                {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
+              </button>
             </div>
           </div>
         }
@@ -409,6 +425,14 @@
           <div class="text-ops-error">
             <span class="overline">Error</span>
             {{ specGenError() }}
+            @if (specGenFailedStep()) {
+              <button
+                class="gen-retry-step-btn"
+                data-test="retry-failed-step"
+                (click)="onRetry()">
+                Retry {{ specGenFailedStep() }}
+              </button>
+            }
           </div>
         }
 

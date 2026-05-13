@@ -14,6 +14,8 @@ Environment variables:
     APP_RELEASE                 ``release`` tag; defaults to "dev".
 """
 
+from __future__ import annotations
+
 import os
 
 import sentry_sdk
@@ -42,12 +44,21 @@ def init_sentry(app) -> None:
     )
 
 
-def set_sentry_user(user_id: str) -> None:
+def set_sentry_user(user_id: str, email: str | None = None) -> None:
     """Populate per-user Sentry scope.
 
-    TODO(auth): Phase-1 auth middleware should call this from a
-    ``before_request`` hook once ``g.current_user`` is populated. Until then
-    this stub is unused. ``sentry_sdk.set_user`` is safe to call
-    unconditionally — when Sentry is not initialised it is a no-op.
+    Called by the ``require_auth`` decorator after ``g.current_user`` is set so
+    every authenticated request carries user identity in the Sentry scope.
+    ``sentry_sdk.set_user`` is safe to call unconditionally — when Sentry is
+    not initialised it is a no-op.
+
+    Args:
+        user_id: String representation of the authenticated user's primary key.
+        email:   User e-mail address. Omitted from the Sentry payload when None
+                 to respect ``send_default_pii=False`` on installations that do
+                 not opt in to PII transmission.
     """
-    sentry_sdk.set_user({"id": user_id})
+    payload: dict = {"id": user_id}
+    if email is not None:
+        payload["email"] = email
+    sentry_sdk.set_user(payload)

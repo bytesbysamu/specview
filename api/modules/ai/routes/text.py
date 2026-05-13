@@ -237,6 +237,11 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
         analysis = chain_adapter.generate(system, prompt).text
         execution.outputs["analysis"] = analysis
 
+        if execution.status is ExecutionStatus.CANCELLING:
+            execution.cancel()
+            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
+            return
+
         execution.current_step_name = "epic"
         system, prompt = _bootstrap_epic_prompt(
             inputs["braindump"], inputs["project_name"], analysis,
@@ -244,6 +249,11 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
         )
         epic = chain_adapter.generate(system, prompt).text
         execution.outputs["epic"] = epic
+
+        if execution.status is ExecutionStatus.CANCELLING:
+            execution.cancel()
+            execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
+            return
 
         execution.current_step_name = "architecture"
         system, prompt = _bootstrap_architecture_prompt(
@@ -327,6 +337,7 @@ def bootstrap_status(job_id: str):
     body: dict = {
         "running": execution.is_running,
         "done": done,
+        "status": execution.status.value,
         "current_step": execution.current_step_name,
         "partial": partials.get(execution.current_step_name, "") if execution.current_step_name else "",
         "warnings": list(execution.warnings),
@@ -365,10 +376,10 @@ def bootstrap_status(job_id: str):
             ]
             body["files"] = [f.model_dump() for f in files]
             body["latencyMs"] = outputs.get("latency_ms", 0)
-        elif execution.error:
-            body["error"] = execution.error
-        elif execution.status is ExecutionStatus.CANCELLED:
-            body["status"] = "cancelled"
+        elif execution.status is ExecutionStatus.ERROR:
+            if execution.error:
+                body["error"] = execution.error
+            body["failed_step"] = execution.current_step_name
 
     return jsonify(body)
 
@@ -434,6 +445,7 @@ def _run_bootstrap_via_runtime(execution: WorkflowExecution, workflow) -> None:
 
 @ai_bp.post("/bootstrap-project/<job_id>/retry")
 @require_auth
+@check_usage_limit("bootstrap")
 def bootstrap_retry(job_id: str):
     """Retry a single bootstrap step against the matching Rel-T3 sub-workflow.
 
@@ -442,8 +454,7 @@ def bootstrap_retry(job_id: str):
     The prior execution's outputs become inputs for the new run — epic retry
     re-uses the prior analysis text; architecture retry re-uses both. Returns
     202 + a fresh job_id; the caller resumes polling the status endpoint with
-    the new id. Counts as one bootstrap usage call (covered by the existing
-    ``@check_usage_limit("bootstrap")`` decorator on the parent route).
+    the new id. Each retry counts against the daily bootstrap quota.
     """
     try:
         req = RetryBootstrapRequest.model_validate(
