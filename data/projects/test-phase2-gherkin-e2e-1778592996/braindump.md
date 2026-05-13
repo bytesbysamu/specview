@@ -259,3 +259,57 @@ Together they cover:
 | Pipeline | bootstrap-pipeline | — |
 | Epic guide | epic-guide | — |
 | Billing | billing-gate, pro-check | — |
+
+---
+
+## SaaS Happy Paths — Project Isolation & Billing (from Phase 2a/2b)
+
+Merged from `e2e-saas-happy-paths-1778666000`. These are the highest-value E2E scenarios because they test the revenue path end-to-end. All were manually verified on 2026-05-13.
+
+### isolation-project-scoping.feature
+
+**User-scoped project listing:**
+A logged-in user sees only their own projects. A second user registers and sees an empty list. Creating a project as the second user shows only that one project.
+
+**Ownership enforcement:**
+User B tries to access User A's project by slug — gets 403 "access denied", not the project content. Same for delete and edit attempts.
+
+**Frontend access denied state:**
+When a user navigates to a project they don't own (e.g. via direct URL), the UI shows "You don't have access to this project" with a back button — not a broken page or raw JSON error.
+
+**Project creation dual-write:**
+Creating a new project via the UI results in both a DB row (with correct user_id) and a filesystem directory. The project appears in the list immediately.
+
+### billing-upgrade-flow.feature
+
+**Free tier limit → upgrade prompt:**
+A free-tier user generates specs until they hit the daily limit. The 429 response triggers navigation to the `/upgrade` page with a contextual message ("You've used all N daily generations"). The usage meter in the masthead shows "0/N remaining" with warning styling.
+
+**Stripe checkout flow:**
+From the upgrade page, clicking "Upgrade to Pro" redirects to Stripe Checkout. After completing payment (test card 4242...), the user returns to the app, sees a brief verification state, then "Welcome to Pro" confirmation. The plan signal updates immediately.
+
+**Pro user bypasses limits:**
+After upgrading, generating specs works without limits. The usage meter is hidden. No 429 responses.
+
+**Lapsed state — payment failure:**
+When `invoice.payment_failed` fires (simulated via Stripe CLI), the user's plan becomes `lapsed`. The upgrade page shows "Update your payment method" messaging with a Customer Portal CTA — not "Upgrade to Pro".
+
+**Manage subscription:**
+A Pro user navigating to `/upgrade` sees "You're on Pro" with a "Manage subscription" button that opens the Stripe Customer Portal.
+
+### Implementation notes for SaaS scenarios
+
+These scenarios need additional step definitions beyond overview page tests:
+
+- "a second user registers" — API call to `/api/auth/register`
+- "User B tries to access User A's project" — direct API call or URL manipulation
+- "the UI shows access denied" — assert `[data-test="access-denied-message"]` visible
+- "the user hits the daily limit" — may need to lower LIMITS in test config or call API repeatedly
+- "redirect to Stripe Checkout" — verify `window.location.href` changes (or mock Stripe redirect)
+- "plan updates to Pro" — assert via `/api/auth/me` or DOM check for plan badge
+
+The Stripe checkout flow is hard to E2E test without Stripe's test mode and real browser interaction. Consider:
+- Mock the checkout redirect in E2E (intercept the POST and simulate a successful return with session_id)
+- Or use Stripe's test mode with a real browser (slower but more realistic)
+
+The `billing-gate.feature` already exists and tests the 429 → billing gate message. The new scenarios extend the funnel: 429 → upgrade page → checkout → Pro → limits bypassed.

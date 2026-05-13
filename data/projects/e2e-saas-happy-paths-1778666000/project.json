@@ -1,1 +1,1 @@
-{"name": "E2E: SaaS Happy Paths (Isolation + Billing)", "createdAt": "2026-05-13T14:00:00.000Z", "priority": 1}
+{"name": "E2E: SaaS Happy Paths (Isolation + Billing)", "createdAt": "2026-05-13T14:00:00.000Z", "priority": 1, "archived": true, "archivedReason": "Merged into test-phase2-gherkin-e2e-1778592996"}
