@@ -194,8 +194,6 @@ class TestVerifySession:
         assert resp.get_json()["error"] == "missing session_id"
 
     def test_returns_200_with_plan_pro_on_paid_session(self, client, make_user):
-        from modules.billing.routes import verify_session as vs
-
         with patch(
             "modules.billing.routes.verify_session",
             return_value={"plan": "pro", "payment_status": "paid"},
