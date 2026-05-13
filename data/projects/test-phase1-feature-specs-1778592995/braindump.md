@@ -69,7 +69,21 @@ Unit & Component Tests (Phase 3) — Karma/Jasmine, test internal logic + DOM, c
 
 ## Overview Page — Feature Specifications
 
-Features documented from actual code: `app.component.html` (505 lines), `app.component.ts` (~700 lines), `styles.css` (1,581 lines), `section-taxonomy.service.ts`, `project-teaser.ts`. Cross-referenced against UX epics: `ux-grid-polish`, `ux-landing-grid-polish`, `ux-polish-newspaper`, `app-ui-mockups`, `ux-reader-textops`.
+**Important: this list is a starting point, not the source of truth.** It was manually inventoried from the codebase at a point in time and is likely incomplete — Phase 2a/2b shipped new features (isolation, billing, upgrade page) that are appended at the bottom but not numbered. The spec pipeline should **explore the actual codebase** to discover all user-facing features rather than trust this list:
+
+Scan these files for the complete feature surface:
+- `web-ng/src/app/app.component.html` — root template, all UI sections
+- `web-ng/src/app/app.component.ts` — all signals, computed values, methods
+- `web-ng/src/app/app.routes.ts` — registered routes (upgrade, signup, etc.)
+- `web-ng/src/app/components/` — standalone components (login, upgrade, usage-meter)
+- `web-ng/src/app/services/` — all services (projects, auth, ai, subscription, token-lifecycle)
+- `web-ng/src/app/interceptors/` — HTTP interceptors (auth, billing)
+- `web-ng/src/app/state/` — shared state (usage)
+- `web-ng/src/styles.css` — all CSS classes and dark-mode rules
+
+The list below is the known inventory. Features may have been added, changed, or removed since this was written. Number them during spec generation, not before.
+
+Previously documented from: `app.component.html`, `app.component.ts`, `styles.css`, `section-taxonomy.service.ts`, `project-teaser.ts`. Cross-referenced against UX epics: `ux-grid-polish`, `ux-landing-grid-polish`, `ux-polish-newspaper`, `app-ui-mockups`, `ux-reader-textops`.
 
 ### F1 — Auth Gate
 
