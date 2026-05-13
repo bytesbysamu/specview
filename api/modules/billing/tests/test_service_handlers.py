@@ -257,6 +257,8 @@ def test_invoice_upcoming_does_not_mutate_state(db_session, caplog):
 def test_handle_webhook_raises_billing_signature_error_on_bad_sig(monkeypatch):
     import stripe
 
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
     def _raise(*_a, **_kw):
         raise stripe.error.SignatureVerificationError("bad sig", "sig-header")
 
@@ -266,6 +268,7 @@ def test_handle_webhook_raises_billing_signature_error_on_bad_sig(monkeypatch):
 
 
 def test_handle_webhook_dispatches_to_registered_handler(monkeypatch, db_session):
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
     user = H.seed(
         db_session,
         customer_id="cus_dispatch",
@@ -292,6 +295,7 @@ def test_handle_webhook_dispatches_to_registered_handler(monkeypatch, db_session
 
 
 def test_handle_webhook_ignores_unregistered_event_types(monkeypatch):
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
     event = {"type": "some.other.event", "data": {"object": {}}}
     monkeypatch.setattr(
         "modules.billing.service.stripe.Webhook.construct_event",
