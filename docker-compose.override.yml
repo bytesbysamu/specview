@@ -19,6 +19,7 @@ services:
       - /Users/sam/.claude-openclaw:/home/appuser/.claude-openclaw
       - /Users/sam/Projects/specview/data:/data/spec-doc
       - /Users/sam/Projects/specview/plugin:/app/plugin:ro
+      - /Users/sam/Projects:/home/appuser/projects:ro
 
 volumes:
   claude-credentials:

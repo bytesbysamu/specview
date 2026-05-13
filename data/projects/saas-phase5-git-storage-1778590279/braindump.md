@@ -1,192 +1,96 @@
 # SaaS Phase 5: Git Storage Layer
 
-> **Priority**: P3 — differentiator, not a launch gate. Gives users version history, diff, revert, and future GitHub sync.
+> **Priority**: P3 — differentiator, not a launch gate. Gives users version history, diff, revert, and sets up the "Connect GitHub" upsell.
 > **Effort**: ~2 days.
 > **Blocks**: nothing.
-> **Depends on**: Phase 2 (ProjectRepository wired into routes, per-user isolation in place).
+> **Depends on**: Phase 2a (ProjectRepository wired into routes, per-user isolation in place).
 
-## What this is
+## The problem
 
-Wire the git_store module that already exists into the project routes, so every file save becomes a git commit. This gives users free version history, diff between versions, and one-click revert — and sets up the "Connect GitHub" upsell for Phase 6+.
+Every file save in specview is a destructive overwrite. When the AI regenerates an architecture doc, the previous version is gone. When a user edits a braindump, there's no undo beyond the browser's back button. There's no way to see what changed between spec generations, no way to revert a bad edit, and no audit trail of who changed what and when.
+
+The git_store module already exists in the codebase — it has the operations defined but isn't wired into the routes. Meanwhile, every project on disk is a flat directory of markdown files with no `.git/` repo. The infrastructure is there; it just needs to be connected and the existing projects need to be migrated.
 
 ---
 
-## Current State (fact-checked 2026-05-12)
+## Current state (fact-checked 2026-05-12)
 
 **What exists:**
-- `api/modules/data/git_store/service.py` — module exists with git operations
-- `api/modules/data/git_store/tests/` — test directory exists
-- `api/modules/data/projects/service.py` — filesystem CRUD (read/write markdown files directly, no git)
-- Projects on disk: `data/projects/<slug>/braindump.md`, `data/projects/<slug>/project.json`, etc.
-- No git repos initialized for any project — all 41 projects are plain directories
+- `api/modules/data/git_store/service.py` — module with git operations defined. Six public ops: `init_repo`, `write_file`, `read_file`, `list_files`, `get_history`, `get_diff`, `revert_file`, `delete_file`.
+- `api/modules/data/git_store/tests/` — test directory exists.
+- `api/modules/data/projects/models.py` — `Project` model has `git_repo_path` and `latest_commit_sha` fields (both nullable). These are already in the migration schema but never populated.
+- `api/modules/data/projects/routes.py` — file history/diff/revert routes exist (Pers-T4) and reference `current_app.project_repository` — they're designed for the repository seam but it's not connected.
+- 41 projects on disk as plain directories — no `.git/` repos anywhere.
 
-**What's missing:**
-- Routes don't call git_store — they call `service.py` which does direct filesystem I/O
-- No git repos exist — each project is a flat directory of markdown files
-- No history/diff/revert endpoints exposed
-- No migration script to convert existing projects to git repos
-
-**Port from**: `braindump-saas-persistence.md` (legacy), which specifies the full git layer design with pygit2.
+**What's broken or missing:**
+- Routes call `service.update_file()` which does `open(path, 'w').write(content)` — direct filesystem write, no git.
+- The bootstrap pipeline writes generated files directly to disk — no version tracking of what was generated vs what the user edited.
+- No history/diff/revert endpoints are functional (they exist in code but the repository seam isn't wired).
+- No migration path for existing 41 projects to become git repos.
 
 ---
 
-## Task 1 — Wire git_store into File Save
+## Learnings from other projects
 
-> **Effort**: 0.5 days
+**Springular:**
+Uses Flyway database migrations for schema versioning but no file-level version control. All content lives in Postgres, not filesystem. No relevant pattern for git storage — specview's hybrid approach (DB for metadata, git for content) is novel in this project family.
 
-Every time a file is saved (user edit, AI generation, bootstrap pipeline), the save should go through git_store instead of direct filesystem write.
+**Trendfy:**
+Stores AI-generated images on S3 with versioned keys (`orders/<id>/results/<scenario>_v1.png`). Each generation creates a new version key. The version list comes from S3 listing. Crude but effective — the key insight is that versioning should be automatic (every save creates a version) and the user shouldn't have to think about it. Specview's git approach is the same philosophy with much better tooling (diff, revert, branches for free).
 
-### Current flow (no git)
-```
-PUT /api/projects/<id>/files/<name> → service.update_file() → open(path, 'w').write(content)
-```
+**Bubls:**
+No file versioning — trained models and generated images are write-once. The generation pipeline does persist intermediate results though: each step writes to the DB before the next step starts. If step 3 fails, outputs from steps 1-2 are preserved. This "persist before proceeding" pattern is exactly what git commits per step give us in the bootstrap pipeline.
 
-### New flow (with git)
-```
-PUT /api/projects/<id>/files/<name> → git_store.write_file(project_id, name, content) → git commit
-                                    → project_repository.touch(project_id, new_sha)
-```
-
-The `write_file` function in git_store:
-1. Writes content to the working tree
-2. Stages the file (`git add`)
-3. Commits with an auto-generated message (`edit(<filename>): user edit` or `feat(<filename>): generated by bootstrap`)
-4. Returns the new commit SHA
-
-The `touch` call updates the `latest_commit_sha` on the Project DB row.
-
-### Bootstrap pipeline integration
-
-When the bootstrap pipeline generates analysis.md, epic.md, architecture.md:
-```python
-git_store.write_file(project.id, "analysis.md", content, msg="feat(analysis): generated by bootstrap")
-git_store.write_file(project.id, "epic.md", content, msg="feat(epic): generated by bootstrap")
-git_store.write_file(project.id, "architecture.md", content, msg="feat(architecture): generated by bootstrap")
-```
-
-Each step is a separate commit so the user can see exactly what was generated and when.
+**General git-as-storage patterns:**
+Per-project repos (not a monorepo) is the right call — clean isolation, trivial export-to-GitHub, easy garbage-collect on delete. Auto-commit with descriptive messages (`feat(analysis): generated by bootstrap`, `edit(epic): user edit`, `revert(braindump): to abc123`) gives a readable audit trail without user effort. The `latest_commit_sha` on the Project model serves as a cache-invalidation key — the frontend can use it to skip re-fetching unchanged content.
 
 ---
 
-## Task 2 — History, Diff, Revert Endpoints
+## Architecture direction
 
-> **Effort**: 0.5 days
+**Git replaces direct filesystem writes.** Every `update_file()` call goes through `git_store.write_file()` which writes to the working tree, stages, and commits in one atomic operation. The commit SHA is written back to `Project.latest_commit_sha` via `project_repository.touch()`. Reading files can still be direct filesystem reads (the working tree IS the filesystem), but history/diff/revert use git operations.
 
-Three new endpoints, all using git_store operations:
+**Bootstrap pipeline commits per step.** When the pipeline generates analysis.md, epic.md, architecture.md — each becomes a separate commit. This gives users visibility into exactly what was generated and when, and enables per-step retry (Phase 3) to create clean diffs.
 
-```python
-@projects_bp.get("/<slug>/files/<filename>/history")
-@require_auth
-def file_history(slug, filename):
-    """List commits touching this file."""
-    project = project_repository.get_by_slug(g.current_user.id, slug)
-    history = git_store.get_history(project.id, filename, limit=50)
-    return jsonify(history)
-    # Returns: [{"sha": "abc123", "message": "edit(epic): user edit", "date": "2026-05-12T10:00:00Z"}, ...]
+**Per-project repos, not a shared monorepo.** Each project gets its own `.git/` inside `data/projects/<slug>/`. Clean isolation per user, trivial to export as a zip or push to GitHub, easy to delete on project deletion.
 
+**Migration script converts existing projects.** One-shot idempotent script: for each project directory, init a git repo, add all existing markdown files as an initial import commit. Runs after Phase 2a's migration (which creates DB rows). Order: Phase 2a creates DB metadata → Phase 5 creates git repos.
 
-@projects_bp.get("/<slug>/files/<filename>/diff")
-@require_auth
-def file_diff(slug, filename):
-    """Unified diff between two commits."""
-    from_sha = request.args["from"]
-    to_sha = request.args.get("to", "HEAD")
-    project = project_repository.get_by_slug(g.current_user.id, slug)
-    diff = git_store.get_diff(project.id, filename, from_sha, to_sha)
-    return jsonify({"diff": diff})
+**Angular file history UI.** History icon next to each file in the sidebar. Click opens a version list with commit messages, dates, and actions (view at SHA, revert to SHA). Diff view reuses the existing red/green styling from text ops. Revert creates a new commit (not a destructive reset) — you can always undo a revert.
 
-
-@projects_bp.post("/<slug>/files/<filename>/revert")
-@require_auth
-def file_revert(slug, filename):
-    """Restore file to a previous version."""
-    body = request.get_json()
-    project = project_repository.get_by_slug(g.current_user.id, slug)
-    new_sha = git_store.revert_file(project.id, filename, body["sha"])
-    project_repository.touch(project.id, new_sha)
-    return jsonify({"sha": new_sha})
-```
-
-### Angular UI
-
-- File sidebar shows a "History" icon next to each file
-- Clicking opens a version list with commit messages and dates
-- Each version has a "View" (shows content at that SHA) and "Revert" (restores it)
-- Diff view uses the existing red/green diff styling from text ops
+**Future: "Connect GitHub" upsell.** The per-project git repo makes this trivial — add a remote and push. "Your specs live in your repo" is a compelling Pro differentiator. Not built in this phase, but the architecture enables it.
 
 ---
 
-## Task 3 — Migration Script
+## Testing baseline to maintain
 
-> **Effort**: 0.5 days
+Phase 3 established 146 tests across 9 spec files (39% statement coverage, 21% branch coverage). New code must maintain or improve this:
 
-Convert all 41 existing filesystem projects to git repos:
-
-```python
-# scripts/migrate_filesystem_to_git.py
-"""For each data/projects/<slug>/ on disk:
-    1. git_store.init_repo(project_id) — creates .git/ inside the project dir
-    2. For each .md file in the directory:
-       git_store.write_file(project_id, filename, content, msg="chore: import from filesystem")
-    3. project_repository.touch(project_id, sha)
-"""
-```
-
-Idempotent: skip if `.git/` already exists in the project directory.
-
-Run after the Phase 2 migration (which creates DB rows). Order matters:
-1. Phase 2: filesystem → DB metadata rows
-2. Phase 5: filesystem → git repos
-
-### Decision: per-project repo (not shared monorepo)
-
-Per the legacy braindump `braindump-saas-persistence.md`:
-- **(a) Per-project repo** at `data/projects/<id>/.git/` — clean isolation, trivial export-to-GitHub, easy garbage-collect on delete
-- (b) Shared monorepo with branches — fewer inodes, harder to export, one corruption affects all
-
-**(a) is right.** Storage is cheap; isolation matters more; the GitHub-mirror story is the killer-app argument.
+- **git_store service:** Needs thorough pytest coverage — init_repo (creates valid repo), write_file (creates commit, returns SHA), get_history (returns commit log), get_diff (returns unified diff), revert_file (creates new commit with old content). Use temporary directories for test isolation.
+- **Route integration:** Test that `PUT /api/projects/<id>/files/<name>` creates a git commit (not just a filesystem write). Test history/diff/revert endpoints return correct data.
+- **Migration script:** Test idempotency — running twice on the same project should be a no-op. Test that all files in a project directory end up committed.
+- **Frontend:** If a file history component is added, it needs a spec file with basic tests: renders commit list, click triggers diff view, revert button calls API.
+- **E2E:** Existing bootstrap-pipeline feature should still pass — file saves still work, just with git underneath.
+- **Structural:** git_store imports should stay within the data module — don't leak into AI routes directly. Routes call the project service or repository, which calls git_store internally.
 
 ---
 
-## Task 4 — "Connect GitHub" (Future Upsell, Out of Scope)
+## Files involved
 
-Not built in this phase, but the git layer makes it possible:
+- `api/modules/data/git_store/service.py` — verify/complete the 6 public operations
+- `api/modules/data/projects/routes.py` — wire file saves through git_store, connect history/diff/revert endpoints
+- `api/modules/data/projects/service.py` — update `update_file()` to go through git_store
+- `api/modules/ai/routes/text.py` — bootstrap pipeline commits each generated file separately
+- `web-ng/src/app/` — file history UI component (sidebar icon, version list, diff view)
+- `scripts/migrate_filesystem_to_git.py` — one-shot migration for existing 41 projects
 
-```python
-# Future: one endpoint to add a remote and push
-git_store.add_remote(project_id, "origin", user_github_url)
-git_store.push(project_id, "origin", "main")
-```
+## Success criteria
 
-This becomes the premium differentiator: "Your specs live in your repo." Linear/Cursor model.
-
----
-
-## Files to Change
-
-| File | Change |
-|------|--------|
-| `api/modules/data/projects/routes.py` | Call git_store instead of direct filesystem write |
-| `api/modules/data/projects/service.py` | Update `update_file()` to go through git_store |
-| `api/modules/data/git_store/service.py` | Verify/complete the 6 public operations |
-| `api/modules/ai/routes/text.py` | Bootstrap pipeline commits each generated file |
-| `web-ng/src/app/app.component.html` | History icon in file sidebar |
-| `web-ng/src/app/app.component.ts` | History/diff/revert API calls and state |
-| `scripts/migrate_filesystem_to_git.py` | New — one-shot migration |
-
-## Success Criteria
-
-- [ ] Every file save creates a git commit with a descriptive message
-- [ ] `GET /api/projects/<slug>/files/<name>/history` returns commit log
-- [ ] `GET /api/projects/<slug>/files/<name>/diff` returns unified diff
-- [ ] `POST /api/projects/<slug>/files/<name>/revert` restores file to previous version
-- [ ] All 41 existing projects have git repos with initial import commit
-- [ ] Bootstrap pipeline creates separate commits for analysis, epic, architecture
-- [ ] `.git/` directories are inside the project dirs, not a shared monorepo
-
-## Explicitly Out of Scope
-
-- GitHub OAuth + push — separate feature, depends on this layer
-- Branching / merge within spec-doc — git supports it, UI doesn't
-- Custom commit signing — enterprise feature
-- Per-project access sharing (collaborator model) — single owner for now
+- Every file save creates a git commit with a descriptive message
+- History endpoint returns commit log for any file
+- Diff endpoint returns unified diff between any two versions
+- Revert endpoint restores file to a previous version (as a new commit, not destructive reset)
+- All existing projects have git repos with an initial import commit
+- Bootstrap pipeline creates separate commits for each generated file
+- Per-project repos (not a shared monorepo) — each `data/projects/<slug>/` has its own `.git/`
+- Existing test suites pass without regression
