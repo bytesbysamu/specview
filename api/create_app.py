@@ -1,4 +1,5 @@
 import importlib
+import logging
 import os
 import sys
 import uuid
@@ -13,6 +14,10 @@ from modules.observability.health import health_bp
 from modules.observability.sentry import init_sentry
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_OWNER_EMAIL = "sam@specview.app"
 
 # Add module path + exported blueprint name here to register a new module.
 ENABLED_MODULES = [
@@ -138,4 +143,163 @@ def create_app(config=None):
         if ".." in _req.path:
             return jsonify({"error": "not found", "status": 404}), 404
 
+    _run_startup_migration(app)
+
     return app
+
+
+def _run_startup_migration(app) -> None:
+    """Flyway-style idempotent filesystem-to-DB migration on app startup.
+
+    Checks whether the project table already has rows. If the table is
+    empty, runs the filesystem-to-DB migration automatically using the
+    owner email from MIGRATION_OWNER_EMAIL (defaulting to
+    DEFAULT_OWNER_EMAIL). Skips entirely when projects already exist.
+
+    This runs AFTER Alembic migrations (schema must exist before any
+    SELECT on the project table is valid), but the Alembic CLI is
+    typically invoked before gunicorn/flask starts, so the schema is
+    guaranteed to be present by the time create_app() is called in
+    production.
+    """
+    if app.config.get("TESTING"):
+        logger.debug("startup_migration: TESTING=True — skipping")
+        return
+
+    owner_email = os.environ.get("MIGRATION_OWNER_EMAIL", DEFAULT_OWNER_EMAIL)
+    try:
+        from sqlmodel import Session, select, func
+        from modules.data.db.engine import get_engine
+        from modules.data.projects.models import Project
+
+        with Session(get_engine()) as session:
+            row_count = session.exec(select(func.count()).select_from(Project)).one()
+
+        if row_count > 0:
+            logger.info(
+                "startup_migration: %d project(s) already in DB — skipping filesystem import",
+                row_count,
+            )
+            return
+
+        logger.info(
+            "startup_migration: project table is empty — running filesystem-to-DB migration "
+            "(owner=%s)",
+            owner_email,
+        )
+        _do_filesystem_migration(owner_email)
+    except Exception:
+        # Migration failures must never prevent app startup; log and continue.
+        logger.exception("startup_migration: migration failed — app will still start")
+
+
+def _do_filesystem_migration(owner_email: str) -> None:
+    """Run the core filesystem-to-DB import logic.
+
+    Mirrors migrate_filesystem_to_git_db.main() but without argparse /
+    sys.exit() so it can be called safely from an app factory context.
+    """
+    import json
+    from pathlib import Path
+    from typing import Optional
+
+    from sqlmodel import Session, select
+
+    from modules.auth.models import User
+    from modules.data.db.engine import get_engine
+    from modules.data import git_store
+    from modules.data.projects.repository import SqlProjectRepository
+    from config import PROJECTS_DIR
+
+    projects_dir = Path(PROJECTS_DIR)
+    if not projects_dir.is_dir():
+        logger.warning(
+            "startup_migration: projects_dir %s does not exist — nothing to migrate",
+            projects_dir,
+        )
+        return
+
+    git_repos_dir = Path(
+        os.environ.get("GIT_REPOS_DIR")
+        or os.environ.get("PROJECTS_DIR")
+        or str(projects_dir)
+    )
+    git_repos_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["GIT_REPOS_DIR"] = str(git_repos_dir)
+
+    # Look up the owner user row.
+    with Session(get_engine()) as session:
+        user = session.exec(select(User).where(User.email == owner_email)).first()
+
+    if user is None:
+        logger.warning(
+            "startup_migration: no User row for email '%s' — skipping migration. "
+            "Register the account first.",
+            owner_email,
+        )
+        return
+
+    owner_id = int(user.id)
+
+    # Import modules used by the per-project migration.
+    import modules.auth.models  # noqa: F401 — registers User table metadata
+    import modules.data.projects.models  # noqa: F401 — registers Project table metadata
+
+    repo = SqlProjectRepository()
+
+    counts = {"migrated": 0, "skipped": 0, "error": 0}
+    files_total = 0
+
+    for slug_dir in sorted(projects_dir.iterdir()):
+        if not slug_dir.is_dir():
+            continue
+        slug = slug_dir.name
+        if repo.get_by_slug(slug) is not None:
+            counts["skipped"] += 1
+            continue
+        md_files = sorted(slug_dir.glob("*.md"))
+        if not md_files:
+            counts["skipped"] += 1
+            continue
+        # Resolve project name from project.json, fall back to slug.
+        name = slug.replace("-", " ").title()
+        project_json = slug_dir / "project.json"
+        if project_json.is_file():
+            try:
+                data = json.loads(project_json.read_text(encoding="utf-8"))
+                candidate = data.get("name")
+                if isinstance(candidate, str) and candidate.strip():
+                    name = candidate.strip()
+            except (json.JSONDecodeError, OSError):
+                pass
+        try:
+            project = repo.create(
+                user_id=owner_id,
+                name=name,
+                slug=slug,
+                git_repo_path=str(git_repos_dir / slug),
+            )
+            last_sha: Optional[str] = None
+            for f in md_files:
+                last_sha = git_store.write_file(
+                    str(project.id),
+                    f.name,
+                    f.read_text(encoding="utf-8"),
+                    f"migrate: {f.name}",
+                )
+            if last_sha is not None:
+                repo.touch(project.id, last_sha, len(md_files))
+            counts["migrated"] += 1
+            files_total += len(md_files)
+            logger.debug("startup_migration: migrated %s (%d files)", slug, len(md_files))
+        except Exception:
+            logger.exception("startup_migration: failed to migrate project %s", slug)
+            counts["error"] += 1
+
+    logger.info(
+        "startup_migration: done — migrated=%d skipped=%d errors=%d files=%d",
+        counts["migrated"],
+        counts["skipped"],
+        counts["error"],
+        files_total,
+    )

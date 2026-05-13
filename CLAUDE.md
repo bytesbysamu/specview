@@ -50,6 +50,7 @@ Do not bypass these — the agents load conventions automatically. Doing it your
 - Angular state is signals only — no BehaviorSubject, no Observable for local state.
 - **When a skill is invoked, execute every step in its Procedure — no skipping.** Post-implementation steps (dev-test, dev-review, summary file) are mandatory, not optional. Re-read the skill's Procedure before reporting done.
 - **Always commit generated files** (e.g. `web-ng/src/app/api/`, migration files, spec outputs) — do not leave them unstaged.
+- **Contract-first API development**: `api/openapi.yaml` is the source of truth. `npm run generate:api` in `web-ng/` regenerates Angular API clients + DTOs. After adding/changing any backend route, update `openapi.yaml` first, regenerate, then update services. The contract test `test_app_routes_are_documented` enforces every Flask route has an OpenAPI entry.
 - **Product behavior is defined in `product-behavior.md`** — five core flows, expected steps, duration classes, and failure shapes; mirrored 1:1 by `e2e/features/`.
 
 ## Available skills (invoke with /skill-name)
