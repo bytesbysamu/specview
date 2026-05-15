@@ -1,3 +1,29 @@
+/* ── Design Playground Section ────────────────────────────────────────────── */
+
+.v2-playground-section {
+  border-top: 2px solid var(--ink, #1a1a1a);
+  border-bottom: 2px solid var(--ink, #1a1a1a);
+  padding: 16px 0;
+}
+
+.v2-section-label {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted, #888);
+  padding: 0 24px 12px;
+  margin: 0;
+}
+
+.v2-playground-iframe {
+  width: 100%;
+  height: 80vh;
+  border: none;
+  display: block;
+}
+
 /* ── V2 Shell Layout ──────────────────────────────────────────────────────── */
 
 .v2-shell {

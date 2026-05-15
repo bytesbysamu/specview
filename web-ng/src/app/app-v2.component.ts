@@ -16,6 +16,7 @@ import { ProjectGridComponent, ContextFile, ProjectsBySection } from './project-
 import { SidebarV2Component } from './sidebar-v2.component';
 import { ReaderPanelComponent } from './reader-panel.component';
 import { LandingPitchComponent } from './landing-pitch.component';
+import { DesignPlaygroundComponent } from './design-playground.component';
 
 interface ParagraphDiff {
   type: 'keep' | 'add' | 'remove';
@@ -80,6 +81,7 @@ const GEN_POLL_INTERVAL = 10_000;
     SidebarV2Component,
     ReaderPanelComponent,
     LandingPitchComponent,
+    DesignPlaygroundComponent,
   ],
   templateUrl: './app-v2.component.html',
   styleUrl: './app-v2.component.css',

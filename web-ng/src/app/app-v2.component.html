@@ -1,6 +1,11 @@
-@if (!auth.isLoggedIn()) {
-  <app-landing-pitch />
-} @else {
+<!-- Landing pitch — always visible at top -->
+<app-landing-pitch />
+
+<!-- Design playground — static visual reference -->
+<app-design-playground />
+
+<!-- App workspace — visible when logged in -->
+@if (auth.isLoggedIn()) {
 <div class="v2-shell">
 
   <!-- Section nav -->
