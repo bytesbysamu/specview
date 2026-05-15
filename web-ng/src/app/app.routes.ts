@@ -12,7 +12,6 @@ export const routes: Routes = [
   { path: 's/:slug', component: PublicSpecComponent },
   { path: 'v1', component: AppComponent },
   { path: 'v2', redirectTo: '', pathMatch: 'full' },
-  { path: 'v3', component: AppV2Component },
   { path: '', component: AppV2Component },
   { path: '**', component: LoginComponent },
 ];
