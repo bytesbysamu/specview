@@ -142,3 +142,44 @@ The escape hatch has a defined lifetime: one week from route swap with zero roll
 - [Analysis](./analysis.md) – CSS token misalignment root cause, V1 vs V2 computed style comparison, and the dependency sequencing that makes the upgrade fix a prerequisite
 - [Epic](./epic.md) – Scope boundaries, 5-task breakdown, success criteria, and explicit exclusions (playground persistence, live front page, speculative token bridge)
 - [Timeline](./timeline.md) – Phase-by-phase execution tracking across the 4-day budget plus 1-week soak period
+---
+
+## CSS Unification Strategy (appended post-review)
+
+### Goal: one styles.css for everything
+Landing page, design playground, and app should all use the same `styles.css`. No component-scoped CSS overrides. No duplicate class definitions.
+
+### Current state
+- `web-ng/src/styles.css` (1,769 lines) — the newspaper design system. Defines all `.file-item`, `.expanded-panel`, `.masthead`, `.section-nav`, `.gen-status-bar` etc.
+- `landing/style.css` — landing page styles. Shares the same CSS custom properties (--ink, --bg, --serif, --sans) and some class names.
+- 5 V2 component CSS files — extracted from `landing/playground.html`. Duplicate and override global styles with playground-density values (12px 8px padding vs 20px 24px).
+- `app-v2.component.css` — shell layout + duplicates of .thinking-dot, .text-ops-error, .overline, .btn-icon that already exist in styles.css.
+
+### The fix (3 steps)
+
+**Step 1: Empty the 5 component CSS files**
+```
+project-grid.component.css   → /* Styles inherited from global styles.css */
+reader-panel.component.css   → /* Styles inherited from global styles.css */
+sidebar-v2.component.css     → /* Styles inherited from global styles.css */
+status-bar.component.css     → /* Styles inherited from global styles.css */
+section-nav.component.css    → /* Styles inherited from global styles.css */
+```
+These components use V1's class names — global styles.css already defines everything they need. Component-scoped overrides are the root cause of the visual mismatch.
+
+**Step 2: Slim down app-v2.component.css**
+Remove duplicates (.thinking-dot, .text-ops-error, .overline, .btn-icon) — already in styles.css. Keep only `.v2-shell { min-height: 100dvh; }` as the one V2-specific rule.
+
+**Step 3: Verify ViewEncapsulation**
+V2 components use Angular's default `ViewEncapsulation.Emulated`. With empty component CSS files, the global styles.css cascade applies directly. No encapsulation conflicts.
+
+### Computed style diff that this fixes
+| Property | V1 (correct) | V2 (broken) | After fix |
+|----------|-------------|-------------|-----------|
+| .file-item padding | 20px 24px | 12px 8px | 20px 24px |
+| .file-item borderBottom | none | 1px solid | none |
+| .file-item margin | 0px | 0px -8px | 0px |
+| card width | 282px | 330px | 282px |
+
+### Landing + playground CSS convergence (future)
+`landing/style.css` and `web-ng/src/styles.css` share the same design tokens but are separate files. Long-term: extract shared tokens into a single `_tokens.css` imported by both. Not in V3 scope — the visual parity fix doesn't require this.
