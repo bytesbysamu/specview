@@ -5,11 +5,13 @@ import { UpgradeComponent } from './components/upgrade/upgrade.component';
 import { PublicSpecComponent } from './pages/public-spec/public-spec.component';
 import { AppV2Component } from './app-v2.component';
 import { AppComponent } from './app.component';
+import { LivePlaygroundComponent } from './live-playground.component';
 
 export const routes: Routes = [
   { path: 'signup', component: SignupComponent },
   { path: 'upgrade', component: UpgradeComponent },
   { path: 's/:slug', component: PublicSpecComponent },
+  { path: 'playground', component: LivePlaygroundComponent },
   { path: 'v1', component: AppComponent },
   { path: 'v2', redirectTo: '', pathMatch: 'full' },
   { path: 'v3', component: AppV2Component },
