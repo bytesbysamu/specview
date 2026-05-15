@@ -36,9 +36,8 @@ def _repos_base() -> Path:
     """Resolved at call time so tests can override via monkeypatch.setenv."""
     base = os.environ.get("GIT_REPOS_DIR") or os.environ.get("PROJECTS_DIR")
     if not base:
-        raise RuntimeError(
-            "GIT_REPOS_DIR (or PROJECTS_DIR) environment variable is not set"
-        )
+        from config import PROJECTS_DIR
+        return Path(PROJECTS_DIR)
     return Path(base)
 
 

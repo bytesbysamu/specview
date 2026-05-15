@@ -445,7 +445,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   retryLastOp() {
-    // Reset to idle from failure — user will re-trigger manually
+    if (this.specGenFailedStep()) {
+      this.onRetry();
+      return;
+    }
+    // No retryable step — just dismiss the error
     this.statusMode.set('idle');
     this.statusFailureMsg.set(null);
   }
