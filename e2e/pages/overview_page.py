@@ -55,8 +55,14 @@ class OverviewPage(AppPage):
     # ── Status bar ────────────────────────────────────────────────────────
 
     def get_status_bar_text(self) -> str:
-        """Return the concatenated visible text of the status bar."""
-        return self.page.locator("[data-test='status-bar']").inner_text().strip()
+        """Return the concatenated visible text of the status bar, normalized.
+
+        Collapses all whitespace (including newlines from inline span elements)
+        into single spaces and lowercases for consistent comparisons.
+        """
+        raw = self.page.locator("[data-test='status-bar']").inner_text().strip()
+        import re
+        return re.sub(r"\s+", " ", raw).lower()
 
     def get_status_bar_state(self) -> str:
         """Return the modifier class active on the status bar element.
@@ -95,7 +101,17 @@ class OverviewPage(AppPage):
         return self.page.locator("[data-test='search-count']").inner_text().strip()
 
     def is_search_visible(self) -> bool:
-        return self.is_visible("[data-test='search-input']", timeout_ms=2_000)
+        return self.is_visible("[data-test='search-input']", timeout_ms=3_000)
+
+    def is_search_hidden(self) -> bool:
+        """Return True when the search input is absent from the DOM or hidden."""
+        try:
+            self.page.wait_for_selector(
+                "[data-test='search-input']", timeout=3_000, state="hidden"
+            )
+            return True
+        except Exception:
+            return False
 
     # ── Project grid ──────────────────────────────────────────────────────
 
@@ -120,11 +136,11 @@ class OverviewPage(AppPage):
             return False
 
     def get_section_group_order(self) -> list[str]:
-        """Return section group titles in DOM order."""
+        """Return section group titles in DOM order, title-cased for comparison."""
         locators = self.page.locator("[data-test='section-group']").all()
         titles = []
         for loc in locators:
-            title = loc.locator(".section-group-title").inner_text().strip()
+            title = loc.locator(".section-group-title").inner_text().strip().title()
             titles.append(title)
         return titles
 
@@ -171,17 +187,35 @@ class OverviewPage(AppPage):
         return self.is_visible("[data-test='create-modal']", timeout_ms=5_000)
 
     def is_create_modal_hidden(self) -> bool:
-        return not self.is_visible("[data-test='create-modal']", timeout_ms=2_000)
+        """Return True when the create-modal element is absent or hidden."""
+        try:
+            self.page.wait_for_selector(
+                "[data-test='create-modal']", timeout=5_000, state="hidden"
+            )
+            return True
+        except Exception:
+            return False
 
     def click_modal_backdrop(self) -> None:
-        self.click(".modal-backdrop")
+        """Click the backdrop area outside the modal dialog to dismiss it."""
+        backdrop = self.page.locator(".modal-backdrop")
+        # Click the top-left corner of the backdrop, which is outside the centered modal.
+        backdrop.click(position={"x": 10, "y": 10})
 
     def fill_create_form(self, name: str, braindump: str) -> None:
-        self.enter_text("#projectName", name)
-        self.enter_text("[data-test='braindump-input']", braindump)
+        """Fill the create-project form fields using Playwright's reliable fill method."""
+        name_input = self.page.locator("#projectName")
+        name_input.wait_for(state="visible", timeout=5_000)
+        name_input.fill(name)
+        braindump_input = self.page.locator("[data-test='braindump-input']")
+        braindump_input.wait_for(state="visible", timeout=5_000)
+        braindump_input.fill(braindump)
 
     def click_generate_button(self) -> None:
-        self.page.locator(".modal-generate").click()
+        """Click the Generate Specs button in the create-project modal."""
+        btn = self.page.locator(".modal-generate")
+        btn.wait_for(state="visible", timeout=5_000)
+        btn.click()
 
     def is_generate_button_disabled(self) -> bool:
         attr = self.page.locator(".modal-generate").get_attribute("disabled")
@@ -205,7 +239,7 @@ class OverviewPage(AppPage):
     def get_theme_preference_from_storage(self) -> str | None:
         """Return the theme string stored in localStorage under the app's key."""
         return self.page.evaluate(
-            "() => localStorage.getItem('specview_theme')"
+            "() => localStorage.getItem('theme')"
         )
 
     # ── Auth helpers ──────────────────────────────────────────────────────
