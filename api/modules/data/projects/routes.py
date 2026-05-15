@@ -68,9 +68,12 @@ def list_projects_route():
     # Delegate to the filesystem service for per-project content/metadata.
     results = []
     for p in projects:
-        project_data = get_project(_PROJECTS_PATH, p.slug)
-        if project_data is not None:
-            results.append(project_data)
+        try:
+            project_data = get_project(_PROJECTS_PATH, p.slug)
+            if project_data is not None:
+                results.append(project_data)
+        except Exception as exc:
+            logger.warning("list_projects skipping slug=%s error=%s", p.slug, exc)
     return jsonify(results)
 
 
