@@ -1,0 +1,71 @@
+<section class="file-grid">
+  @if (activeSection === 'context') {
+    <!-- Context cards -->
+    <div class="context-grid">
+      @for (f of contextFiles; track f.key) {
+        <div class="context-card" (click)="onOpenContext(f.key)">
+          <div class="context-card__label">{{ f.label }}</div>
+          <div class="context-card__desc">{{ f.desc }}</div>
+        </div>
+      }
+    </div>
+  } @else if (filteredProjects.length === 0) {
+    <div class="empty-state">No projects in this section.</div>
+  } @else if (activeSection === 'all') {
+    <!-- Grouped by taxonomy section in canonical order -->
+    @for (group of projectsBySection; track group.section) {
+      <div class="section-group" data-test="section-group" [attr.data-section]="group.section">
+        <div class="section-group-header">
+          <span class="section-group-title overline">{{ group.section }}</span>
+          <span class="section-group-count section-count-pulse" [attr.data-count]="group.projects.length">{{ group.projects.length }}</span>
+        </div>
+        <div class="section-group-cards"
+             [class.hero-grid]="group.section === 'Active'"
+             [class.hero-grid--single]="group.section === 'Active' && group.projects.length === 1">
+          @for (p of group.projects; track p.id; let pi = $index) {
+            <div
+              class="file-item"
+              data-test="project-card"
+              [class.featured]="pi === 0"
+              [class.hero-main]="group.section === 'Active' && pi === 0"
+              [class.hero-secondary]="group.section === 'Active' && pi > 0"
+              (click)="onSelectProject(p.id)">
+              <div class="file-item-title">{{ p.name }}</div>
+              <div class="file-item-teaser">{{ teaserFn(p) }}</div>
+              <div class="file-item-meta">
+                <span class="badge">{{ p.specs.length }}</span>
+                <span>{{ sectionFn(p) }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <!-- Filtered section: column layout -->
+    @for (col of columns; track $index; let ci = $index) {
+      <div class="file-column">
+        <div class="file-header">
+          <span class="col-title">{{ sectionLabel }}</span>
+          @if (ci === 0) {
+            <span class="col-badge section-count-pulse" [attr.data-count]="filteredProjects.length">{{ filteredProjects.length }}</span>
+          }
+        </div>
+        @for (p of col; track p.id; let pi = $index) {
+          <div
+            class="file-item"
+            data-test="project-card"
+            [class.featured]="pi === 0"
+            (click)="onSelectProject(p.id)">
+            <div class="file-item-title">{{ p.name }}</div>
+            <div class="file-item-teaser">{{ teaserFn(p) }}</div>
+            <div class="file-item-meta">
+              <span class="badge">{{ p.specs.length }}</span>
+              <span>{{ sectionFn(p) }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</section>
