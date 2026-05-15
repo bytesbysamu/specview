@@ -1,8 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { signal } from '@angular/core';
 
 import { SubscriptionService, Plan } from './subscription.service';
+import { AuthService } from './auth.service';
 
 describe('SubscriptionService', () => {
   let service: SubscriptionService;
@@ -14,6 +16,7 @@ describe('SubscriptionService', () => {
         SubscriptionService,
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: AuthService, useValue: { isLoggedIn: signal(true) } },
       ],
     });
 

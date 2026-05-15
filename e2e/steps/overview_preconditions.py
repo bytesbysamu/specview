@@ -20,7 +20,7 @@ import os
 _JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
 _JWT_USER_ID = os.environ.get("E2E_USER_ID", "1")
 _JWT_USER_EMAIL = os.environ.get("E2E_USER_EMAIL", "test@test.com")
-_JWT_TTL_SECONDS = 3600
+_JWT_TTL_SECONDS = 86400  # 24h — must exceed REFRESH_WINDOW_SECONDS (3600) to avoid refresh attempt
 
 
 def _make_jwt(user_id: str = _JWT_USER_ID, email: str = _JWT_USER_EMAIL, ttl: int = _JWT_TTL_SECONDS) -> str:
@@ -48,14 +48,16 @@ def user_not_logged_in(page: Page, angular_server: str, step_context: dict) -> N
 
 @given("the user is logged in")
 def user_logged_in(page: Page, angular_server: str, step_context: dict) -> None:
-    """Inject a valid JWT before Angular boots so the app sees an authenticated state."""
+    """Inject a valid JWT then navigate to root so Angular boots authenticated."""
     overview = _build_overview(page, angular_server)
     step_context["overview"] = overview
     token = _make_jwt()
-    # Set JWT via init script so it's in localStorage BEFORE Angular bootstraps.
-    # This avoids the race where Angular boots unauthenticated, fires API calls
-    # that return 401, and redirects to /login before we can inject the token.
-    page.add_init_script(f"() => localStorage.setItem('specview_jwt', '{token}')")
+    # Navigate to establish the origin so localStorage is accessible
+    page.goto(angular_server + "/login")
+    page.wait_for_load_state("domcontentloaded")
+    # Inject token into localStorage
+    page.evaluate(f"() => localStorage.setItem('specview_jwt', '{token}')")
+    # Navigate to root (not reload) so Angular reboots with token and lands on overview
     page.goto(angular_server)
     page.wait_for_load_state("networkidle")
 
