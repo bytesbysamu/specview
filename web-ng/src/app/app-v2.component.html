@@ -1,10 +1,8 @@
-<!-- Landing pitch + playground — visible only when not logged in -->
-@if (!auth.isLoggedIn()) {
-  <app-landing-pitch />
+<!-- Landing pitch — always visible -->
+<app-landing-pitch />
 
-  <!-- Design playground — static visual reference -->
-  <app-design-playground />
-}
+<!-- Design playground — always visible -->
+<app-design-playground />
 
 <!-- App workspace — visible when logged in -->
 @if (auth.isLoggedIn()) {
