@@ -1,6 +1,7 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from './auth.service';
 
 export type Plan = 'free' | 'pro' | 'lapsed';
 
@@ -16,9 +17,12 @@ interface CheckoutSessionResponse {
 export class SubscriptionService {
   readonly plan = signal<Plan>('free');
   readonly isPro = computed(() => this.plan() === 'pro');
+  private auth = inject(AuthService);
 
   constructor(private http: HttpClient) {
-    this.refresh();
+    if (this.auth.isLoggedIn()) {
+      this.refresh();
+    }
   }
 
   async refresh(): Promise<void> {

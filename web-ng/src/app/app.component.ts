@@ -112,7 +112,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private router = inject(Router);
 
   /** Routes that render via router-outlet instead of the app shell. */
-  private static FULL_PAGE_ROUTES = ['/upgrade'];
+  private static FULL_PAGE_ROUTES = ['/upgrade', '/signup', '/login'];
   isFullPageRoute = signal(false);
 
   private _routeSub = this.router.events.pipe(
@@ -445,7 +445,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   retryLastOp() {
-    // Reset to idle from failure — user will re-trigger manually
+    if (this.specGenFailedStep()) {
+      this.onRetry();
+      return;
+    }
+    // No retryable step — just dismiss the error
     this.statusMode.set('idle');
     this.statusFailureMsg.set(null);
   }

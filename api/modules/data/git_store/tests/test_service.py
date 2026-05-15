@@ -2,6 +2,8 @@
 modules/data/git_store/tests/test_service.py
 Unit tests for all eight public git_store operations.
 """
+from pathlib import Path
+
 import pytest
 
 import modules.data.git_store as git_store
@@ -69,12 +71,12 @@ def test_init_repo_creates_parent_dirs(tmp_path, monkeypatch):
     assert (tmp_path / "nested" / "base" / "brand-new" / ".git").is_dir()
 
 
-def test_repos_base_raises_without_env(monkeypatch):
-    """Helper must surface a clear error when neither env var is set."""
+def test_repos_base_falls_back_to_config_without_env(monkeypatch):
+    """When neither env var is set, _repos_base falls back to config.PROJECTS_DIR."""
     monkeypatch.delenv("GIT_REPOS_DIR", raising=False)
     monkeypatch.delenv("PROJECTS_DIR", raising=False)
-    with pytest.raises(RuntimeError, match="GIT_REPOS_DIR"):
-        git_store.init_repo("nope")
+    from config import PROJECTS_DIR
+    assert git_store.service._repos_base() == Path(PROJECTS_DIR)
 
 
 def test_init_repo_falls_back_to_projects_dir(tmp_path, monkeypatch):
