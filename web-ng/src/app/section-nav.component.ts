@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 export interface NavSection {
   id: string;
@@ -16,7 +16,7 @@ export class SectionNavComponent {
   @Input() sections: NavSection[] = [];
   @Input() activeSection = '';
   @Input() sectionCounts: Record<string, number> = {};
-  @Input() pulsingSections: Set<string> = new Set();
+  @Input() pulsingSections = new Set<string>();
   @Input() contextFileCount = 0;
 
   @Output() sectionSelected = new EventEmitter<string>();
