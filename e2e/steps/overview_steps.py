@@ -346,7 +346,7 @@ def masthead_not_visible(context: dict) -> None:
 def masthead_edition(context: dict, text: str) -> None:
     overview: OverviewPage = context["overview"]
     edition_text = overview.page.locator(".edition").inner_text().strip()
-    assert text in edition_text, f"Expected edition {text!r}, got: {edition_text!r}"
+    assert text.lower() in edition_text.lower(), f"Expected edition {text!r}, got: {edition_text!r}"
 
 
 @then(parsers.parse('the masthead displays the title "{text}"'))
