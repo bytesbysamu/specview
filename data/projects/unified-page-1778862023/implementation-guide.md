@@ -1,180 +1,170 @@
 # Implementation Guide: Unified Page
 
 ## Overview
-This epic collapses three disconnected surfaces — a static landing page, a 2,304-line static design playground, and the live Angular app — into a single Angular template rendered at `/`. Tasks 1 and 2 run in parallel: Task 1 decomposes the playground HTML into five standalone Angular components preserving its CSS grid and design tokens, while Task 2 extracts the landing pitch hero into its own component. Task 3 composes all of these into a new `app-v2` root component on a staging route. Task 4 wires auth-conditional rendering so anonymous visitors see the pitch and authenticated users land directly in their workspace. Task 5 promotes the staging component to the root bootstrap entry and redirects the legacy `/app` path.
+This epic unifies three disjointed experiences — landing pitch, design playground, and app workspace — into a single visually coherent page served at the root route. Work begins with an urgent trust-destroying bug where the upgrade button logs users out, then proceeds to replace all V2 CSS tokens with the newspaper design system, restore the full newspaper chrome into V2 component boundaries, wire up auth-aware page transitions without reload, and finally convert anonymous playground braindumps into persisted projects on signup. Tasks 1 and 2 are strictly sequential; Tasks 3 and 4 run in parallel after Task 2; Task 5 depends on both 3 and 4.
 
 ## Shared Pre-flight
-- Confirm the Angular workspace builds cleanly by running `ng build --configuration production` with zero errors before starting any task.
-- Locate the static playground HTML file (likely `landing/playground.html`, approximately 2,304 lines) and the static landing page (`landing/index.html`) — these are the source artifacts for extraction.
-- Identify the existing app entry point in `src/app/app.component.ts` and catalog every signal it owns: `projects`, `activeProject`, `activeSpec`, `loading`, `error`, `bootstrapProgress`, `currentStep`.
-- Confirm `ProjectsService` exists in `src/app/services/` and exposes `listProjects()` and `bootstrap()` methods.
-- Verify that `marked` and `dompurify` are already listed in `package.json` dependencies.
-- Extract shared design tokens (CSS custom properties for typography scale, spacing rhythm, color palette, and dark-mode overrides) from the playground CSS and promote them into `src/styles.scss` as global variables — all five playground-derived components will reference these tokens.
-- Ensure Angular 17+ control-flow syntax (`@if`, `@for`) is available in the workspace and that no legacy `*ngIf`/`*ngFor` directives will be used.
-- Create the target directories: `src/app/components/project-grid/`, `src/app/components/reader-panel/`, `src/app/components/sidebar/`, `src/app/components/status-bar/`, `src/app/components/section-nav/`, and `src/app/components/landing-pitch/`.
+- Ensure Node and Angular CLI are installed and `ng serve --port 4201` starts cleanly from the `web-ng/` directory.
+- Run `ng build --configuration production` to confirm the build passes before making any changes.
+- Familiarize yourself with the newspaper design tokens defined in `web-ng/src/styles.css`: `--ink`, `--bg` (`#FFFEF9`), `--border`, `--serif` (Playfair Display), `--sans` (Inter), `--body` (Source Serif 4).
+- Confirm the V1 reference components and their HTML/SCSS are accessible for porting during Tasks 3 and 5.
+- Verify that `web-ng/src/app/services/auth.service.ts` exposes the `isLoggedIn` signal from `TokenLifecycleService` and that `signOut()` clears tokens correctly.
+- Confirm `web-ng/src/app/services/projects.service.ts` supports `createProject(name, braindump)` via `POST /api/projects`.
+- Confirm `web-ng/src/app/services/subscription.service.ts` exposes the `plan` signal and `isPro` computed value.
+- Review `web-ng/src/app/app.routes.ts` to understand the current route table: `/`, `/login`, `/signup`, `/upgrade`, and the wildcard fallback.
 
 ---
 
-## Task 1: Decompose Playground HTML into Angular Components  [Effort: 2 days]
+## Task 1: Upgrade Button Bug Fix  [Effort: 0.5 days]
 
 ### What
-Break the 2,304-line static playground HTML into five standalone Angular components — ProjectGridComponent, ReaderPanelComponent, SidebarComponent, StatusBarComponent, and SectionNavComponent — each under 200 lines. These components preserve the playground's CSS classes, grid layouts, and newspaper-style design tokens as the visual foundation for the unified page.
+The upgrade button in the masthead currently calls `logout()` instead of `navigateToUpgrade()`, logging users out when they try to upgrade. This is a trust-destroying defect that must ship before any visual work because no amount of design polish recovers a user who clicked "upgrade" and lost their session.
 
 ### Files
-- **Create**: `src/app/components/project-grid/project-grid.component.ts` — standalone component for the newspaper-style project card grid
-- **Create**: `src/app/components/project-grid/project-grid.component.html` — template extracted from the playground's project grid section
-- **Create**: `src/app/components/project-grid/project-grid.component.scss` — grid-specific styles extracted from the playground CSS
-- **Create**: `src/app/components/reader-panel/reader-panel.component.ts` — standalone component for the expanded document reader
-- **Create**: `src/app/components/reader-panel/reader-panel.component.html` — template extracted from the playground's reader section
-- **Create**: `src/app/components/reader-panel/reader-panel.component.scss` — reader-specific styles from the playground CSS
-- **Create**: `src/app/components/sidebar/sidebar.component.ts` — standalone component for the left-hand file tree navigation rail
-- **Create**: `src/app/components/sidebar/sidebar.component.html` — template extracted from the playground's sidebar section
-- **Create**: `src/app/components/sidebar/sidebar.component.scss` — sidebar-specific styles from the playground CSS
-- **Create**: `src/app/components/status-bar/status-bar.component.ts` — standalone component for the bottom generation-status strip
-- **Create**: `src/app/components/status-bar/status-bar.component.html` — template extracted from the playground's status bar section
-- **Create**: `src/app/components/status-bar/status-bar.component.scss` — status bar styles from the playground CSS
-- **Create**: `src/app/components/section-nav/section-nav.component.ts` — standalone component for the spec-type tabs or breadcrumb navigation
-- **Create**: `src/app/components/section-nav/section-nav.component.html` — template extracted from the playground's section navigation
-- **Create**: `src/app/components/section-nav/section-nav.component.scss` — section nav styles from the playground CSS
-- **Modify**: `src/styles.scss` — add promoted CSS custom properties (typography scale, spacing rhythm, color palette, dark-mode overrides) extracted from the playground's shared design tokens
+- **Modify**: `web-ng/src/app/app.component.html` — change the upgrade button's click handler from `logout()` to `navigateToUpgrade()` in the `.masthead-actions` section.
+- **Modify**: `web-ng/src/app/app.component.ts` — audit all action-to-handler mappings to confirm no other button is similarly misrouted; verify `navigateToUpgrade()` calls `this.router.navigate(['/upgrade'])`.
 
 ### Steps
-1. Open the playground HTML file and identify the five distinct layout zones: the project card grid, the document reader panel, the left sidebar navigation rail, the bottom status bar strip, and the top section navigation tabs.
-2. For each zone, identify its outermost container element and note the CSS classes, grid-area assignments, and any parent-child nesting relationships that affect styling.
-3. Extract the project grid zone into `project-grid.component.html`, keeping all original CSS classes intact. In the component TypeScript file, declare a standalone component with `@Input()` signals for the `projects` list. Replace static mockup cards with an `@for` loop over the projects input, and include a hardcoded constant array of example `ProjectSummary` objects for anonymous-mode rendering.
-4. Extract the reader panel zone into `reader-panel.component.html`. In the component TypeScript file, declare an `@Input()` for `activeSpec` and bind the template content area to render markdown through the existing `marked` plus `DOMPurify` pipeline. Replace the static lorem content with a signal binding that renders the real spec content.
-5. Extract the sidebar zone into `sidebar.component.html`. In the component TypeScript file, declare `@Input()` signals for `activeProject` and `activeSpec`, and an `@Output()` event emitter for spec selection. Replace the static filename list with an `@for` loop over `activeProject.specs`.
-6. Extract the status bar zone into `status-bar.component.html`. In the component TypeScript file, declare `@Input()` signals for `bootstrapProgress`, `currentStep`, and `loading`. Replace the static status text with signal bindings.
-7. Extract the section nav zone into `section-nav.component.html`. In the component TypeScript file, declare an `@Input()` for the available specs of the active project and an `@Output()` for spec-type selection events. Replace static labels with an `@for` loop.
-8. For each component, extract its corresponding CSS from the playground stylesheet into the component's `.scss` file. Keep only the rules that apply to elements within that component's template. Remove any shared design token declarations that were already promoted to `src/styles.scss`.
-9. Visually verify each extracted component in isolation by temporarily rendering it in a test harness or the existing app shell, comparing it side-by-side with the original playground in the browser to catch CSS specificity breaks, grid-area misalignments, or responsive breakpoint regressions.
+1. Open `web-ng/src/app/app.component.html` and locate the upgrade button inside the `.masthead-actions` region. It is conditionally rendered when `!subscription.isPro()` is true. Change its click binding from `logout()` to `navigateToUpgrade()`.
+2. Open `web-ng/src/app/app.component.ts` and confirm the `navigateToUpgrade()` method exists and navigates to `/upgrade` via the Angular router. If the method does not exist, add it with a single `this.router.navigate(['/upgrade'])` call.
+3. While in `app.component.ts`, audit every other click handler referenced in the template to ensure no other action is bound to the wrong method. Pay special attention to the sign-out button, theme toggle, and new-project button — each must invoke its own dedicated handler.
+4. Open the app in a browser, log in as a free-tier user, and click the upgrade button. Confirm it navigates to the `/upgrade` route and the user remains authenticated.
+5. Repeat the test as a lapsed-plan user if possible, confirming the same navigation behavior.
 
 ### Verify
-- Each of the five component TypeScript files is under 200 lines, confirmed by running `wc -l src/app/components/*//*.component.ts`.
-- `ng build --configuration production` completes with zero errors after all five components are created.
-- Rendering each component in isolation visually matches the corresponding section of the original static playground — grid proportions, typography, spacing, and dark-mode colors are identical.
-- The shared CSS custom properties in `src/styles.scss` are referenced by at least two of the five component `.scss` files, confirming token promotion worked.
+- Clicking the upgrade button while logged in navigates the browser to `/upgrade` without any logout side effect.
+- The `isLoggedIn` signal remains `true` after clicking upgrade, confirmed by the masthead still rendering the authenticated layout.
+- `ng build --configuration production` passes with no errors.
 
 ---
 
-## Task 2: Extract Landing Pitch into Angular Component  [Effort: 1 day]
+## Task 2: Design Token Unification  [Effort: 2 days]
 
 ### What
-Convert the hero and pitch content from `landing/index.html` into a standalone Angular presentational component. This component has no signals, no service dependencies, and no interactivity beyond a "Get Started" link. It runs in parallel with Task 1.
+V2 components reference CSS variables (`--bg-primary`, `--text-primary`, `--border-default`, `--font-base`) that do not exist in the project stylesheet. This causes every V2 component to fall back to browser defaults — white backgrounds, system fonts, transparent borders — creating a visible quality cliff between the landing section and the app workspace. This task replaces every V2 token reference with the corresponding newspaper design system token so all components share one visual vocabulary.
 
 ### Files
-- **Create**: `src/app/components/landing-pitch/landing-pitch.component.ts` — standalone presentational component for the hero headline, value proposition, and call-to-action
-- **Create**: `src/app/components/landing-pitch/landing-pitch.component.html` — template extracted from the landing page's hero and pitch sections
-- **Create**: `src/app/components/landing-pitch/landing-pitch.component.scss` — styles extracted from the landing page CSS, preserving fonts, spacing, background treatment, and responsive breakpoints
+- **Modify**: `web-ng/src/styles.css` — remove any lingering V2 token declarations if present; confirm the newspaper tokens (`--ink`, `--bg`, `--border`, `--serif`, `--sans`, `--body`, `--ink-light`, `--ink-muted`, `--red`, `--accent`, `--status-running`) are all defined in the `:root` block and the `[data-theme="dark"]` block.
+- **Modify**: `web-ng/src/app/app.component.html` — update any inline style references that use V2 token names to use newspaper tokens.
+- **Modify**: `web-ng/src/app/app.component.ts` — update any programmatic style assignments that reference V2 token names.
+- **Modify**: `web-ng/src/app/components/upgrade/upgrade.component.ts` — replace V2 token references in the component's styles with newspaper tokens.
+- **Modify**: `web-ng/src/app/components/usage-meter/usage-meter.component.ts` — replace V2 token references in component styles.
+- **Modify**: `web-ng/src/app/components/login/login.component.ts` — replace V2 token references in component styles.
+- **Modify**: `web-ng/src/app/pages/signup/signup.component.ts` — replace V2 token references in component styles.
 
 ### Steps
-1. Open `landing/index.html` and identify the hero section containing the product headline, value proposition copy, and the call-to-action button or link.
-2. Extract the hero section HTML into `landing-pitch.component.html`, preserving all original CSS classes and structural markup. The "Get Started" call-to-action should remain as a standard anchor link pointing to the existing auth redirect URL.
-3. In `landing-pitch.component.ts`, declare a standalone component with no inputs, no outputs, and no injected services. Set the component selector to `app-landing-pitch`, reference the external template and stylesheet, and set `changeDetection` to `OnPush`.
-4. Extract the landing page's hero-specific CSS into `landing-pitch.component.scss`. This component does not use the playground's design tokens — it retains its own visual identity with its own font choices, spacing scale, and background treatment.
-5. Visually verify the extracted component renders identically to the original landing page hero by temporarily mounting it in the app shell and comparing in the browser at desktop and mobile viewport widths.
+1. Search the entire `web-ng/src/` directory for every occurrence of `--bg-primary`, `--text-primary`, `--border-default`, and `--font-base`. Record every file and line where these tokens appear.
+2. Perform the following mechanical replacements across all files found in step 1: `--bg-primary` becomes `--bg`, `--text-primary` becomes `--ink`, `--border-default` becomes `--border`, and `--font-base` becomes `--serif` for headings or `--body` for paragraph text (choose based on the element's semantic role).
+3. Open `web-ng/src/styles.css` and confirm that no V2 token names remain as custom property declarations. Every token in the `:root` and `[data-theme="dark"]` selectors must belong to the newspaper design system.
+4. Search for any remaining `font-family` declarations across all component files that reference system fonts or generic stacks directly instead of using `var(--serif)`, `var(--sans)`, or `var(--body)`. Replace them with the appropriate newspaper token.
+5. Run `ng build --configuration production` to catch any undefined SCSS variable errors at compile time.
+6. Launch the dev server and scroll through the full page — landing section, playground section, and app workspace. Confirm the background is a consistent warm cream (`#FFFEF9`) with no white gaps between sections. Confirm all text renders in the newspaper type stack: Playfair Display for display headings, Source Serif 4 for body text, and Inter/Source Sans 3 for UI chrome.
+7. Toggle dark mode using the theme button and confirm all sections respond to the `[data-theme="dark"]` selector without any tokens falling through to undefined values.
 
 ### Verify
-- `landing-pitch.component.ts` is under 200 lines, confirmed by `wc -l src/app/components/landing-pitch/landing-pitch.component.ts`.
-- `ng build --configuration production` completes with zero errors.
-- The rendered component visually matches the original `landing/index.html` hero section at both desktop and mobile breakpoints.
-- The "Get Started" call-to-action link navigates to the existing auth redirect URL without errors.
+- A global search for `--bg-primary`, `--text-primary`, `--border-default`, and `--font-base` across `web-ng/src/` returns zero results.
+- The background color is `#FFFEF9` across the full page scroll with no white gaps between sections.
+- All visible text renders in the newspaper type stack — no system font fallbacks appear in the browser's computed styles for the app workspace section.
+- `ng build --configuration production` passes with no errors.
 
 ---
 
-## Task 3: Compose Unified Template (app-v2)  [Effort: 2 days]
+## Task 3: Newspaper Chrome Restoration  [Effort: 2.5 days]
 
 ### What
-Create the `UnifiedPageComponent` (aliased as `app-v2`) that imports all playground-derived layout components, the landing pitch component, and the existing app signals and services into a single composition root on a staging route. This is the architectural centerpiece — it owns the signals that currently live in `app.component.ts` and arranges child components in a CSS grid shell.
+The V1 newspaper chrome — masthead with edition/date/title/tagline, four-column project grid, status bar, section nav, and usage meter — must be restored to full visual fidelity within V2's decomposed component boundaries. This task ports V1's HTML structure into the existing V2 sub-components rather than re-skinning V2's generic markup, because V1's DOM was authored for the newspaper design tokens and forcing V1's visual language onto V2's DOM creates a permanent impedance mismatch.
 
 ### Files
-- **Create**: `src/app/app-v2.component.ts` — composition root component that owns all signals (`projects`, `activeProject`, `activeSpec`, `loading`, `error`, `bootstrapProgress`, `currentStep`) and imports child components plus `AuthService` and `ProjectsService`
-- **Create**: `src/app/app-v2.component.html` — unified template arranging LandingPitchComponent at the top, then a CSS grid shell containing SidebarComponent, SectionNavComponent, ProjectGridComponent or ReaderPanelComponent in the center, and StatusBarComponent at the bottom
-- **Create**: `src/app/app-v2.component.scss` — grid shell layout styles defining the CSS grid areas, shared spacing, and responsive behavior derived from the playground's top-level grid
-- **Create**: `src/app/services/auth.service.ts` — AuthService exposing `isAuthenticated`, `currentUser`, and `authLoading` signals; reads JWT from localStorage and validates via `GET /api/auth/me`
-- **Create**: `src/app/services/auth.service.spec.ts` — unit tests for AuthService covering token-present, token-expired, token-missing, and network-error scenarios
-- **Create**: `src/app/services/auth.service.mock.ts` — mock factory for AuthService returning controllable signals for use in child component tests
-- **Modify**: `src/app/app.config.ts` — temporarily add `UnifiedPageComponent` as an available bootstrap component for staging validation (do not yet replace `AppComponent`)
+- **Modify**: `web-ng/src/app/app.component.html` — replace the masthead markup in the `.masthead` region with V1's HTML structure: edition line (overline), date, title in Playfair Display at 64px, italic tagline in Source Serif 4, and the masthead action buttons.
+- **Modify**: `web-ng/src/styles.css` — add or update styles for `.masthead`, `.masthead-edition`, `.masthead-date`, `.masthead-title`, `.masthead-tagline`, `.section-nav`, `.gen-status-bar`, `.file-grid`, `.section-group`, `.section-group-header`, `.file-item`, `.featured`, `.hero-grid`, `.hero-main`, `.hero-secondary`, and `.file-column` to match V1's newspaper layout.
+- **Modify**: `web-ng/src/app/components/usage-meter/usage-meter.component.ts` — port V1's usage meter HTML into this standalone component, displaying remaining/limit counts with newspaper styling and the warning state when remaining is 1 or fewer.
+- **Modify**: `web-ng/src/app/app.component.ts` — add or update the `columns()` computed signal for the three-column single-section masonry layout and ensure the `projectsBySection()` computed groups projects correctly for the multi-column grid.
+- **Create**: `web-ng/src/app/components/masthead/masthead.component.ts` — extract the masthead into its own standalone component if the shell exceeds the 200-line limit, accepting subscription state and user info as input signals.
 
 ### Steps
-1. Create `AuthService` in `src/app/services/auth.service.ts`. Declare three signals: `isAuthenticated` (boolean), `currentUser` (the `/api/auth/me` response or null), and `authLoading` (boolean, initially true). In the constructor, check `localStorage` for a JWT token. If present, call `GET /api/auth/me` using `HttpClient` to validate it. On success, set `currentUser` and `isAuthenticated` to true. On failure or missing token, set `isAuthenticated` to false. In both cases, set `authLoading` to false when the check completes.
-2. Write unit tests in `auth.service.spec.ts` covering four scenarios: valid token resolves `isAuthenticated` to true, expired token resolves to false, missing token resolves to false without making an HTTP call, and network error on `/api/auth/me` resolves to false gracefully. Create the mock factory in `auth.service.mock.ts` that returns an `AuthService`-shaped object with writable signals.
-3. Create `UnifiedPageComponent` in `src/app/app-v2.component.ts`. Inject `AuthService` and `ProjectsService`. Declare the same signals currently owned by `app.component.ts`: `projects`, `activeProject`, `activeSpec`, `loading`, `error`, `bootstrapProgress`, `currentStep`. In `ngOnInit`, check `isAuthenticated()` — if true, call `ProjectsService.listProjects()` to populate the `projects` signal. If false, skip the API call.
-4. Build the unified template in `app-v2.component.html`. Place `app-landing-pitch` at the top of the template. Below it, define a div with the playground's top-level CSS grid classes to serve as the layout shell. Inside the grid shell, place `app-sidebar` in the left rail area, `app-section-nav` in the top bar area, either `app-project-grid` or `app-reader-panel` in the center area (toggled by whether `activeProject` is set), and `app-status-bar` in the bottom strip area.
-5. Wire the child component inputs in the template. Pass `projects` to ProjectGridComponent, `activeProject` and `activeSpec` to SidebarComponent, `activeSpec` to ReaderPanelComponent, available specs to SectionNavComponent, and `bootstrapProgress`, `currentStep`, and `loading` to StatusBarComponent. Bind output events from SidebarComponent and SectionNavComponent to update `activeSpec` and `activeProject` signals.
-6. Define the grid shell styles in `app-v2.component.scss`. Extract the playground's top-level CSS grid declaration (grid-template-areas, grid-template-columns, grid-template-rows) and responsive breakpoint overrides. Apply shared spacing variables from `src/styles.scss`.
-7. Migrate the `submitBraindump()` method and its polling logic from `app.component.ts` into `app-v2.component.ts`, ensuring it calls `ProjectsService.bootstrap()`, stores the `job_id`, polls `GET /status/{job_id}` via setInterval, and updates `bootstrapProgress` and `currentStep` signals until completion.
-8. Temporarily update `src/app/app.config.ts` to bootstrap `UnifiedPageComponent` instead of `AppComponent` for local validation. Serve the app with `ng serve` and verify the full composition renders correctly in the browser.
+1. Open V1's original template and identify the exact HTML structure for the masthead: the edition overline, formatted date, Playfair Display title, italic Source Serif tagline, and the row of action buttons (new project, theme toggle, upgrade, sign out).
+2. Replace the current `.masthead` markup in `web-ng/src/app/app.component.html` with V1's HTML structure, using Angular 17 `@if` control flow for conditional elements (upgrade button hidden for Pro users, usage meter visible only for free-tier users).
+3. Port V1's section nav HTML into the `.section-nav` region of the template. Each nav button should display its section name and a count badge using the `sectionCounts()` computed signal. Apply the 3px `--ink` border-top and the `.section-count-pulse` animation class for count changes.
+4. Port V1's project grid HTML into the `.file-grid` region. Implement the section grouping with `.section-group` wrappers, each containing a `.section-group-header` and a card grid. The first card in each section receives the `.featured` class. The "Active" section uses the `.hero-grid` layout with a lead story at `2fr` and two secondaries at `1fr` each.
+5. Port V1's status bar HTML into the `.gen-status-bar` region. Implement the four visual states (idle, active with animated dots, success flash, failure) driven by the `statusMode()` signal.
+6. Open `web-ng/src/app/components/usage-meter/usage-meter.component.ts` and port V1's usage meter template into the component. It should display "N/M remaining" text, apply the `isWarning()` computed for low-usage styling, and remain hidden for Pro users via the `isVisible()` computed.
+7. Update `web-ng/src/styles.css` with the newspaper layout styles: the four-column grid using `auto-fill minmax(280px, 1fr)` with 1px gap for hairline separators, the `.featured` card enhancement (17px title, 3-line clamp), the `.hero-grid` layout, and the `.file-column` border-right dividers for single-section three-column views.
+8. Measure the line count of `web-ng/src/app/app.component.ts`. If it exceeds 200 lines, extract the masthead into a new `web-ng/src/app/components/masthead/masthead.component.ts` standalone component, passing subscription state, user info, and action callbacks as input signals and output events.
+9. Run the dev server and visually compare the masthead, section nav, project grid, status bar, and usage meter against V1's appearance. Confirm Playfair Display renders at 64px for the title, section headers use the correct newspaper typography, and the grid renders in multi-column layout with featured cards and section grouping.
 
 ### Verify
-- `ng build --configuration production` completes with zero errors with `UnifiedPageComponent` as the bootstrap component.
-- All `AuthService` unit tests pass when running `ng test --include=**/auth.service.spec.ts`.
-- The unified page renders the playground-derived layout grid with correct proportions, matching the original playground visually.
-- Authenticated users see their real project list populated from `ProjectsService.listProjects()`, and clicking a project card updates the reader panel with real spec content.
+- The masthead displays edition, date, title in Playfair Display, and italic tagline — all using newspaper design tokens.
+- The project grid renders in multi-column newspaper layout with featured cards, section grouping, and hairline separators — not a compressed single-column list.
+- The status bar correctly cycles through its four visual states (idle, active, success, failure) during a spec generation operation.
+- `ng build --configuration production` passes with no errors.
 
 ---
 
-## Task 4: Wire Auth-Conditional Rendering  [Effort: 0.5 days]
+## Task 4: Auth-Aware Page Transition  [Effort: 2 days]
 
 ### What
-Use the `AuthService.isAuthenticated` and `AuthService.authLoading` signals to conditionally render sections of the unified template — anonymous visitors see the landing pitch with placeholder content, authenticated users see their workspace with live data, and a loading skeleton prevents auth-state flash during token validation.
+When a visitor logs in or a user logs out, the page must transition between anonymous and authenticated states without a full page reload or visual jarring. The landing pitch collapses, the playground crossfades into "create new project," and the workspace fades in — all driven by CSS transitions triggered by a signal state change in the shell component. This task also introduces the three-zone layout structure (landing pitch zone, playground/create zone, workspace zone) that the shell component composites via `@if` blocks bound to auth state.
 
 ### Files
-- **Modify**: `src/app/app-v2.component.html` — wrap the landing pitch in an `@if (!authService.isAuthenticated())` block, wrap the workspace data bindings in an `@if (authService.isAuthenticated())` block, and add an `@if (authService.authLoading())` guard at the top that renders a loading skeleton while the initial auth check is in flight
-- **Modify**: `src/app/components/project-grid/project-grid.component.ts` — add logic to display the hardcoded example `ProjectSummary` array when the projects input is empty or null (anonymous mode), and real project data when populated (authenticated mode)
-- **Modify**: `src/app/components/reader-panel/reader-panel.component.ts` — add a fallback to render a sample spec document when `activeSpec` is null (anonymous mode)
-- **Modify**: `src/app/components/sidebar/sidebar.component.ts` — add a fallback to display sample filenames when `activeProject` is null (anonymous mode)
+- **Modify**: `web-ng/src/app/app.component.html` — restructure the template into three vertical zones: landing pitch zone (visible to anonymous visitors), playground/create zone (playground for anonymous, "new project" for authenticated), and workspace zone (project grid for authenticated). Add CSS transition classes for the auth state change animations.
+- **Modify**: `web-ng/src/app/app.component.ts` — add signals for transition state management: a `transitionPhase` signal to track animation progress, an `effect()` that responds to auth state changes by applying transition classes, and a `transitionend` listener that updates the secondary signal to remove collapsed DOM after animation completes.
+- **Modify**: `web-ng/src/styles.css` — add CSS transition declarations for the landing pitch collapse (`max-height`, `opacity`), the playground/create crossfade (`opacity`, `transform`), and the workspace fade-in (`opacity`). Define the `.zone-landing`, `.zone-playground`, `.zone-workspace` layout classes and their transition-state variants.
 
 ### Steps
-1. Open `src/app/app-v2.component.html` and wrap the outermost container in an `@if` guard on `authService.authLoading()`. When loading is true, render a minimal loading skeleton element in the top zone. When loading is false, render the full conditional content below.
-2. Inside the loading-resolved block, wrap the `app-landing-pitch` element in `@if (!authService.isAuthenticated())` so it only renders for anonymous visitors.
-3. In the workspace section of the template, add conditional logic so that when `isAuthenticated()` is true, child components receive real signal data, and when false, they receive null or empty inputs which trigger their built-in placeholder rendering.
-4. In `project-grid.component.ts`, add a check at the top of the template rendering logic: if the `projects` input is empty or null, render the hardcoded example `ProjectSummary` constant array instead. Ensure the example data conforms to the same `ProjectSummary` interface used by real projects.
-5. In `reader-panel.component.ts`, add a fallback: if `activeSpec` is null, render a static sample spec markdown string through the same `marked` plus `DOMPurify` pipeline.
-6. In `sidebar.component.ts`, add a fallback: if `activeProject` is null, render a static list of sample filenames.
-7. Test the anonymous experience by clearing the JWT from localStorage, reloading the page, and confirming the landing pitch appears at top with placeholder content in the grid, reader, and sidebar below.
-8. Test the authenticated experience by logging in through the existing auth flow, returning to `/`, and confirming the landing pitch is hidden and real project data populates all components.
+1. In `web-ng/src/app/app.component.html`, wrap the existing landing pitch content in a `.zone-landing` container. This zone is visible to anonymous visitors and receives a `.zone-collapsing` class during the login transition.
+2. Add a `.zone-playground` container below the landing zone. For anonymous visitors, this renders the playground input area. For authenticated users, it renders a "create new project" entry point that reuses the same input area but saves directly to a project instead of localStorage.
+3. Add a `.zone-workspace` container that wraps the existing project grid, section nav, and expanded panel. This zone is hidden for anonymous visitors and fades in during the login transition.
+4. In `web-ng/src/app/app.component.ts`, create a `transitionPhase` signal with values like `idle`, `collapsing`, and `complete`. Add an `effect()` that watches the `isLoggedIn` signal from `AuthService`. When auth state changes from false to true, set `transitionPhase` to `collapsing`, which triggers CSS classes on the zones. When auth state changes from true to false, play the reverse animation.
+5. Add a `transitionend` event listener on the `.zone-landing` element. When the collapse animation finishes, update a secondary signal (such as `landingVisible`) to false, allowing Angular's `@if` to remove the landing DOM. This prevents the flash of missing content that would occur if the DOM were removed at the start of the state change.
+6. In `web-ng/src/styles.css`, define transitions on `.zone-landing` for `max-height` and `opacity` with appropriate durations (around 400ms). Use `overflow: hidden` during the collapse to prevent content reflow. Define a fade-in transition on `.zone-workspace` using `opacity` and a slight upward `transform` translation. Define a crossfade on `.zone-playground` using `opacity`.
+7. Ensure all three zones share one continuous scroll context with no iframes, no lazy-loaded route children, and no shadow DOM boundaries that would fragment the CSS cascade.
+8. Test the login transition: as an anonymous visitor, observe the landing pitch, then log in and confirm the landing pitch slides up and collapses, the playground crossfades into the "create new project" variant, and the workspace fades in below — all without a page reload.
+9. Test the logout transition: while authenticated, click sign out and confirm the workspace fades out, the landing pitch expands back in, and the playground reverts to its anonymous variant.
 
 ### Verify
-- With no JWT in localStorage, the page renders the landing pitch at the top and placeholder content in the workspace grid, reader panel, and sidebar.
-- With a valid JWT in localStorage, the page hides the landing pitch entirely and shows real project data in all workspace components.
-- During the brief `authLoading` period (observable by throttling the network in browser devtools), neither the pitch nor the workspace flashes — only the loading skeleton is visible.
-- `ng build --configuration production` completes with zero errors.
+- Logging in transitions the page from anonymous to authenticated state without a full page reload — the URL remains `/`.
+- The landing pitch collapses with a smooth animation rather than an instant disappearance, and the workspace zone fades in without layout shift.
+- Logging out plays the reverse transition: workspace fades out, landing pitch expands back in.
+- `ng build --configuration production` passes with no errors.
 
 ---
 
-## Task 5: Route Cutover and Legacy Redirect  [Effort: 0.5 days]
+## Task 5: Playground-to-Project Conversion  [Effort: 1.5 days]
 
 ### What
-Promote `UnifiedPageComponent` as the permanent root bootstrap component, update the nginx configuration so `/` serves the Angular SPA, redirect `/app` to `/`, and migrate landing page SEO meta tags into the Angular app's `index.html`.
+An anonymous visitor's braindump entered in the playground must survive signup and become their first project. This is the architectural expression of the "demo IS the product" philosophy — the visitor's work is never disposable. The persistence strategy uses localStorage as a bridge between anonymous and authenticated states, and the shell component orchestrates the conversion on auth state change.
 
 ### Files
-- **Modify**: `src/app/app.config.ts` — set `UnifiedPageComponent` as the sole bootstrap component, removing `AppComponent` from the bootstrap array
-- **Modify**: `src/index.html` — add the landing page's SEO meta tags (title, description, Open Graph tags) so crawlers receive them from the Angular entry point
-- **Modify**: `nginx.conf` (or equivalent server configuration file) — update the root location to serve the Angular build's `index.html` for all non-API paths, and add a redirect rule from `/app` to `/`
-- **Modify**: `src/app/app-v2.component.ts` — rename the selector from `app-v2` to `app-root` (or update `src/index.html` to use the `app-v2` selector) so the Angular bootstrap finds the correct root element
+- **Modify**: `web-ng/src/app/app.component.html` — wire the playground textarea's input event to a debounced save function that persists content to localStorage under a well-known key. Update the "create new project" zone variant for authenticated users to pre-populate from localStorage if content exists.
+- **Modify**: `web-ng/src/app/app.component.ts` — add a `saveBraindumpToLocalStorage()` method that debounces writes to a localStorage key (such as `specview_playground_braindump`). Add logic to the auth state change `effect()` that checks for the localStorage key on login, calls `createProject()` on `ProjectsService` with the stored content, then clears the key. Add a `pendingBraindump` signal to track the conversion flow.
+- **Modify**: `web-ng/src/app/services/projects.service.ts` — confirm that `createProject(name, braindump)` accepts a braindump string and passes it through to `POST /api/projects`. If the method only accepts a name, extend it to also accept an optional braindump parameter.
+- **Modify**: `web-ng/src/styles.css` — add styles for the playground textarea zone in both anonymous and authenticated variants, using newspaper design tokens for consistent visual treatment.
 
 ### Steps
-1. Open `src/app/app.config.ts` and change the bootstrap array to contain only `UnifiedPageComponent`. Remove `AppComponent` from the array entirely.
-2. Update the root element selector in `src/index.html` to match `UnifiedPageComponent`'s selector. If the component uses `app-v2` as its selector, either change the selector in `app-v2.component.ts` to `app-root` or change the element tag in `index.html` to `app-v2`.
-3. Copy the SEO meta tags from `landing/index.html` — including the page title, meta description, and any Open Graph tags — into the `<head>` section of `src/index.html`.
-4. Open the nginx configuration file and update the root location block to serve `index.html` from the Angular build output directory for all paths that do not match `/api/`. Add a location block for `/app` that returns a 301 redirect to `/`.
-5. Build the production bundle with `ng build --configuration production` and verify the output directory contains the updated `index.html` with SEO tags.
-6. Start the application through the production-like nginx configuration and verify that navigating to `/` serves the Angular unified page, navigating to `/app` redirects to `/`, and API routes still proxy correctly to the Flask backend.
-7. Confirm that the old `src/app/app.component.ts`, `src/app/app.component.html`, and `src/app/app.component.scss` files are no longer imported or referenced anywhere. Leave them in the repository as inert reference artifacts per the architecture decision — do not delete them in this task.
+1. Define a constant for the localStorage key, such as `specview_playground_braindump`, in `web-ng/src/app/app.component.ts`.
+2. Add a `saveBraindumpToLocalStorage()` method that writes the playground textarea's current value to localStorage. Debounce this method so it fires at most once every 500 milliseconds to avoid excessive writes on every keystroke.
+3. In `web-ng/src/app/app.component.html`, bind the playground textarea's input event to the debounced save method. This ensures every anonymous visitor's braindump is auto-persisted as they type.
+4. Extend the auth state change `effect()` in `web-ng/src/app/app.component.ts` to check for the localStorage key when `isLoggedIn` transitions from false to true. If content is found, call `ProjectsService.createProject()` with a default project name (such as "My First Project") and the stored braindump content.
+5. After the project creation call succeeds, call the braindump bootstrap endpoint via `ProjectsService.startBootstrap()` if the content warrants generation, then clear the localStorage key to prevent duplicate conversion on subsequent logins.
+6. Add a `pendingBraindump` signal that is set to true during the conversion process and false once complete. Use this signal to display a brief loading indicator in the workspace zone while the project is being created.
+7. Confirm that `ProjectsService.createProject()` in `web-ng/src/app/services/projects.service.ts` passes the braindump content through to the `POST /api/projects` endpoint. If the current implementation only sends the project name, add the braindump field to the request body.
+8. Handle the edge case where the localStorage content is empty or only whitespace — skip the conversion and clear the key silently.
+9. Test the full flow: open the app as an anonymous visitor, type a braindump into the playground, then sign up via the `/signup` page. After signup completes and the page transitions to the authenticated state, confirm the braindump appears as the user's first project in the workspace grid.
+10. Test that a returning authenticated user who had no anonymous braindump sees the normal "create new project" entry point with no leftover localStorage artifacts.
 
 ### Verify
-- `ng build --configuration production` completes with zero errors using `UnifiedPageComponent` as the sole bootstrap component.
-- Navigating to `/` in the browser serves the unified Angular page with the correct SEO meta tags visible in the page source.
-- Navigating to `/app` returns a 301 redirect to `/`.
-- The Flask API routes (such as `/api/auth/me` and `/api/projects`) continue to respond correctly through the nginx proxy.
----
+- A braindump entered anonymously in the playground survives signup and appears as the user's first project in the authenticated workspace.
+- The localStorage key is cleared after successful project creation, so refreshing the page does not trigger a duplicate conversion.
+- An authenticated user with no pending braindump sees the standard "create new project" entry point with no errors in the browser console.
+- `ng build --configuration production` passes with no errors.
 
 
 ---
 
 ## Implementation Notes
 
-1. **Reuse existing AuthService.** `web-ng/src/app/services/auth.service.ts` already exists with `isLoggedIn` signal via `TokenLifecycleService`. Do not create a new one in Task 3 — inject the existing service.
-2. **Flat Angular structure.** Per CLAUDE.md, new components go at `web-ng/src/app/` level, not under a new `components/` subdirectory.
-3. **Gradual cutover.** Route `app-v2` at `/v2` first. Old app stays live at `/` until validated. Task 5 swaps them.
+1. **Task 1 targets the wrong file.** The logout bug is in `app-v2.component.html` line 50, not `app.component.html`. The V1 app already has the correct handler.
+2. **Task 2 targets the wrong files.** The V2 CSS token problem is in the V2 components: `app-v2.component.css`, `section-nav.component.css`, `status-bar.component.css`, `project-grid.component.css`, `sidebar-v2.component.css`, `reader-panel.component.css`. The V1 components (upgrade, usage-meter, login, signup) already use newspaper tokens.
+3. **Task 3: flat structure.** Do not create `components/masthead/`. New components go at `web-ng/src/app/` level per CLAUDE.md.
+4. **Task 3 targets the wrong template.** Port V1 HTML into the V2 sub-components, not into `app.component.html`. The V1 app stays untouched.
+5. **Task 4 is over-engineered.** Use a simple `@if (auth.isLoggedIn())` toggle, same as V1. No `transitionPhase` signal, no `transitionend` listeners, no three-zone state machine. CSS transitions on opacity/max-height are fine as polish later, not MVP.
