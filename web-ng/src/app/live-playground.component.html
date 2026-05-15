@@ -1,0 +1,196 @@
+<div class="pg-page">
+
+  <!-- ──────────────────────────────────────────────────────────────────────
+       Section 1: Landing Pitch
+  ──────────────────────────────────────────────────────────────────────── -->
+  <div class="pg-section">
+    <div class="pg-label">SECTION 1 · LANDING PITCH</div>
+    <app-landing-pitch />
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────
+       Section 2: Section Navigation (interactive)
+  ──────────────────────────────────────────────────────────────────────── -->
+  <div class="pg-section">
+    <div class="pg-label">SECTION 2 · SECTION NAVIGATION (interactive)</div>
+    <app-section-nav
+      [sections]="demoNavSections"
+      [activeSection]="demoActiveSection()"
+      [sectionCounts]="demoSectionCounts()"
+      [pulsingSections]="pulsingSections"
+      [contextFileCount]="0"
+      (sectionSelected)="selectSection($event)"
+    />
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────
+       Section 3: Status Bar — all 4 states
+  ──────────────────────────────────────────────────────────────────────── -->
+  <div class="pg-section">
+    <div class="pg-label">SECTION 3 · STATUS BAR — ALL 4 STATES</div>
+
+    <div class="pg-status-row">
+      <div class="pg-status-label">idle</div>
+      <app-status-bar
+        mode="idle"
+        [specGenProjectName]="null"
+        [specGenStep]="null"
+        specGenElapsed="0.0s"
+        [specGenJobId]="null"
+        [statusFailureMsg]="null"
+        [cancelling]="false"
+      />
+    </div>
+
+    <div class="pg-status-row">
+      <div class="pg-status-label">active</div>
+      <app-status-bar
+        mode="active"
+        specGenProjectName="Payment Gateway Redesign"
+        specGenStep="generating architecture"
+        specGenElapsed="14.3s"
+        specGenJobId="job-abc123"
+        [statusFailureMsg]="null"
+        [cancelling]="false"
+      />
+    </div>
+
+    <div class="pg-status-row">
+      <div class="pg-status-label">success-flash</div>
+      <app-status-bar
+        mode="success-flash"
+        specGenProjectName="Payment Gateway Redesign"
+        [specGenStep]="null"
+        specGenElapsed="22.1s"
+        [specGenJobId]="null"
+        [statusFailureMsg]="null"
+        [cancelling]="false"
+      />
+    </div>
+
+    <div class="pg-status-row">
+      <div class="pg-status-label">failure</div>
+      <app-status-bar
+        mode="failure"
+        specGenProjectName="Real-time Notification Engine"
+        [specGenStep]="null"
+        specGenElapsed="8.7s"
+        [specGenJobId]="null"
+        statusFailureMsg="AI provider timed out — click Retry to resume."
+        [cancelling]="false"
+      />
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────
+       Section 4: Project Grid (interactive with demo projects)
+  ──────────────────────────────────────────────────────────────────────── -->
+  <div class="pg-section">
+    <div class="pg-label">SECTION 4 · PROJECT GRID (interactive — click a card)</div>
+    <app-project-grid
+      [activeSection]="demoActiveSection()"
+      [filteredProjects]="demoFilteredProjects()"
+      [projectsBySection]="demoProjectsBySection()"
+      [columns]="demoColumns()"
+      [contextFiles]="[]"
+      [sectionLabel]="demoSectionLabel()"
+      [teaserFn]="teaserFn"
+      [sectionFn]="sectionFn"
+      (projectSelected)="selectProject($event)"
+      (contextOpened)="onContextOpened($event)"
+    />
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────
+       Section 5: Expanded Panel (sidebar + reader)
+       Pre-loaded with Payment Gateway Redesign / analysis.md
+  ──────────────────────────────────────────────────────────────────────── -->
+  <div class="pg-section">
+    <div class="pg-label">SECTION 5 · EXPANDED PANEL (sidebar + reader)</div>
+
+    <div class="pg-expanded-controls">
+      <button class="pg-btn" (click)="preSelectDemoProject()">Load demo project</button>
+      @if (demoActiveProject()) {
+        <button class="pg-btn pg-btn--secondary" (click)="closeExpanded()">Close panel</button>
+      }
+    </div>
+
+    @if (demoActiveProject()) {
+      <div class="pg-expanded-panel">
+        <app-sidebar-v2
+          [activeProject]="demoActiveProject()"
+          [activeFile]="demoActiveFile()"
+          expandedProject=""
+          mode="idle"
+          [specGenLoading]="false"
+          [specGenStep]="null"
+          activeStepLabel=""
+          [statusFailureMsg]="null"
+          [shareLoading]="false"
+          [shareUrl]="null"
+          [shareCopied]="false"
+          [canGenerateSpecs]="false"
+          [canGenerateEpicGuide]="true"
+          [epicGuideLoading]="false"
+          [currentSpec]="demoCurrentSpec()"
+          [isBraindump]="false"
+          [activeOp]="null"
+          [aiLoading]="false"
+          [aiResult]="null"
+          [canRevert]="false"
+          [canRedo]="false"
+          [fileOpState]="{}"
+          [stylePresets]="[]"
+          (fileSelected)="selectFile($event)"
+          (closeExpanded)="closeExpanded()"
+        />
+        <app-reader-panel
+          [activeProject]="demoActiveProject()"
+          [currentSpec]="demoCurrentSpec()"
+          [accessDenied]="false"
+          [expandedTitle]="demoCurrentSpec()?.label ?? ''"
+          [expandedProject]="demoActiveProject()?.name ?? ''"
+          [activeFileType]="demoActiveFileType()"
+          [parsedContent]="demoParsedContent()"
+          parsedAiResult=""
+          diffHtmlUnified=""
+          [aiResult]="null"
+          [aiLoading]="false"
+          [aiError]="false"
+          [aiLatencyMs]="null"
+          [activeOp]="null"
+          [isAdditiveOp]="false"
+          [billingError]="null"
+          [copied]="false"
+          brainstormQuestion=""
+          [canGenerateSpecs]="false"
+          [specGenLoading]="false"
+          [specGenProjectName]="null"
+          [specGenStep]="null"
+          [specGenError]="null"
+          [specGenFailedStep]="null"
+          [cancelling]="false"
+          (closeExpanded)="closeExpanded()"
+        />
+      </div>
+    }
+
+    @if (!demoActiveProject()) {
+      <div class="pg-empty-hint">Click "Load demo project" to render the expanded panel.</div>
+    }
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────
+       Section 6: Dark Mode Toggle
+  ──────────────────────────────────────────────────────────────────────── -->
+  <div class="pg-section">
+    <div class="pg-label">SECTION 6 · DARK MODE TOGGLE</div>
+    <div class="pg-theme-row">
+      <button class="pg-btn" (click)="toggleTheme()">
+        Toggle theme (currently {{ isDark() ? 'dark' : 'light' }})
+      </button>
+      <span class="pg-theme-hint">Sets [data-theme] on &lt;html&gt; and persists to localStorage.</span>
+    </div>
+  </div>
+
+</div>

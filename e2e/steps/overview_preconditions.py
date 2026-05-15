@@ -17,7 +17,7 @@ from e2e.pages.overview_page import OverviewPage
 
 _JWT_SECRET = "dev-secret-change-in-prod"
 _JWT_SUBJECT = "test@test.com"
-_JWT_TTL_SECONDS = 3600
+_JWT_TTL_SECONDS = 7200
 
 
 def _make_jwt(subject: str = _JWT_SUBJECT, ttl: int = _JWT_TTL_SECONDS) -> str:
