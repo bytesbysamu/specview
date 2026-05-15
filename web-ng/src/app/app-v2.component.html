@@ -1,12 +1,41 @@
-<!-- Landing pitch — always visible at top -->
-<app-landing-pitch />
+<!-- Landing pitch + playground — visible only when not logged in -->
+@if (!auth.isLoggedIn()) {
+  <app-landing-pitch />
 
-<!-- Design playground — static visual reference -->
-<app-design-playground />
+  <!-- Design playground — static visual reference -->
+  <app-design-playground />
+}
 
 <!-- App workspace — visible when logged in -->
 @if (auth.isLoggedIn()) {
-<div class="v2-shell">
+<div class="v2-shell page">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="edition">Spec Doc</span>
+      <div class="masthead-center">
+        <div class="masthead-date">{{ today }}</div>
+        <h1 class="masthead-title" data-test="masthead-title">Specview</h1>
+        <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
+      </div>
+      <div class="masthead-actions">
+        <app-usage-meter />
+        @if (!subscription.isPro()) {
+          <button class="upgrade-btn" (click)="navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
+        }
+        <button class="new-project-btn" data-test="create-button" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
+        <button class="theme-toggle" data-test="dark-mode-toggle" (click)="toggleTheme()" title="Toggle dark mode">
+          @if (isDark()) {
+            <span class="btn-icon">&#9788;</span>
+          } @else {
+            <span class="btn-icon">&#9790;</span>
+          }
+        </button>
+        <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
+      </div>
+    </div>
+  </header>
 
   <!-- Section nav -->
   <app-section-nav
@@ -29,55 +58,41 @@
     (cancelClicked)="onCancel()"
     (retryClicked)="retryLastOp()" />
 
-  <!-- Toolbar row: search + actions -->
-  <div class="v2-toolbar">
-    @if (activeSection() !== 'context' && showGrid()) {
-      <div class="v2-search">
-        <input
-          type="search"
-          data-test="search-input"
-          placeholder="Filter projects…"
-          autocomplete="off"
-          [value]="searchQuery()"
-          (input)="onSearch($any($event.target).value)" />
-        <span class="v2-search-count" data-test="search-count">
-          @if (searchQuery()) {
-            {{ filteredProjects().length }} match{{ filteredProjects().length !== 1 ? 'es' : '' }}
-          } @else {
-            {{ projects().length }} projects
-          }
-        </span>
-      </div>
-    }
-
-    <div class="v2-toolbar-actions">
-      @if (!subscription.isPro()) {
-        <button class="v2-upgrade-btn" (click)="logout()" title="Upgrade to Pro">Upgrade</button>
-      }
-      <button class="v2-new-btn" data-test="create-button" (click)="openCreateModal()" title="New project">
-        <span class="btn-icon">+</span> New
-      </button>
-      <button class="v2-theme-btn" data-test="dark-mode-toggle" (click)="toggleTheme()" title="Toggle dark mode">
-        @if (isDark()) {
-          <span class="btn-icon">&#9788;</span>
-        } @else {
-          <span class="btn-icon">&#9790;</span>
-        }
-      </button>
-      <button class="v2-logout-btn" (click)="logout()" title="Sign out">Sign out</button>
-    </div>
-  </div>
-
   <!-- Update banner -->
   @if (updateBanner()) {
-    <div class="v2-update-banner" data-test="update-banner">
+    <div class="update-banner" data-test="update-banner">
       {{ updateBanner() }} · <button (click)="updateBanner.set('')">dismiss</button>
     </div>
   }
 
   @if (pollingError()) {
-    <div class="v2-error-state" data-test="polling-error">{{ pollingError() }}</div>
+    <div class="error-state" data-test="polling-error">
+      <span class="overline">Error</span>
+      {{ pollingError() }}
+    </div>
   }
+
+  <!-- Search bar (hidden when viewing project or context section) -->
+  @if (activeSection() !== 'context' && showGrid()) {
+    <div class="search-bar">
+      <input
+        type="search"
+        data-test="search-input"
+        placeholder="Filter projects…"
+        autocomplete="off"
+        [value]="searchQuery()"
+        (input)="onSearch($any($event.target).value)" />
+      <span class="search-count" data-test="search-count">
+        @if (searchQuery()) {
+          {{ filteredProjects().length }} match{{ filteredProjects().length !== 1 ? 'es' : '' }}
+        } @else {
+          {{ projects().length }} projects
+        }
+      </span>
+    </div>
+  }
+
+  <div class="divider thick" [style.display]="showGrid() ? '' : 'none'"></div>
 
   <!-- Project grid (no active project) -->
   @if (showGrid()) {
@@ -96,7 +111,7 @@
 
   <!-- Expanded panel (project reader + sidebar) -->
   @if (showExpanded()) {
-    <div class="v2-expanded">
+    <div class="expanded-panel active">
       <app-sidebar-v2
         [activeProject]="activeProject()"
         [activeFile]="activeFile()"

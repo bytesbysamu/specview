@@ -26,266 +26,12 @@
 
 /* ── V2 Shell Layout ──────────────────────────────────────────────────────── */
 
+/* .v2-shell extends .page (max-width, margin, padding) from global styles.css.
+   Additional layout behaviour only. */
 .v2-shell {
-  display: grid;
-  grid-template-rows: auto auto auto 1fr;
-  grid-template-columns: 1fr;
   min-height: 100dvh;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-/* ── Toolbar (search + actions) ──────────────────────────────────────────── */
-
-.v2-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-primary);
-  flex-wrap: wrap;
-}
-
-.v2-search {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1;
-  min-width: 0;
-}
-
-.v2-search input[type="search"] {
-  flex: 1;
-  min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-}
-
-.v2-search input[type="search"]:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-
-.v2-search-count {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.v2-toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.v2-upgrade-btn,
-.v2-new-btn,
-.v2-theme-btn,
-.v2-logout-btn {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.v2-new-btn {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.v2-new-btn:hover {
-  background: var(--color-accent);
-  color: var(--bg-primary);
-}
-
-.v2-upgrade-btn:hover,
-.v2-theme-btn:hover,
-.v2-logout-btn:hover {
-  background: var(--bg-hover);
-}
-
-/* ── Update banner / error strip ─────────────────────────────────────────── */
-
-.v2-update-banner {
-  padding: var(--space-1) var(--space-4);
-  background: var(--color-accent-muted, oklch(94% 0.04 250));
-  color: var(--color-accent);
-  font-size: var(--text-xs);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.v2-update-banner button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: inherit;
-  text-decoration: underline;
-  font-size: inherit;
-}
-
-.v2-error-state {
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-danger-muted, oklch(95% 0.04 30));
-  color: var(--color-danger, oklch(50% 0.2 30));
-  font-size: var(--text-sm);
-}
-
-/* ── Expanded panel: sidebar + reader side by side ───────────────────────── */
-
-.v2-expanded {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  min-height: 0;
-  flex: 1;
-}
-
-@media (max-width: 768px) {
-  .v2-expanded {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-}
-
-/* ── Modal (re-uses global .modal-* classes from styles.scss) ─────────────── */
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  width: min(640px, 95vw);
-  max-height: 90dvh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.modal-title {
-  font-size: var(--text-base);
-  font-weight: 600;
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: var(--text-lg);
-  line-height: 1;
-  padding: 0 var(--space-1);
-}
-
-.modal-body {
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  overflow-y: auto;
-}
-
-.modal-label {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.modal-input {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  box-sizing: border-box;
-}
-
-.modal-textarea {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  resize: vertical;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-.modal-input:focus,
-.modal-textarea:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-}
-
-.modal-cancel {
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
-.modal-generate {
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-sm);
-  background: var(--color-accent);
-  color: var(--bg-primary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.modal-generate:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  background: var(--bg);
+  color: var(--ink);
 }
 
 /* ── Shared thinking dots (already defined globally, kept here for fallback) */
@@ -311,22 +57,22 @@
 /* ── Text ops error (reused in modal) ────────────────────────────────────── */
 
 .text-ops-error {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-danger, oklch(50% 0.2 30));
-  border-radius: var(--radius-sm);
-  color: var(--color-danger, oklch(50% 0.2 30));
-  font-size: var(--text-sm);
+  padding: 12px 16px;
+  border: 1px solid var(--red);
+  border-radius: 2px;
+  color: var(--red);
+  font-size: 13px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 8px;
 }
 
 .overline {
-  font-size: var(--text-xs);
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
 .btn-icon {

@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
+import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -17,6 +18,7 @@ import { SidebarV2Component } from './sidebar-v2.component';
 import { ReaderPanelComponent } from './reader-panel.component';
 import { LandingPitchComponent } from './landing-pitch.component';
 import { DesignPlaygroundComponent } from './design-playground.component';
+import { UsageMeterComponent } from './components/usage-meter/usage-meter.component';
 
 interface ParagraphDiff {
   type: 'keep' | 'add' | 'remove';
@@ -82,12 +84,14 @@ const GEN_POLL_INTERVAL = 10_000;
     ReaderPanelComponent,
     LandingPitchComponent,
     DesignPlaygroundComponent,
+    UsageMeterComponent,
   ],
   templateUrl: './app-v2.component.html',
   styleUrl: './app-v2.component.css',
 })
 export class AppV2Component implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
+  private router = inject(Router);
   private projectsSvc = inject(ProjectsService);
   private aiSvc = inject(AiService);
   auth = inject(AuthService);
@@ -96,6 +100,7 @@ export class AppV2Component implements OnInit, OnDestroy {
   readonly sections = NAV_SECTIONS;
   readonly contextFiles = CONTEXT_FILES;
   readonly STYLE_PRESETS = ['Concise', 'Technical', 'Executive', 'Narrative', 'Punchy'];
+  readonly today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   // ── State ─────────────────────────────────────────
   projects = signal<Project[]>([]);
@@ -1022,6 +1027,10 @@ export class AppV2Component implements OnInit, OnDestroy {
     } finally {
       this.epicGuideLoading.set(false);
     }
+  }
+
+  navigateToUpgrade() {
+    this.router.navigate(['/upgrade']);
   }
 
   logout() {
