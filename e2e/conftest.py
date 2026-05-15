@@ -28,8 +28,11 @@ def _wait_for_port(host: str, port: int, timeout: float = 30.0) -> None:
 
 
 @pytest.fixture
-def context():
+def step_context():
     """Mutable dict shared across steps in a single scenario.
+
+    Named step_context (not context) to avoid shadowing pytest-playwright's
+    context fixture which provides the browser context for page creation.
 
     Function-scoped (default) so values from one scenario never leak into the
     next. Do not elevate this to session or module scope — step definitions store
