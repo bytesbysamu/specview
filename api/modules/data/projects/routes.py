@@ -11,6 +11,7 @@ Deviations from task-2 guide:
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +43,7 @@ from .service import (
 )
 from modules.data import git_store  # adapter boundary: only public package import for git ops
 from modules.quality.coherence import lint_capability
+import modules.data.public.service as public_service
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +206,48 @@ def coherence_route(id: str):
 
     logger.info("coherence project_id=%s flags=%d", id, len(flags))
     return jsonify({"flags": flag_dicts, "summary": summary})
+
+
+# ---------------------------------------------------------------------------
+# Share endpoint
+# ---------------------------------------------------------------------------
+
+@projects_bp.post("/<id>/share")
+@require_auth
+@require_project_ownership
+def share_project_route(id: str):
+    """POST /api/projects/<id>/share — generate (or return existing) share slug.
+
+    Returns {"shareSlug": slug, "url": "/s/<slug>"}
+    Idempotent: repeated calls return the same slug.
+    """
+    project_path = _PROJECTS_PATH / id
+    meta_path = project_path / "project.json"
+    if not project_path.exists() or not meta_path.exists():
+        return jsonify({"error": "Project not found"}), 404
+
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return jsonify({"error": "Project not found"}), 404
+
+    existing_slug = meta.get("shareSlug")
+    if existing_slug:
+        return jsonify({"shareSlug": existing_slug, "url": f"/s/{existing_slug}"})
+
+    slug = public_service.generate_slug()
+    meta["shareSlug"] = slug
+    try:
+        meta_path.write_text(
+            json.dumps(meta, indent=2), encoding="utf-8"
+        )
+    except OSError:
+        logger.error("share_project_route write_failed project_id=%s", id)
+        return jsonify({"error": "Could not save share slug"}), 500
+
+    public_service.register_slug(slug, id)
+    logger.info("share_project_route slug_created project_id=%s slug=%s", id, slug)
+    return jsonify({"shareSlug": slug, "url": f"/s/{slug}"})
 
 
 # ---------------------------------------------------------------------------

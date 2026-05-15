@@ -112,15 +112,21 @@ export class AppComponent implements OnInit, OnDestroy {
   private router = inject(Router);
 
   /** Routes that render via router-outlet instead of the app shell. */
-  private static FULL_PAGE_ROUTES = ['/upgrade', '/signup', '/login'];
+  private static FULL_PAGE_ROUTES = ['/upgrade', '/signup', '/login', '/s'];
+  /** Exact-match paths that render via router-outlet (prefix matching is unsafe for ''). */
+  private static FULL_PAGE_EXACT = [''];
   isFullPageRoute = signal(false);
+
+  private static _isFullPage(path: string): boolean {
+    if (AppComponent.FULL_PAGE_EXACT.includes(path)) return true;
+    return AppComponent.FULL_PAGE_ROUTES.some(r => path === r || path.startsWith(r + '/'));
+  }
 
   private _routeSub = this.router.events.pipe(
     filter((e): e is NavigationEnd => e instanceof NavigationEnd)
   ).subscribe(e => {
-    this.isFullPageRoute.set(
-      AppComponent.FULL_PAGE_ROUTES.includes(e.urlAfterRedirects.split('?')[0])
-    );
+    const path = e.urlAfterRedirects.split('?')[0];
+    this.isFullPageRoute.set(AppComponent._isFullPage(path));
   });
 
   readonly sections = NAV_SECTIONS;
@@ -166,6 +172,11 @@ export class AppComponent implements OnInit, OnDestroy {
   epicGuideLoading = signal(false);
   epicGuideError = signal<string | null>(null);
 
+  // Share project
+  shareUrl = signal<string | null>(null);
+  shareCopied = signal(false);
+  shareLoading = signal(false);
+
 
   toolbarFloating = computed(() => !!(this.activeProject() && this.currentSpec()));
   polling = signal(false);
@@ -185,6 +196,11 @@ export class AppComponent implements OnInit, OnDestroy {
   statusFailureMsg = signal<string | null>(null);
   private _syncElapsedTimer: ReturnType<typeof setInterval> | null = null;
   private _successFlashTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Generation timer
+  specGenStartTime = signal<number | null>(null);
+  specGenElapsed = signal<string>('0.0s');
+  private _timerInterval: ReturnType<typeof setInterval> | null = null;
 
   // Per-file dot tracking: filename of the file currently targeted by an AI op
   activeOpFile = signal<string | null>(null);
@@ -344,10 +360,9 @@ export class AppComponent implements OnInit, OnDestroy {
   expandedProject = computed(() => this.contextContent() !== null ? 'Context' : (this.activeProject()?.name ?? ''));
 
   constructor() {
-    // Set initial full-page route state for direct navigation (e.g. /upgrade)
-    this.isFullPageRoute.set(
-      AppComponent.FULL_PAGE_ROUTES.includes(this.router.url.split('?')[0])
-    );
+    // Set initial full-page route state for direct navigation (e.g. /upgrade, /s/slug)
+    const initialPath = this.router.url.split('?')[0];
+    this.isFullPageRoute.set(AppComponent._isFullPage(initialPath));
 
     // Reload projects immediately whenever the user becomes logged in
     effect(() => {
@@ -387,6 +402,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.stopPolling();
     this._stopGenPoll();
     this._stopSyncElapsedTimer();
+    this._stopTimer();
     if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
   }
 
@@ -427,9 +443,11 @@ export class AppComponent implements OnInit, OnDestroy {
   private _setStatusActive() {
     if (this._successFlashTimer) { clearTimeout(this._successFlashTimer); this._successFlashTimer = null; }
     this.statusMode.set('active');
+    this._startTimer();
   }
 
   private _setStatusSuccess() {
+    this._stopTimer();
     this.statusMode.set('success-flash');
     this._markSyncNow();
     if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
@@ -442,6 +460,26 @@ export class AppComponent implements OnInit, OnDestroy {
   private _setStatusFailure(msg: string) {
     this.statusMode.set('failure');
     this.statusFailureMsg.set(msg);
+    this._stopTimer();
+  }
+
+  private _startTimer() {
+    this.specGenStartTime.set(Date.now());
+    this._stopTimer();
+    this._timerInterval = setInterval(() => {
+      const start = this.specGenStartTime();
+      if (start) {
+        const elapsed = (Date.now() - start) / 1000;
+        this.specGenElapsed.set(elapsed.toFixed(1) + 's');
+      }
+    }, 100);
+  }
+
+  private _stopTimer() {
+    if (this._timerInterval) {
+      clearInterval(this._timerInterval);
+      this._timerInterval = null;
+    }
   }
 
   retryLastOp() {
@@ -1089,6 +1127,24 @@ export class AppComponent implements OnInit, OnDestroy {
 
   logout() {
     this.auth.signOut();
+  }
+
+  async shareProject() {
+    const proj = this.activeProject();
+    if (!proj || this.shareLoading()) return;
+    this.shareLoading.set(true);
+    try {
+      const result = await this.projectsSvc.shareProject(proj.id);
+      const fullUrl = `${window.location.origin}${result.url}`;
+      this.shareUrl.set(fullUrl);
+      await navigator.clipboard.writeText(fullUrl);
+      this.shareCopied.set(true);
+      setTimeout(() => this.shareCopied.set(false), 3000);
+    } catch {
+      // Ignore — share is best-effort
+    } finally {
+      this.shareLoading.set(false);
+    }
   }
 
   // ── Helpers (used in template) ────────────────────

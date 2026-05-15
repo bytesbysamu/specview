@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -89,7 +90,8 @@ export class LoginComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(private auth: AuthService) {}
+  private auth = inject(AuthService);
+  private router = inject(Router);
 
   async submit(e: Event) {
     e.preventDefault();
@@ -101,6 +103,7 @@ export class LoginComponent {
     this.error.set('');
     try {
       await this.auth.login(email, password);
+      this.router.navigate(['/']);
     } catch {
       this.error.set('Invalid email or password.');
     } finally {

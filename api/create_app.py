@@ -32,6 +32,7 @@ ENABLED_MODULES = [
     ('modules.auth.routes',         'auth_bp'),       # SaaS Auth Magic Link (Auth-T2)
     ('modules.ai.routes.generic_skill_route', 'skill_bp'),  # Thin API Phase 2 — generic skill route
     ('modules.ai.routes.actions', 'actions_bp'),            # Thin API Phase 3 — action routes
+    ('modules.data.public.routes', 'public_bp'),            # Task 1 — public shareable spec URLs
 ]
 
 
@@ -94,6 +95,13 @@ def create_app(config=None):
         app.register_blueprint(bp)
 
     app.register_blueprint(health_bp)
+
+    # Build the public share slug index from existing project.json files.
+    from modules.data.public.service import build_index as _build_slug_index
+    try:
+        _build_slug_index()
+    except Exception:
+        logger.exception("create_app: build_index failed — app will still start")
 
     from pathlib import Path
     from modules.runtime.workflows.repository.fs_adapter import WorkflowRepositoryFs
