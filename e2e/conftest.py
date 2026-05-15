@@ -43,20 +43,21 @@ def step_context():
 
 @pytest.fixture(scope="session")
 def flask_server():
-    """Start Flask on port 5001 with mock provider and auth bypass for E2E.
+    """API base URL for E2E tests.
 
-    Session-scoped so the server process starts once and is reused across all
-    scenarios. Starting a new Flask process per test would add ~1–2 s per
-    scenario and destroy the in-process bootstrap job registry that the Active
-    seed project depends on.
+    When E2E_API_URL is set, uses that URL directly (for running against
+    Docker Compose or a deployed environment). Otherwise starts a standalone
+    Flask process on port 5001 with mock provider and auth bypass.
     """
+    external = os.environ.get("E2E_API_URL")
+    if external:
+        yield external
+        return
+
     env = {
         **os.environ,
         "CHAIN_PROVIDER": "mock",
         "FLASK_APP": "create_app:create_app",
-        # SKIP_AUTH=1 + FLASK_ENV=development bypass JWT verification so the
-        # seed helpers can call POST /api/projects and bootstrap endpoints
-        # with "Bearer test-token" without a real user in the database.
         "SKIP_AUTH": "1",
         "FLASK_ENV": "development",
     }
@@ -73,13 +74,17 @@ def flask_server():
 
 @pytest.fixture(scope="session")
 def angular_server():
-    """Start Angular dev server on port 4201.
+    """Frontend base URL for E2E tests.
 
-    Session-scoped for the same reason as flask_server — the Angular build
-    takes 15–30 s on first compile and must be shared across scenarios. The
-    dev server is stateless from the test perspective; each scenario controls
-    state via localStorage and JWT injection, not by restarting the server.
+    When E2E_BASE_URL is set, uses that URL directly (for running against
+    Docker Compose or a deployed environment). Otherwise starts Angular
+    dev server on port 4201.
     """
+    external = os.environ.get("E2E_BASE_URL")
+    if external:
+        yield external
+        return
+
     proc = subprocess.Popen(
         ["npx", "ng", "serve", "--port", "4201", "--poll", "0"],
         cwd=str(os.path.join(os.path.dirname(__file__), "..", "web-ng")),

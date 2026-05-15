@@ -15,13 +15,16 @@ from playwright.sync_api import Page
 from e2e.helpers.seed_projects import SeedMatrix
 from e2e.pages.overview_page import OverviewPage
 
-_JWT_SECRET = "dev-secret-change-in-prod"
-_JWT_SUBJECT = "test@test.com"
+import os
+
+_JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
+_JWT_USER_ID = os.environ.get("E2E_USER_ID", "1")
+_JWT_USER_EMAIL = os.environ.get("E2E_USER_EMAIL", "test@test.com")
 _JWT_TTL_SECONDS = 3600
 
 
-def _make_jwt(subject: str = _JWT_SUBJECT, ttl: int = _JWT_TTL_SECONDS) -> str:
-    payload = {"sub": subject, "exp": int(time.time()) + ttl}
+def _make_jwt(user_id: str = _JWT_USER_ID, email: str = _JWT_USER_EMAIL, ttl: int = _JWT_TTL_SECONDS) -> str:
+    payload = {"sub": user_id, "email": email, "exp": int(time.time()) + ttl}
     return jwt.encode(payload, _JWT_SECRET, algorithm="HS256")
 
 
@@ -45,16 +48,15 @@ def user_not_logged_in(page: Page, angular_server: str, step_context: dict) -> N
 
 @given("the user is logged in")
 def user_logged_in(page: Page, angular_server: str, step_context: dict) -> None:
-    """Inject a valid JWT so the Angular auth service considers the session active."""
+    """Inject a valid JWT before Angular boots so the app sees an authenticated state."""
     overview = _build_overview(page, angular_server)
     step_context["overview"] = overview
     token = _make_jwt()
-    # Navigate first so localStorage is writable for the origin
+    # Set JWT via init script so it's in localStorage BEFORE Angular bootstraps.
+    # This avoids the race where Angular boots unauthenticated, fires API calls
+    # that return 401, and redirects to /login before we can inject the token.
+    page.add_init_script(f"() => localStorage.setItem('specview_jwt', '{token}')")
     page.goto(angular_server)
-    page.wait_for_load_state("networkidle")
-    overview.inject_jwt(token)
-    # Reload so Angular picks up the token before any steps interact with the page
-    page.reload()
     page.wait_for_load_state("networkidle")
 
 
