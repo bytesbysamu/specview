@@ -3,7 +3,7 @@
  * No HTTP calls — all data is static and typed.
  */
 
-import { Project, Spec } from './services/projects.service';
+import { Project } from './services/projects.service';
 import { NavSection } from './section-nav.component';
 
 // ── Demo Nav Sections ────────────────────────────────────────────────────────

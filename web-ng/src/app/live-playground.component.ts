@@ -18,7 +18,6 @@ import { LandingPitchComponent } from './landing-pitch.component';
 import {
   DEMO_PROJECTS,
   DEMO_NAV_SECTIONS,
-  DEMO_SECTION_COUNTS,
 } from './playground-demo-data';
 
 @Component({
@@ -162,6 +161,7 @@ export class LivePlaygroundComponent implements OnInit {
 
   sectionFn = (p: Project): Section => sectionFor(p, false);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onContextOpened(_key: string) {
     // No-op in playground — context files are not available in demo mode.
   }
