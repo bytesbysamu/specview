@@ -15,8 +15,8 @@ from flask import jsonify, request
 
 logger = logging.getLogger(__name__)
 
-_WINDOW_SECONDS = 3600  # 1 hour
-_MAX_REQUESTS = 5
+_WINDOW_SECONDS = 900   # 15 minutes
+_MAX_REQUESTS = 15
 
 # ip -> list of epoch timestamps for recent requests
 _ip_timestamps: dict[str, list[float]] = defaultdict(list)
