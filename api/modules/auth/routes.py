@@ -29,7 +29,6 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
 @auth_bp.post("/login")
-@ip_rate_limit
 def login():
     """POST /api/auth/login — {email, password} → {token, email}."""
     body = request.get_json(silent=True) or {}
@@ -53,7 +52,6 @@ def login():
 
 
 @auth_bp.post("/register")
-@ip_rate_limit
 def register():
     """POST /api/auth/register — {email, password} → {token, email} (201)."""
     body = request.get_json(silent=True) or {}
