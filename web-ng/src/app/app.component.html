@@ -11,7 +11,7 @@
       <span class="edition">Spec Doc</span>
       <div class="masthead-center">
         <div class="masthead-date">{{ today }}</div>
-        <h1 class="masthead-title">Specview</h1>
+        <h1 class="masthead-title" data-test="masthead-title">Specview</h1>
         <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
       </div>
       <div class="masthead-actions">
@@ -19,8 +19,8 @@
         @if (!subscription.isPro()) {
           <button class="upgrade-btn" (click)="navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
         }
-        <button class="new-project-btn" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
-        <button class="theme-toggle" (click)="toggleTheme()" title="Toggle dark mode">
+        <button class="new-project-btn" data-test="create-button" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
+        <button class="theme-toggle" data-test="dark-mode-toggle" (click)="toggleTheme()" title="Toggle dark mode">
           @if (isDark()) {
             <span class="btn-icon">☀</span>
           } @else {
@@ -37,14 +37,18 @@
     @for (s of sections; track s.id) {
       <button
         class="section-link"
+        data-test="section-tab"
+        [attr.data-section-id]="s.id"
         [class.active]="activeSection() === s.id"
         (click)="selectSection(s.id)">
         {{ s.label }}
         @if (s.id === 'context') {
           <span class="section-count section-count-pulse"
+                data-test="section-tab-count"
                 [class.pulsing]="pulsingSections().has('context')">{{ contextFiles.length }}</span>
         } @else if (sectionCounts()[s.id] !== undefined) {
           <span class="section-count section-count-pulse"
+                data-test="section-tab-count"
                 [class.pulsing]="pulsingSections().has(s.id)">{{ sectionCounts()[s.id] }}</span>
         }
       </button>
@@ -53,6 +57,7 @@
 
   <!-- Generation status bar — always visible, positioned between nav and search -->
   <div class="gen-status-bar"
+       data-test="status-bar"
        [class.gen-status-bar--idle]="mode() === 'idle'"
        [class.gen-status-bar--active]="mode() === 'active'"
        [class.gen-status-bar--success]="mode() === 'success-flash'"
@@ -108,7 +113,7 @@
 
   <!-- Update banner -->
   @if (updateBanner()) {
-    <div class="update-banner">
+    <div class="update-banner" data-test="update-banner">
       {{ updateBanner() }} · <button (click)="updateBanner.set('')">dismiss</button>
     </div>
   }
@@ -126,11 +131,12 @@
     <div class="search-bar">
       <input
         type="search"
+        data-test="search-input"
         placeholder="Filter projects…"
         autocomplete="off"
         [value]="searchQuery()"
         (input)="onSearch($any($event.target).value)" />
-      <span class="search-count">
+      <span class="search-count" data-test="search-count">
         @if (searchQuery()) {
           {{ filteredProjects().length }} match{{ filteredProjects().length !== 1 ? 'es' : '' }}
         } @else {
@@ -160,7 +166,7 @@
       } @else if (activeSection() === 'all') {
         <!-- Grouped by taxonomy section in canonical order -->
         @for (group of projectsBySection(); track group.section) {
-          <div class="section-group" [attr.data-section]="group.section">
+          <div class="section-group" data-test="section-group" [attr.data-section]="group.section">
             <div class="section-group-header">
               <span class="section-group-title overline">{{ group.section }}</span>
               <span class="section-group-count section-count-pulse" [attr.data-count]="group.projects.length">{{ group.projects.length }}</span>
@@ -171,6 +177,7 @@
               @for (p of group.projects; track p.id; let pi = $index) {
                 <div
                   class="file-item"
+                  data-test="project-card"
                   [class.featured]="pi === 0"
                   [class.hero-main]="group.section === 'Active' && pi === 0"
                   [class.hero-secondary]="group.section === 'Active' && pi > 0"
@@ -198,6 +205,7 @@
             @for (p of col; track p.id; let pi = $index) {
               <div
                 class="file-item"
+                data-test="project-card"
                 [class.featured]="pi === 0"
                 (click)="selectProject(p.id)">
                 <div class="file-item-title">{{ p.name }}</div>
@@ -497,7 +505,7 @@
 <!-- New Project Modal -->
 @if (showCreateModal()) {
   <div class="modal-backdrop" (click)="closeCreateModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal" data-test="create-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title">New Project</h2>
         <button class="modal-close" (click)="closeCreateModal()"><span class="btn-icon">×</span></button>
