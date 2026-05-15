@@ -170,16 +170,11 @@ Promote `UnifiedPageComponent` as the permanent root bootstrap component, update
 - The Flask API routes (such as `/api/auth/me` and `/api/projects`) continue to respond correctly through the nginx proxy.
 ---
 
-## Implementation Notes (corrections)
 
-1. **Do NOT create a new AuthService.** `web-ng/src/app/services/auth.service.ts` already exists with `isLoggedIn` signal via `TokenLifecycleService`. Reuse it — do not duplicate with `isAuthenticated`/`currentUser`/`authLoading`.
+---
 
-2. **Do NOT duplicate app.component signals.** The 900-line `app.component.ts` already owns all signals (`projects`, `activeProject`, `activeFile`, `statusMode`, etc.) and all service wiring. `app-v2` should extend or wrap it, not rewrite from scratch.
+## Implementation Notes
 
-3. **Follow existing flat structure.** The Angular app uses `web-ng/src/app/` flat layout per CLAUDE.md. Do not create `src/app/components/` subdirectories — keep new components at the existing level.
-
-4. **Simpler anonymous mode.** Anonymous visitors see the landing pitch + "Get Started" CTA. No fake project data, no placeholder specs, no sample filenames. Just the pitch and a login/signup prompt.
-
-5. **Gradual cutover.** Route `app-v2` alongside the existing app at `/v2` first. Do not replace `AppComponent` as bootstrap until validated. Legacy routes stay live.
-
-6. **The real job is small.** The existing app already works. The playground has the visual design. The task is: apply playground CSS/design tokens to the existing app template, prepend the landing pitch for `!isLoggedIn()`, done. Not decompose → recompose.
+1. **Reuse existing AuthService.** `web-ng/src/app/services/auth.service.ts` already exists with `isLoggedIn` signal via `TokenLifecycleService`. Do not create a new one in Task 3 — inject the existing service.
+2. **Flat Angular structure.** Per CLAUDE.md, new components go at `web-ng/src/app/` level, not under a new `components/` subdirectory.
+3. **Gradual cutover.** Route `app-v2` at `/v2` first. Old app stays live at `/` until validated. Task 5 swaps them.
