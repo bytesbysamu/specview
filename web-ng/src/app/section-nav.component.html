@@ -1,0 +1,23 @@
+<nav class="section-nav">
+  @for (s of sections; track s.id) {
+    <button
+      class="section-link"
+      data-test="section-tab"
+      [attr.data-section-id]="s.id"
+      [class.active]="activeSection === s.id"
+      (click)="selectSection(s.id)">
+      {{ s.label }}
+      @if (s.id === 'context') {
+        <span
+          class="section-count section-count-pulse"
+          data-test="section-tab-count"
+          [class.pulsing]="pulsingSections.has('context')">{{ contextFileCount }}</span>
+      } @else if (sectionCounts[s.id] !== undefined) {
+        <span
+          class="section-count section-count-pulse"
+          data-test="section-tab-count"
+          [class.pulsing]="pulsingSections.has(s.id)">{{ sectionCounts[s.id] }}</span>
+      }
+    </button>
+  }
+</nav>

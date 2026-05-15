@@ -95,7 +95,7 @@ def list_projects(projects_dir: Path) -> list[dict]:
         results.append({
             "id": d.name,
             "name": meta["name"],
-            "createdAt": meta["createdAt"],
+            "createdAt": meta.get("createdAt", ""),
             "section": meta.get("section", ""),
             "priority": meta.get("priority", 99),
             "specs": _read_specs(d, include_content=False, teaser_chars=500),
@@ -118,7 +118,7 @@ def get_project(projects_dir: Path, project_id: str) -> Optional[dict]:
     return {
         "id": project_id,
         "name": meta["name"],
-        "createdAt": meta["createdAt"],
+        "createdAt": meta.get("createdAt", ""),
         "specs": _read_specs(project_path, include_content=True),
     }
 

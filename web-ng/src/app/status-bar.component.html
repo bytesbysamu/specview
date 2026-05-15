@@ -1,0 +1,56 @@
+<div class="gen-status-bar"
+     data-test="status-bar"
+     [class.gen-status-bar--idle]="mode === 'idle'"
+     [class.gen-status-bar--active]="mode === 'active'"
+     [class.gen-status-bar--success]="mode === 'success-flash'"
+     [class.gen-status-bar--failure]="mode === 'failure'">
+  @switch (mode) {
+    @case ('active') {
+      <div class="gen-status-track"></div>
+      <div class="gen-status-content">
+        <span class="thinking-dot gen-dot"></span>
+        <span class="thinking-dot gen-dot"></span>
+        <span class="thinking-dot gen-dot"></span>
+        <span class="gen-status-project">{{ specGenProjectName }}</span>
+        @if (specGenStep) {
+          <span class="gen-status-sep">·</span>
+          <span class="gen-status-step">{{ specGenStep }}</span>
+        }
+        <span class="gen-status-timer" data-test="gen-status-timer">{{ specGenElapsed }}</span>
+        @if (specGenJobId) {
+          <button
+            class="gen-status-cancel"
+            data-test="cancel-generation-global"
+            [disabled]="cancelling"
+            (click)="onCancel()">
+            {{ cancelling ? 'Cancelling…' : 'Cancel' }}
+          </button>
+        }
+      </div>
+    }
+    @case ('success-flash') {
+      <div class="gen-status-content">
+        <span class="gen-status-project">{{ specGenProjectName ?? 'done' }}</span>
+        <span class="gen-status-sep">·</span>
+        <span class="gen-status-step">done</span>
+        <span class="gen-status-timer" data-test="gen-status-timer-done">{{ specGenElapsed }}</span>
+      </div>
+    }
+    @case ('failure') {
+      <div class="gen-status-content">
+        <span class="gen-status-project">error</span>
+        <span class="gen-status-sep">·</span>
+        <span class="gen-status-step">{{ statusFailureMsg }}</span>
+        <button class="gen-status-retry" (click)="onRetry()">retry</button>
+      </div>
+    }
+    @default {
+      <div class="gen-status-content gen-status-idle">
+        <span class="gen-dot"></span>
+        <span class="gen-status-project">specview</span>
+        <span class="gen-status-sep">·</span>
+        <span class="gen-status-step">idle — ready</span>
+      </div>
+    }
+  }
+</div>

@@ -1,19 +1,24 @@
 import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
+import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { trigger, transition, style, animate, query, group } from '@angular/animations';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
 import { AiService } from './services/ai.service';
 import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
 import { projectTeaser, countTasks } from './services/project-teaser';
-import { WordCountPipe } from './word-count.pipe';
-import { UsageMeterComponent } from './components/usage-meter/usage-meter.component';
 import { SubscriptionService } from './services/subscription.service';
+
+import { SectionNavComponent, NavSection } from './section-nav.component';
+import { StatusBarComponent } from './status-bar.component';
+import { ProjectGridComponent, ContextFile, ProjectsBySection } from './project-grid.component';
+import { SidebarV2Component } from './sidebar-v2.component';
+import { ReaderPanelComponent } from './reader-panel.component';
+import { LandingPitchComponent } from './landing-pitch.component';
+import { DesignPlaygroundComponent } from './design-playground.component';
+import { UsageMeterComponent } from './components/usage-meter/usage-meter.component';
 
 interface ParagraphDiff {
   type: 'keep' | 'add' | 'remove';
@@ -28,7 +33,7 @@ function computeParagraphDiff(original: string, result: string): ParagraphDiff[]
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
   for (let i = m - 1; i >= 0; i--) {
     for (let j = n - 1; j >= 0; j--) {
-      dp[i][j] = a[i] === b[j] ? 1 + dp[i+1][j+1] : Math.max(dp[i+1][j], dp[i][j+1]);
+      dp[i][j] = a[i] === b[j] ? 1 + dp[i + 1][j + 1] : Math.max(dp[i + 1][j], dp[i][j + 1]);
     }
   }
 
@@ -37,7 +42,7 @@ function computeParagraphDiff(original: string, result: string): ParagraphDiff[]
   while (i < m || j < n) {
     if (i < m && j < n && a[i] === b[j]) {
       diffs.push({ type: 'keep', text: a[i++] }); j++;
-    } else if (i < m && (j >= n || dp[i+1][j] >= dp[i][j+1])) {
+    } else if (i < m && (j >= n || dp[i + 1][j] >= dp[i][j + 1])) {
       diffs.push({ type: 'remove', text: a[i++] });
     } else {
       diffs.push({ type: 'add', text: b[j++] });
@@ -46,7 +51,7 @@ function computeParagraphDiff(original: string, result: string): ParagraphDiff[]
   return diffs;
 }
 
-const NAV_SECTIONS = [
+const NAV_SECTIONS: NavSection[] = [
   { id: 'context',        label: 'Context',        icon: 'ruler' },
   { id: 'all',            label: 'All',             icon: '' },
   { id: 'Active',         label: 'Active',          icon: 'zap' },
@@ -56,7 +61,7 @@ const NAV_SECTIONS = [
   { id: 'Archive',        label: 'Archive',         icon: 'archive' },
 ];
 
-const CONTEXT_FILES = [
+const CONTEXT_FILES: ContextFile[] = [
   { key: 'builder',    label: 'Builder',    desc: 'How to build with spec-doc' },
   { key: 'principles', label: 'Principles', desc: 'Core development principles' },
   { key: 'codebase',   label: 'Codebase',   desc: 'Codebase overview & conventions' },
@@ -68,78 +73,42 @@ const CONTEXT_FILES = [
 const REFRESH_INTERVAL = 30_000;
 const GEN_POLL_INTERVAL = 10_000;
 
-
-
-
 @Component({
-  selector: 'app-root',
+  selector: 'app-v2-root',
   standalone: true,
-  imports: [RouterOutlet, WordCountPipe, UsageMeterComponent],
-  templateUrl: './app.component.html',
-  animations: [
-    trigger('panelEnter', [
-      transition(':enter', [
-        group([
-          query('.expanded-sidebar', [
-            style({ transform: 'translateX(-8px)', opacity: 0 }),
-            animate('250ms ease-out', style({ transform: 'translateX(0)', opacity: 1 })),
-          ], { optional: true }),
-          query('.expanded-main', [
-            style({ transform: 'translateY(8px)', opacity: 0 }),
-            animate('250ms 40ms ease-out', style({ transform: 'translateY(0)', opacity: 1 })),
-          ], { optional: true }),
-        ]),
-      ]),
-      transition(':leave', [
-        group([
-          query('.expanded-sidebar', [
-            animate('150ms ease-in', style({ transform: 'translateX(-8px)', opacity: 0 })),
-          ], { optional: true }),
-          query('.expanded-main', [
-            animate('150ms ease-in', style({ transform: 'translateY(8px)', opacity: 0 })),
-          ], { optional: true }),
-        ]),
-      ]),
-    ]),
+  imports: [
+    SectionNavComponent,
+    StatusBarComponent,
+    ProjectGridComponent,
+    SidebarV2Component,
+    ReaderPanelComponent,
+    LandingPitchComponent,
+    DesignPlaygroundComponent,
+    UsageMeterComponent,
   ],
+  templateUrl: './app-v2.component.html',
+  styleUrl: './app-v2.component.css',
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppV2Component implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
+  private router = inject(Router);
   private projectsSvc = inject(ProjectsService);
   private aiSvc = inject(AiService);
   auth = inject(AuthService);
   subscription = inject(SubscriptionService);
-  private router = inject(Router);
-
-  /** Routes that render via router-outlet instead of the app shell. */
-  private static FULL_PAGE_ROUTES = ['/upgrade', '/signup', '/login', '/s', '/v2'];
-  /** Exact-match paths that render via router-outlet (prefix matching is unsafe for ''). */
-  private static FULL_PAGE_EXACT = [''];
-  isFullPageRoute = signal(false);
-
-  private static _isFullPage(path: string): boolean {
-    if (AppComponent.FULL_PAGE_EXACT.includes(path)) return true;
-    return AppComponent.FULL_PAGE_ROUTES.some(r => path === r || path.startsWith(r + '/'));
-  }
-
-  private _routeSub = this.router.events.pipe(
-    filter((e): e is NavigationEnd => e instanceof NavigationEnd)
-  ).subscribe(e => {
-    const path = e.urlAfterRedirects.split('?')[0];
-    this.isFullPageRoute.set(AppComponent._isFullPage(path));
-  });
 
   readonly sections = NAV_SECTIONS;
   readonly contextFiles = CONTEXT_FILES;
+  readonly STYLE_PRESETS = ['Concise', 'Technical', 'Executive', 'Narrative', 'Punchy'];
+  readonly today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // ── State ────────────────────────────────────────
+  // ── State ─────────────────────────────────────────
   projects = signal<Project[]>([]);
   activeSection = signal('all');
   activeProject = signal<Project | null>(null);
   activeFile = signal<string | null>(null);
   searchQuery = signal('');
   isDark = signal(false);
-  today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   updateBanner = signal('');
   knownCount = signal(0);
 
@@ -148,7 +117,7 @@ export class AppComponent implements OnInit, OnDestroy {
   aiResult = signal<string | null>(null);
   aiLatencyMs = signal<number | null>(null);
   aiError = signal(false);
-  activeOp = signal<string | null>(null); // which chip is open/active
+  activeOp = signal<string | null>(null);
   copied = signal(false);
 
   // Context viewer
@@ -177,8 +146,6 @@ export class AppComponent implements OnInit, OnDestroy {
   shareCopied = signal(false);
   shareLoading = signal(false);
 
-
-  toolbarFloating = computed(() => !!(this.activeProject() && this.currentSpec()));
   polling = signal(false);
   pollOk = signal(true);
   pollingError = signal<string | null>(null);
@@ -186,7 +153,6 @@ export class AppComponent implements OnInit, OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private genPollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly POLL_MAX_RETRIES = 30;
-  private readonly POLL_INTERVAL_MS = 2000;
   private pollRetries = 0;
 
   // Status bar: four-state mode
@@ -202,7 +168,7 @@ export class AppComponent implements OnInit, OnDestroy {
   specGenElapsed = signal<string>('0.0s');
   private _timerInterval: ReturnType<typeof setInterval> | null = null;
 
-  // Per-file dot tracking: filename of the file currently targeted by an AI op
+  // Per-file dot tracking
   activeOpFile = signal<string | null>(null);
   fileOpState = signal<Record<string, 'running' | 'success' | 'failure'>>({});
 
@@ -210,9 +176,15 @@ export class AppComponent implements OnInit, OnDestroy {
   pulsingSections = signal<Set<string>>(new Set());
   private _prevSectionCounts: Record<string, number> = {};
 
+  // Undo / redo stacks keyed by "projectId/filename"
+  undoStack = signal<Record<string, string[]>>({});
+  redoStack = signal<Record<string, string[]>>({});
+
+  // Brainstorm follow-up
+  brainstormQuestion = signal('');
+
   // ── Computed ──────────────────────────────────────
 
-  /** True if spec-gen is actively running for a given project id. */
   private isActiveJob(projectId: string): boolean {
     return this.specGenLoading() && this.specGenProjectName() === projectId;
   }
@@ -237,12 +209,7 @@ export class AppComponent implements OnInit, OnDestroy {
     return list;
   });
 
-  /**
-   * Projects grouped into the five taxonomy sections in canonical order,
-   * filtered by the current search query.
-   * Only sections with at least one project are included.
-   */
-  projectsBySection = computed((): { section: Section; projects: Project[] }[] => {
+  projectsBySection = computed((): ProjectsBySection[] => {
     const q = this.searchQuery().toLowerCase();
     let all = this.projects();
     if (q) all = all.filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q));
@@ -282,14 +249,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(marked.parse(content) as string));
   });
 
-  // Undo / redo stacks keyed by "projectId/filename"
-  undoStack = signal<Record<string, string[]>>({});
-  redoStack = signal<Record<string, string[]>>({});
-
-  // Brainstorm follow-up
-  brainstormQuestion = signal('');
-
-  // Paragraph-level diff rendered as markdown HTML (single unified column)
   diffHtmlUnified = computed((): SafeHtml => {
     const result = this.aiResult();
     const original = this.currentSpec()?.content ?? '';
@@ -304,14 +263,12 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(parts.join('')));
   });
 
-  // For brainstorm and TL;DR — render result as plain markdown (no diff)
   parsedAiResult = computed((): SafeHtml => {
     const result = this.aiResult();
     if (!result) return '';
     return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(marked.parse(result) as string));
   });
 
-  // True for ops where diff view doesn't make sense (brainstorm is additive)
   isAdditiveOp = computed(() => ['brainstorm', 'tldr'].includes(this.activeOp() ?? ''));
 
   aiOpLabel = computed(() => {
@@ -339,31 +296,52 @@ export class AppComponent implements OnInit, OnDestroy {
 
   sectionLabel = computed(() => NAV_SECTIONS.find(s => s.id === this.activeSection())?.label ?? 'Projects');
 
-  // True when project has no generated analysis yet (braindump.md not required)
   canGenerateSpecs = computed(() => {
     const proj = this.activeProject();
     if (!proj) return false;
     return !proj.specs.some(s => s.filename === 'analysis.md');
   });
 
-  // True when project has an epic but no implementation-guide yet
   canGenerateEpicGuide = computed(() => {
     const proj = this.activeProject();
     if (!proj) return false;
     return proj.specs.some(s => s.filename === 'epic.md');
   });
 
-
   showGrid = computed(() => !this.activeProject() && this.contextContent() === null && !this.accessDenied());
   showExpanded = computed(() => !!this.activeProject() || this.contextContent() !== null || this.accessDenied());
   expandedTitle = computed(() => this.contextContent() !== null ? this.contextTitle() : (this.currentSpec()?.label ?? ''));
   expandedProject = computed(() => this.contextContent() !== null ? 'Context' : (this.activeProject()?.name ?? ''));
 
-  constructor() {
-    // Set initial full-page route state for direct navigation (e.g. /upgrade, /s/slug)
-    const initialPath = this.router.url.split('?')[0];
-    this.isFullPageRoute.set(AppComponent._isFullPage(initialPath));
+  activeFileType = computed((): string | null => {
+    const file = this.activeFile();
+    if (!file || !this.activeProject()) return null;
+    return file
+      .replace(/\.md$/i, '')
+      .replace(/-/g, ' ')
+      .toUpperCase();
+  });
 
+  isBraindump = computed(() => {
+    const spec = this.currentSpec();
+    return spec !== null && spec.filename === 'braindump.md';
+  });
+
+  mode = computed(() => this.statusMode());
+
+  lastSyncLabel = computed(() => {
+    const elapsed = this.lastSyncElapsed();
+    if (elapsed < 60) return `${elapsed}s ago`;
+    return `${Math.floor(elapsed / 60)}m ago`;
+  });
+
+  activeStepLabel = computed(() => {
+    if (this.specGenLoading()) return this.specGenStep() ?? 'starting…';
+    if (this.aiLoading()) return `${this.aiOpLabel()}…`;
+    return '';
+  });
+
+  constructor() {
     // Reload projects immediately whenever the user becomes logged in
     effect(() => {
       if (this.auth.isLoggedIn()) {
@@ -419,7 +397,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.genPollTimer) { clearInterval(this.genPollTimer); this.genPollTimer = null; }
   }
 
-  // ── Status bar transitions ────────────────────
+  // ── Status bar transitions ─────────────────────────
   private _startSyncElapsedTimer() {
     if (this._syncElapsedTimer) return;
     this._syncElapsedTimer = setInterval(() => {
@@ -476,10 +454,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private _stopTimer() {
-    if (this._timerInterval) {
-      clearInterval(this._timerInterval);
-      this._timerInterval = null;
-    }
+    if (this._timerInterval) { clearInterval(this._timerInterval); this._timerInterval = null; }
   }
 
   retryLastOp() {
@@ -487,7 +462,6 @@ export class AppComponent implements OnInit, OnDestroy {
       this.onRetry();
       return;
     }
-    // No retryable step — just dismiss the error
     this.statusMode.set('idle');
     this.statusFailureMsg.set(null);
   }
@@ -519,7 +493,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Per-file dot helpers ──────────────────────
+  // ── Per-file dot helpers ───────────────────────────
   private _setFileRunning(filename: string | null) {
     this.activeOpFile.set(filename);
     if (filename) {
@@ -550,7 +524,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.fileOpState.set(s);
   }
 
-  // ── Theme ─────────────────────────────────────────
+  // ── Theme ──────────────────────────────────────────
   toggleTheme() {
     const next = this.isDark() ? 'light' : 'dark';
     this.isDark.set(next === 'dark');
@@ -558,7 +532,7 @@ export class AppComponent implements OnInit, OnDestroy {
     localStorage.setItem('theme', next);
   }
 
-  // ── Projects ──────────────────────────────────────
+  // ── Projects ───────────────────────────────────────
   async loadProjects() {
     try {
       const list = await this.projectsSvc.listProjects();
@@ -580,7 +554,6 @@ export class AppComponent implements OnInit, OnDestroy {
       const fresh = await this.projectsSvc.listProjects();
       this.pollOk.set(true);
       this._markSyncNow();
-      // Always update on count change, OR if projects is empty (initial load may have failed)
       if (fresh.length !== this.knownCount() || this.knownCount() === 0) {
         const diff = fresh.length - this.knownCount();
         this.projects.set(fresh);
@@ -597,19 +570,19 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Search ────────────────────────────────────────
+  // ── Search ─────────────────────────────────────────
   onSearch(value: string) {
     this.searchQuery.set(value);
   }
 
-  // ── Nav ───────────────────────────────────────────
+  // ── Nav ────────────────────────────────────────────
   selectSection(id: string) {
     this.activeSection.set(id);
     this.searchQuery.set('');
     this.closeExpanded();
   }
 
-  // ── Project grid ──────────────────────────────────
+  // ── Project grid ───────────────────────────────────
   async selectProject(id: string) {
     this.accessDenied.set(false);
     try {
@@ -621,7 +594,6 @@ export class AppComponent implements OnInit, OnDestroy {
     } catch (err: any) {
       if (err instanceof AccessDeniedError) {
         this.accessDenied.set(true);
-        // Keep expanded panel open so the access-denied block is visible
         this.activeProject.set(null);
         this.activeFile.set(null);
         this.contextContent.set(null);
@@ -637,7 +609,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.contextContent.set(null);
     this.aiResult.set(null);
     this.accessDenied.set(false);
-
   }
 
   selectFile(filename: string) {
@@ -647,7 +618,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.aiError.set(false);
   }
 
-  // ── Context files ─────────────────────────────────
+  // ── Context files ──────────────────────────────────
   async openContext(key: string) {
     const ctx = CONTEXT_FILES.find(f => f.key === key);
     const data = await this.projectsSvc.getContext(key);
@@ -656,56 +627,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeProject.set(null);
     this.activeFile.set(null);
     this.aiResult.set(null);
-    
   }
 
-  /**
-   * Derives a display label from the active filename for the reader overline.
-   * e.g. "architecture.md" → "ARCHITECTURE", "implementation-guide.md" → "IMPLEMENTATION GUIDE"
-   * Returns null when no project file is open.
-   */
-  activeFileType = computed((): string | null => {
-    const file = this.activeFile();
-    if (!file || !this.activeProject()) return null;
-    return file
-      .replace(/\.md$/i, '')
-      .replace(/-/g, ' ')
-      .toUpperCase();
-  });
-
-  // True only when the open file is the braindump
-  isBraindump = computed(() => {
-    const spec = this.currentSpec();
-    return spec !== null && spec.filename === 'braindump.md';
-  });
-
-  // Status bar four-state mode, derived from statusMode signal
-  mode = computed(() => this.statusMode());
-
-  // Idle "last sync" text
-  lastSyncLabel = computed(() => {
-    const elapsed = this.lastSyncElapsed();
-    if (elapsed < 60) return `${elapsed}s ago`;
-    return `${Math.floor(elapsed / 60)}m ago`;
-  });
-
-  // Active step display
-  activeStepLabel = computed(() => {
-    if (this.specGenLoading()) return this.specGenStep() ?? 'starting…';
-    if (this.aiLoading()) return `${this.aiOpLabel()}…`;
-    return '';
-  });
-
-  // Short job id for display
-  activeJobId = computed(() => {
-    const name = this.specGenProjectName();
-    if (!name) return null;
-    return name.slice(0, 8);
-  });
-
-  readonly STYLE_PRESETS = ['Concise', 'Technical', 'Executive', 'Narrative', 'Punchy'];
-
-  // ── AI text ops ───────────────────────────────────
+  // ── AI text ops ────────────────────────────────────
   toggleOp(op: 'expand' | 'compress' | 'clarify' | 'simplify' | 'tldr' | 'bullets' | 'brainstorm' | 'style') {
     if (this.activeOp() === op) {
       this.activeOp.set(null);
@@ -716,7 +640,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeOp.set(op);
     this.aiResult.set(null);
     this.aiError.set(false);
-    // 'style' shows preset chips (no immediate call); 'rewrite' kept as alias for style
     const immediateOps = ['expand', 'compress', 'clarify', 'simplify', 'tldr', 'bullets', 'brainstorm'];
     if (immediateOps.includes(op)) {
       this.runOp(op as 'expand' | 'compress' | 'clarify' | 'simplify' | 'tldr' | 'bullets' | 'brainstorm');
@@ -783,7 +706,6 @@ export class AppComponent implements OnInit, OnDestroy {
     const spec = this.currentSpec();
     if (!proj || !result || !spec) return;
 
-    // Use brainstorm result + original braindump as the combined context for spec gen
     const enrichedBraindump = `${spec.content ?? ''}\n\n---\n## Brainstorm Output\n\n${result}`;
     this.aiResult.set(null);
     this.specGenLoading.set(true);
@@ -839,17 +761,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
     const key = `${proj.id}/${file}`;
 
-    // Push current to undo stack
     const undo = { ...this.undoStack() };
     undo[key] = [...(undo[key] ?? []), spec.content ?? ''];
     this.undoStack.set(undo);
 
-    // Applying a new result always clears redo (new branch)
     const redo = { ...this.redoStack() };
     redo[key] = [];
     this.redoStack.set(redo);
 
-    // Update spec in the project signal
     const updatedSpecs = proj.specs.map(s =>
       s.filename === file ? { ...s, content: result } : s
     );
@@ -876,7 +795,6 @@ export class AppComponent implements OnInit, OnDestroy {
     undoCurrent[key] = undoEntries.slice(0, -1);
     this.undoStack.set(undoCurrent);
 
-    // Save current content onto redo stack
     const currentContent = proj.specs.find(s => s.filename === file)?.content ?? '';
     const redoCurrent = { ...this.redoStack() };
     redoCurrent[key] = [...(redoCurrent[key] ?? []), currentContent];
@@ -903,7 +821,6 @@ export class AppComponent implements OnInit, OnDestroy {
     redoCurrent[key] = redoEntries.slice(0, -1);
     this.redoStack.set(redoCurrent);
 
-    // Save current content onto undo stack
     const currentContent = proj.specs.find(s => s.filename === file)?.content ?? '';
     const undoCurrent = { ...this.undoStack() };
     undoCurrent[key] = [...(undoCurrent[key] ?? []), currentContent];
@@ -924,7 +841,7 @@ export class AppComponent implements OnInit, OnDestroy {
     setTimeout(() => this.copied.set(false), 2000);
   }
 
-  // ── New project / spec-gen ────────────────────────
+  // ── New project / spec-gen ─────────────────────────
   private async _runBootstrap(
     projectName: string,
     braindump: string,
@@ -942,23 +859,21 @@ export class AppComponent implements OnInit, OnDestroy {
       let status: Awaited<ReturnType<typeof this.projectsSvc.pollBootstrap>>;
       try {
         status = await this.projectsSvc.pollBootstrap(this.specGenJobId()!);
-        pollFailures = 0; // reset on success
+        pollFailures = 0;
       } catch {
         pollFailures++;
         if (pollFailures >= MAX_POLL_FAILURES) {
           throw new Error('Lost connection to server after multiple retries.');
         }
-        continue; // retry poll
+        continue;
       }
 
       if (status.current_step) this.specGenStep.set(status.current_step);
 
-      // Capture the failed step from the poll response (Task 4 field)
       if (status.failed_step !== undefined) {
         this.specGenFailedStep.set(status.failed_step ?? null);
       }
 
-      // Save incremental files as each AI step completes
       if (onFile && status.partial_files) {
         for (const file of status.partial_files) {
           if (!saved.has(file.filename)) {
@@ -971,7 +886,6 @@ export class AppComponent implements OnInit, OnDestroy {
       if (status.done) {
         if (status.status === 'CANCELLED') throw new Error('Generation cancelled');
         if (status.error) throw new Error(status.error);
-        // Return only files not already saved incrementally
         return (status.files ?? []).filter(f => !saved.has(f.filename));
       }
     }
@@ -992,7 +906,6 @@ export class AppComponent implements OnInit, OnDestroy {
     const braindump = braindumpEl.value.trim();
     if (!name || !braindump || this.specGenLoading()) return;
 
-    // Close modal immediately — show fixed status bar
     this.showCreateModal.set(false);
     this.specGenLoading.set(true);
     this.specGenError.set(null);
@@ -1007,26 +920,22 @@ export class AppComponent implements OnInit, OnDestroy {
     this._startGenPoll();
 
     try {
-      // Create project immediately with just the braindump — navigate to it right away
       const project = await this.projectsSvc.createProject(name, [
         { filename: 'braindump.md', content: braindump },
       ]);
       await this.loadProjects();
       await this.selectProject(project.id);
 
-      // Generate specs, saving each file to disk as soon as its AI step completes
       const remainingFiles = await this._runBootstrap(name, braindump, async (file) => {
         await this.projectsSvc.saveFile(project.id, file.filename, file.content);
         const refreshed = await this.projectsSvc.getProject(project.id);
         this.activeProject.set(refreshed);
       });
 
-      // Save remaining files (spec-index, timeline, README — generated at completion)
       for (const file of remainingFiles) {
         await this.projectsSvc.saveFile(project.id, file.filename, file.content);
       }
 
-      // Final refresh and navigate to analysis.md
       const final = await this.projectsSvc.getProject(project.id);
       this.activeProject.set(final);
       this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
@@ -1048,7 +957,6 @@ export class AppComponent implements OnInit, OnDestroy {
   async generateFromBraindump() {
     const proj = this.activeProject();
     if (!proj || this.specGenLoading()) return;
-    // Use braindump.md if present, otherwise active file, otherwise first spec
     const braindumpSpec =
       proj.specs.find(s => s.filename === 'braindump.md') ??
       this.currentSpec() ??
@@ -1147,24 +1055,17 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Helpers (used in template) ────────────────────
+  // ── Template helpers ───────────────────────────────
 
-  /** Section name for a project — used in card meta label. */
   sectionForProject(p: Project): Section {
     return sectionFor(p, this.isActiveJob(p.id));
   }
 
-  /**
-   * Compute the teaser string for a project card.
-   * leadFileContent is taken from the most relevant spec for the section.
-   */
   teaserFor(p: Project): string {
     const hasJob = this.isActiveJob(p.id);
     const sec = sectionFor(p, hasJob);
     const activeStep = hasJob ? (this.specGenStep() ?? null) : null;
 
-    // Pick lead file by section
-    // Use content if loaded (single-project view), fall back to teaser (list view)
     const specText = (s: any) => s?.content ?? s?.teaser ?? null;
 
     let leadContent: string | null = null;
@@ -1180,7 +1081,6 @@ export class AppComponent implements OnInit, OnDestroy {
       leadContent = specText(p.specs.find(s => s.filename === 'braindump.md'));
     }
 
-    // Count tasks in implementation guide if present
     const guideText = specText(p.specs.find(s => s.filename === 'implementation-guide.md'));
     const taskCount = guideText != null ? countTasks(guideText) : null;
 

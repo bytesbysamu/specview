@@ -1,0 +1,243 @@
+<!-- Landing pitch — always visible -->
+<app-landing-pitch />
+
+<!-- Design playground — always visible -->
+<app-design-playground />
+
+<!-- App workspace — visible when logged in -->
+@if (auth.isLoggedIn()) {
+<div class="v2-shell page">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="edition">Spec Doc</span>
+      <div class="masthead-center">
+        <div class="masthead-date">{{ today }}</div>
+        <h1 class="masthead-title" data-test="masthead-title">Specview</h1>
+        <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
+      </div>
+      <div class="masthead-actions">
+        <app-usage-meter />
+        @if (!subscription.isPro()) {
+          <button class="upgrade-btn" (click)="navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
+        }
+        <button class="new-project-btn" data-test="create-button" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
+        <button class="theme-toggle" data-test="dark-mode-toggle" (click)="toggleTheme()" title="Toggle dark mode">
+          @if (isDark()) {
+            <span class="btn-icon">&#9788;</span>
+          } @else {
+            <span class="btn-icon">&#9790;</span>
+          }
+        </button>
+        <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section nav -->
+  <app-section-nav
+    [sections]="sections"
+    [activeSection]="activeSection()"
+    [sectionCounts]="sectionCounts()"
+    [pulsingSections]="pulsingSections()"
+    [contextFileCount]="contextFiles.length"
+    (sectionSelected)="selectSection($event)" />
+
+  <!-- Generation status bar -->
+  <app-status-bar
+    [mode]="mode()"
+    [specGenProjectName]="specGenProjectName()"
+    [specGenStep]="specGenStep()"
+    [specGenElapsed]="specGenElapsed()"
+    [specGenJobId]="specGenJobId()"
+    [statusFailureMsg]="statusFailureMsg()"
+    [cancelling]="cancelling()"
+    (cancelClicked)="onCancel()"
+    (retryClicked)="retryLastOp()" />
+
+  <!-- Update banner -->
+  @if (updateBanner()) {
+    <div class="update-banner" data-test="update-banner">
+      {{ updateBanner() }} · <button (click)="updateBanner.set('')">dismiss</button>
+    </div>
+  }
+
+  @if (pollingError()) {
+    <div class="error-state" data-test="polling-error">
+      <span class="overline">Error</span>
+      {{ pollingError() }}
+    </div>
+  }
+
+  <!-- Search bar (hidden when viewing project or context section) -->
+  @if (activeSection() !== 'context' && showGrid()) {
+    <div class="search-bar">
+      <input
+        type="search"
+        data-test="search-input"
+        placeholder="Filter projects…"
+        autocomplete="off"
+        [value]="searchQuery()"
+        (input)="onSearch($any($event.target).value)" />
+      <span class="search-count" data-test="search-count">
+        @if (searchQuery()) {
+          {{ filteredProjects().length }} match{{ filteredProjects().length !== 1 ? 'es' : '' }}
+        } @else {
+          {{ projects().length }} projects
+        }
+      </span>
+    </div>
+  }
+
+  <div class="divider thick" [style.display]="showGrid() ? '' : 'none'"></div>
+
+  <!-- Project grid (no active project) -->
+  @if (showGrid()) {
+    <app-project-grid
+      [activeSection]="activeSection()"
+      [filteredProjects]="filteredProjects()"
+      [projectsBySection]="projectsBySection()"
+      [columns]="columns()"
+      [contextFiles]="contextFiles"
+      [sectionLabel]="sectionLabel()"
+      [teaserFn]="teaserFor.bind(this)"
+      [sectionFn]="sectionForProject.bind(this)"
+      (projectSelected)="selectProject($event)"
+      (contextOpened)="openContext($event)" />
+  }
+
+  <!-- Expanded panel (project reader + sidebar) -->
+  @if (showExpanded()) {
+    <div class="expanded-panel active">
+      <app-sidebar-v2
+        [activeProject]="activeProject()"
+        [activeFile]="activeFile()"
+        [expandedProject]="expandedProject()"
+        [mode]="mode()"
+        [specGenLoading]="specGenLoading()"
+        [specGenStep]="specGenStep()"
+        [activeStepLabel]="activeStepLabel()"
+        [statusFailureMsg]="statusFailureMsg()"
+        [shareLoading]="shareLoading()"
+        [shareUrl]="shareUrl()"
+        [shareCopied]="shareCopied()"
+        [canGenerateSpecs]="canGenerateSpecs()"
+        [canGenerateEpicGuide]="canGenerateEpicGuide()"
+        [epicGuideLoading]="epicGuideLoading()"
+        [currentSpec]="currentSpec()"
+        [isBraindump]="isBraindump()"
+        [activeOp]="activeOp()"
+        [aiLoading]="aiLoading()"
+        [aiResult]="aiResult()"
+        [canRevert]="canRevert()"
+        [canRedo]="canRedo()"
+        [fileOpState]="fileOpState()"
+        [stylePresets]="STYLE_PRESETS"
+        (closeExpanded)="closeExpanded()"
+        (fileSelected)="selectFile($event)"
+        (retryClicked)="retryLastOp()"
+        (shareClicked)="shareProject()"
+        (generateSpecsClicked)="generateFromBraindump()"
+        (generateGuideClicked)="generateEpicGuide()"
+        (opToggled)="toggleOp($event)"
+        (styleRun)="runStyle($event)"
+        (undoClicked)="undoVersion()"
+        (redoClicked)="redoVersion()" />
+
+      <app-reader-panel
+        [activeProject]="activeProject()"
+        [currentSpec]="currentSpec()"
+        [accessDenied]="accessDenied()"
+        [expandedTitle]="expandedTitle()"
+        [expandedProject]="expandedProject()"
+        [activeFileType]="activeFileType()"
+        [parsedContent]="parsedContent()"
+        [parsedAiResult]="parsedAiResult()"
+        [diffHtmlUnified]="diffHtmlUnified()"
+        [aiResult]="aiResult()"
+        [aiLoading]="aiLoading()"
+        [aiError]="aiError()"
+        [aiLatencyMs]="aiLatencyMs()"
+        [activeOp]="activeOp()"
+        [isAdditiveOp]="isAdditiveOp()"
+        [billingError]="billingError()"
+        [copied]="copied()"
+        [brainstormQuestion]="brainstormQuestion()"
+        [canGenerateSpecs]="canGenerateSpecs()"
+        [specGenLoading]="specGenLoading()"
+        [specGenProjectName]="specGenProjectName()"
+        [specGenStep]="specGenStep()"
+        [specGenError]="specGenError()"
+        [specGenFailedStep]="specGenFailedStep()"
+        [cancelling]="cancelling()"
+        (closeExpanded)="closeExpanded()"
+        (applyResult)="applyResult()"
+        (dismissResult)="dismissResult()"
+        (copyResult)="copyResult()"
+        (followupBrainstorm)="followupBrainstorm($event)"
+        (brainstormQuestionChange)="brainstormQuestion.set($event)"
+        (generateFromBrainstormResult)="generateFromBrainstormResult()"
+        (cancelClicked)="onCancel()"
+        (retryFailedStep)="onRetry()" />
+    </div>
+  }
+
+</div>
+}
+
+<!-- New Project Modal -->
+@if (showCreateModal()) {
+  <div class="modal-backdrop" (click)="closeCreateModal()">
+    <div class="modal" data-test="create-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">New Project</h2>
+        <button class="modal-close" (click)="closeCreateModal()"><span class="btn-icon">&#215;</span></button>
+      </div>
+
+      <div class="modal-body">
+        <label class="modal-label" for="v2ProjectName">Project name</label>
+        <input
+          #projectNameEl
+          id="v2ProjectName"
+          class="modal-input"
+          type="text"
+          placeholder="e.g. Flask / Angular Plugin"
+          (keydown.enter)="projectNameEl.value && braindumpEl.value && createProject(projectNameEl, braindumpEl)" />
+
+        <label class="modal-label" for="v2Braindump">Brain dump</label>
+        <textarea
+          #braindumpEl
+          id="v2Braindump"
+          data-test="braindump-input"
+          class="modal-textarea"
+          placeholder="Paste your brain dump here — everything you know about this project, unfiltered."
+          rows="14"></textarea>
+
+        @if (specGenError()) {
+          <div class="text-ops-error">
+            <span class="overline">Error</span>
+            {{ specGenError() }}
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="modal-cancel" (click)="closeCreateModal()">Cancel</button>
+        <button
+          class="modal-generate"
+          [disabled]="specGenLoading()"
+          (click)="createProject(projectNameEl, braindumpEl)">
+          @if (specGenLoading()) {
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            Generating…
+          } @else {
+            <span class="btn-icon">&#10022;</span> Generate Specs
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

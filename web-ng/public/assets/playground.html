@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Playground — Spec Doc</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/landing-style.css">
+  <style>
+    /* ── Part 1: App-only CSS custom properties ─────────────────────────── */
+    :root {
+      --code-bg:           #F5F5F5;
+      --status-idle:       #1a6b30;
+      --status-active:     #7a5800;
+      --status-success:    #1a6b30;
+      --status-failure:    #C41E3A;
+      --status-running:    #22A66A;
+      --status-success-bg: #2E7D32;
+    }
+    [data-theme="dark"] {
+      --code-bg:           #1E1E1E;
+      --status-idle:       #1a4d25;
+      --status-active:     #5a4000;
+      --status-success:    #1a4d25;
+      --status-failure:    #8B0000;
+      --status-running:    #1DB97A;
+      --status-success-bg: #1B5E20;
+    }
+
+    /* ── Part 2: App component classes ──────────────────────────────────── */
+
+    /* File Grid */
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      padding: 24px 0;
+    }
+    .file-column {
+      padding: 0 24px;
+      border-right: 1px solid var(--border);
+    }
+    .file-column:first-child { padding-left: 0; }
+    .file-column:last-child  { border-right: none; padding-right: 0; }
+
+    .file-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--ink);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+    }
+    .col-title {
+      font-family: var(--serif);
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .col-badge {
+      font-family: var(--sans);
+      font-size: 10px;
+      padding: 2px 8px;
+      background: var(--border);
+      border-radius: 2px;
+      color: var(--ink-light);
+    }
+
+    .file-item {
+      padding: 12px 8px;
+      margin: 0 -8px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .file-item:hover { background: rgba(0,0,0,0.025); }
+    [data-theme="dark"] .file-item:hover { background: rgba(255,255,255,0.04); }
+    .file-item:last-child { border-bottom: none; }
+    .file-item-title {
+      font-family: var(--serif);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .file-item-teaser {
+      font-family: var(--body);
+      font-size: 13px;
+      color: var(--ink-light);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .file-item-meta {
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .file-item.featured .file-item-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .file-item.featured .file-item-teaser {
+      -webkit-line-clamp: 3;
+    }
+
+    /* Expanded Panel */
+    .expanded-panel {
+      display: none;
+      border-top: 3px solid var(--ink);
+    }
+    .expanded-panel.pg-active {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      align-items: start;
+      animation: rise 0.2s ease;
+    }
+    .expanded-sidebar {
+      position: sticky;
+      top: 40px;
+      padding: 32px 0 40px;
+      border-right: 1px solid var(--border);
+    }
+    .expanded-main {
+      padding: 32px 0 100px 48px;
+    }
+    .expanded-title {
+      font-family: var(--serif);
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 32px;
+    }
+
+    /* Sidebar generate/status */
+    .sidebar-generate {
+      display: block;
+      width: calc(100% - 32px);
+      margin: 16px 16px 0;
+      padding: 8px 12px;
+      border: 1px dashed var(--accent);
+      color: var(--accent);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: none;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .sidebar-generate:hover { background: var(--accent); color: var(--bg); }
+
+    .sidebar-status {
+      margin: 16px 16px 0;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--ink-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-status--active {
+      border-color: var(--status-running);
+      background: rgba(34,166,106,0.05);
+      color: var(--ink);
+    }
+    .sidebar-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .sidebar-status-dot--active {
+      background: var(--status-running);
+      animation: poll-pulse 0.7s ease-out infinite alternate;
+    }
+
+    /* Sidebar file links */
+    .sidebar-file {
+      display: block;
+      padding: 6px 16px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--ink-muted);
+      border-left: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      text-decoration: none;
+    }
+    .sidebar-file:hover { color: var(--ink); background: rgba(0,0,0,0.025); }
+    [data-theme="dark"] .sidebar-file:hover { background: rgba(255,255,255,0.04); }
+    .sidebar-file.active {
+      color: var(--ink);
+      font-weight: 600;
+      border-left-color: var(--ink);
+    }
+
+    /* Markdown content */
+    .markdown-content {
+      font-family: var(--body);
+      font-size: 15px;
+      line-height: 1.85;
+      column-count: 2;
+      column-gap: 52px;
+      column-rule: 1px solid var(--border);
+    }
+    .markdown-content h1 {
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 700;
+      column-span: all;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin: 0 0 16px;
+    }
+    .markdown-content h2 {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 700;
+      margin: 16px 0 8px;
+    }
+    .markdown-content h3 {
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--ink-muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin: 16px 0 8px;
+    }
+    .markdown-content p { margin: 0 0 12px; }
+    .markdown-content code {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 12px;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+    .markdown-content pre {
+      background: var(--code-bg);
+      border-left: 3px solid var(--border-dark);
+      padding: 16px 20px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      column-span: all;
+      margin: 12px 0;
+    }
+    .markdown-content pre code { background: none; padding: 0; }
+    .markdown-content blockquote {
+      border-left: 3px solid var(--border-dark);
+      padding-left: 20px;
+      font-style: italic;
+      color: var(--ink-light);
+      margin: 12px 0;
+    }
+    .markdown-content table {
+      width: 100%;
+      border-collapse: collapse;
+      column-span: all;
+      margin: 12px 0;
+    }
+    .markdown-content th {
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 2px solid var(--ink);
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .markdown-content td {
+      border-bottom: 1px solid var(--border);
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .markdown-content hr {
+      border: none;
+      border-top: 3px solid var(--border-dark);
+      column-span: all;
+      margin: 16px 0;
+    }
+
+    /* Editor toolbar */
+    .editor-toolbar {
+      border-bottom: 2px solid var(--ink);
+      padding: 10px 0;
+      background: var(--bg);
+    }
+
+    /* Op chips */
+    .op-chip {
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid var(--border);
+      color: var(--ink-muted);
+      padding: 4px 14px;
+      border-radius: 2px;
+      background: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .op-chip:hover { color: var(--ink); border-color: var(--ink-light); }
+    .op-chip.active {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+    .op-chip--accent {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .op-chip--accent.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .style-chip {
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid var(--border);
+      color: var(--ink-muted);
+      padding: 4px 14px;
+      border-radius: 20px;
+      background: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .style-chip:hover { color: var(--ink); border-color: var(--ink-light); }
+
+    .editor-apply-btn {
+      background: var(--ink);
+      color: var(--bg);
+      border: 1px solid var(--ink);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 6px 22px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .editor-apply-btn:hover { opacity: 0.85; }
+
+    .text-ops-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .text-ops-label {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-muted);
+      white-space: nowrap;
+    }
+
+    /* Generation status bar */
+    .gen-status-bar {
+      display: block;
+      background: var(--status-idle);
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+    }
+    .gen-status-track {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), #fff, var(--accent), transparent);
+      background-size: 200% 100%;
+      animation: gen-shimmer 1.6s linear infinite;
+    }
+    .gen-status-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+    }
+    .gen-status-bar--idle    { background: var(--status-idle); }
+    .gen-status-bar--active  { background: var(--status-active); }
+    .gen-status-bar--success { background: var(--status-success); }
+    .gen-status-bar--failure { background: var(--status-failure); }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal {
+      background: var(--bg);
+      border: 1px solid var(--border-dark);
+      max-width: 680px;
+      width: 100%;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.18);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 2px solid var(--border-dark);
+    }
+    .modal-title {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--ink-muted);
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .modal-close:hover { color: var(--ink); }
+    .modal-body { padding: 20px 24px; }
+    .modal-label {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+    .modal-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .modal-input:focus { border-color: var(--ink); }
+    .modal-textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--body);
+      font-size: 14px;
+      line-height: 1.65;
+      padding: 10px 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .modal-textarea:focus { border-color: var(--ink); }
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .modal-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--ink-muted);
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .modal-cancel:hover { border-color: var(--ink); color: var(--ink); }
+    .modal-generate {
+      background: var(--ink);
+      color: var(--bg);
+      border: 1px solid var(--ink);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .modal-generate:hover { opacity: 0.85; }
+
+    /* Diff blocks */
+    .diff-block-remove {
+      background: rgba(196,30,58,0.05);
+      border-left: 3px solid var(--red);
+      text-decoration: line-through;
+      opacity: 0.65;
+      padding: 10px 16px;
+      font-family: var(--body);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .diff-block-add {
+      background: rgba(46,125,50,0.06);
+      border-left: 3px solid var(--status-success-bg);
+      padding: 10px 16px;
+      font-family: var(--body);
+      font-size: 14px;
+    }
+
+    /* Update banner */
+    .update-banner {
+      background: var(--ink);
+      color: var(--bg);
+      font-family: var(--sans);
+      font-size: 12px;
+      text-align: center;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .update-banner button {
+      border: 1px solid var(--bg);
+      border-radius: 2px;
+      background: none;
+      color: var(--bg);
+      font-family: var(--sans);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 2px 10px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .update-banner button:hover { background: var(--bg); color: var(--ink); }
+
+    /* Context cards */
+    .context-card {
+      border: 1px solid var(--border);
+      padding: 20px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .context-card:hover {
+      border-color: var(--ink);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .context-card__label {
+      font-family: var(--serif);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .context-card__desc {
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--ink-muted);
+      line-height: 1.5;
+    }
+
+    /* Search bar */
+    .search-bar {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .search-bar input {
+      border: none;
+      border-bottom: 1px solid var(--border);
+      background: none;
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 13px;
+      padding: 4px 0;
+      outline: none;
+      flex: 1;
+      transition: border-color 0.15s;
+    }
+    .search-bar input:focus { border-color: var(--ink); }
+
+    /* Empty state */
+    .empty-state {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-style: italic;
+      color: var(--ink-muted);
+      padding: 64px 0;
+      text-align: center;
+    }
+
+    /* New project / logout buttons */
+    .new-project-btn {
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 5px 12px;
+      background: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .new-project-btn:hover { background: var(--accent); color: var(--bg); }
+
+    .logout-btn {
+      border: 1px solid var(--border-dark);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 5px 12px;
+      background: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .logout-btn:hover { background: var(--ink); color: var(--bg); }
+
+    /* ── Part 3: All 7 @keyframes ────────────────────────────────────────── */
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes gen-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @keyframes poll-pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(34,166,106,0.55); }
+      100% { box-shadow: 0 0 0 5px rgba(34,166,106,0); }
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.85); }
+      50%       { opacity: 1;   transform: scale(1); }
+    }
+    @keyframes thinking-pulse {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40%            { opacity: 1;   transform: scale(1); }
+    }
+    @keyframes count-pulse {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+    @keyframes status-success-flash {
+      0%, 40% { background: var(--status-success-bg); }
+      100%    { background: var(--status-success); }
+    }
+
+    /* ── Part 4: Playground utility classes ──────────────────────────────── */
+    .pg-section {
+      border-top: 3px solid var(--ink);
+      padding: 48px 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    .pg-section-title {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .pg-section-sub {
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--ink-muted);
+      margin-bottom: 32px;
+    }
+    .pg-subsection { margin-bottom: 48px; }
+    .pg-subsection:last-child { margin-bottom: 0; }
+    .pg-subsection-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .pg-subsection-header h3 {
+      font-family: var(--serif);
+      font-size: 18px;
+      font-weight: 700;
+      flex: 1;
+    }
+    .pg-source-label {
+      font-family: var(--sans);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 2px 8px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .pg-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    .pg-three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+    }
+    .pg-col-label {
+      font-family: var(--sans);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-muted);
+      margin-bottom: 8px;
+    }
+    .pg-demo {
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--ink);
+      padding: 24px;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .pg-demo--flush { padding: 0; }
+    .pg-code {
+      background: #F5F5F5;
+      border-left: 3px solid var(--ink-muted);
+      padding: 14px 18px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.65;
+      color: var(--ink);
+      white-space: pre;
+      overflow-x: auto;
+      margin: 0;
+    }
+    [data-theme="dark"] .pg-code { background: #1E1E1E; }
+    .pg-note {
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--ink-muted);
+      font-style: italic;
+      margin-top: 8px;
+    }
+
+    /* Swatch grid */
+    .pg-swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .pg-swatch {
+      text-align: center;
+      width: 90px;
+    }
+    .pg-swatch-box {
+      height: 56px;
+      border: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .pg-swatch-name {
+      font-family: var(--sans);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+      display: block;
+      margin-bottom: 2px;
+    }
+    .pg-swatch-hex {
+      font-family: 'SF Mono', monospace;
+      font-size: 10px;
+      color: var(--ink-muted);
+      display: block;
+    }
+
+    /* Animation cards */
+    .pg-anim-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 24px;
+    }
+    .pg-anim-card {
+      border: 1px solid var(--border);
+      padding: 20px;
+      text-align: center;
+    }
+    .pg-anim-name {
+      font-family: 'SF Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .pg-anim-timing {
+      font-family: var(--sans);
+      font-size: 10px;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .pg-anim-stage {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .pg-replay-btn {
+      font-family: var(--sans);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--ink-muted);
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .pg-replay-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+    /* States table */
+    .pg-states-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .pg-states-table th {
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-light);
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 2px solid var(--ink);
+    }
+    .pg-states-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .pg-states-table tr:last-child td { border-bottom: none; }
+    .pg-element-name {
+      font-family: 'SF Mono', monospace;
+      font-size: 11px;
+      color: var(--ink-light);
+      white-space: nowrap;
+    }
+
+    /* Comparison table */
+    .pg-comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .pg-comparison-table th {
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-light);
+      text-align: left;
+      padding: 10px 16px;
+      border-bottom: 2px solid var(--ink);
+    }
+    .pg-comparison-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--sans);
+      font-size: 13px;
+      vertical-align: top;
+    }
+    .pg-comparison-table tr:last-child td { border-bottom: none; }
+    .pg-comparison-table td:first-child {
+      font-weight: 600;
+      color: var(--ink);
+      width: 200px;
+    }
+    .pg-comparison-table td:not(:first-child) {
+      color: var(--ink-light);
+      font-family: 'SF Mono', monospace;
+      font-size: 11px;
+    }
+    .pg-comparison-table td em {
+      font-style: italic;
+      color: var(--ink-muted);
+      font-family: var(--sans);
+      font-size: 11px;
+    }
+
+    /* Border demos */
+    .pg-border-demo-line {
+      height: 0;
+      margin: 8px 0;
+    }
+    .pg-border-demo-left {
+      padding-left: 16px;
+      font-family: 'SF Mono', monospace;
+      font-size: 11px;
+      color: var(--ink-muted);
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="masthead-edition">Specview Design System</span>
+      <div class="masthead-center">
+        <div class="masthead-date" id="date-label"></div>
+        <h1 class="masthead-title">Design Playground</h1>
+        <div class="masthead-tagline"><em>Every Component · Every State · Every Token</em></div>
+      </div>
+      <div class="masthead-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+          <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section nav -->
+  <nav class="section-bar" id="pg-nav">
+    <a href="#pg-tokens" class="active">Tokens</a>
+    <a href="#pg-borders">Borders</a>
+    <a href="#pg-components">Components</a>
+    <a href="#pg-animations">Animations</a>
+    <a href="#pg-states">States</a>
+    <a href="#pg-comparison">App vs Landing</a>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SECTION: Design Tokens
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="pg-section" id="pg-tokens">
+    <div class="pg-section-title">Design Tokens</div>
+    <div class="pg-section-sub">Single source of truth for color, typography, and spacing. Lives in landing/style.css and web-ng/src/styles.css.</div>
+
+    <!-- Colors -->
+    <div class="pg-subsection">
+      <div class="pg-subsection-header">
+        <h3>Colors — Shared Palette</h3>
+        <span class="pg-source-label">From: style.css :root</span>
+      </div>
+      <div class="pg-swatches">
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--bg)"></div>
+          <span class="pg-swatch-name">--bg</span>
+          <span class="pg-swatch-hex">#FFFEF9</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--ink)"></div>
+          <span class="pg-swatch-name">--ink</span>
+          <span class="pg-swatch-hex">#121212</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--ink-light)"></div>
+          <span class="pg-swatch-name">--ink-light</span>
+          <span class="pg-swatch-hex">#5A5A5A</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--ink-muted)"></div>
+          <span class="pg-swatch-name">--ink-muted</span>
+          <span class="pg-swatch-hex">#999999</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--border)"></div>
+          <span class="pg-swatch-name">--border</span>
+          <span class="pg-swatch-hex">#DFDFDF</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--border-dark)"></div>
+          <span class="pg-swatch-name">--border-dark</span>
+          <span class="pg-swatch-hex">#121212</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--accent)"></div>
+          <span class="pg-swatch-name">--accent</span>
+          <span class="pg-swatch-hex">#567B95</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--red)"></div>
+          <span class="pg-swatch-name">--red</span>
+          <span class="pg-swatch-hex">#C41E3A</span>
+        </div>
+      </div>
+
+      <div class="pg-col-label" style="margin-bottom: 12px;">App-only tokens (web-ng/src/styles.css)</div>
+      <div class="pg-swatches">
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: var(--code-bg)"></div>
+          <span class="pg-swatch-name">--code-bg</span>
+          <span class="pg-swatch-hex">#F5F5F5</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: #1a6b30"></div>
+          <span class="pg-swatch-name">--status-idle</span>
+          <span class="pg-swatch-hex">#1a6b30</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: #7a5800"></div>
+          <span class="pg-swatch-name">--status-active</span>
+          <span class="pg-swatch-hex">#7a5800</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: #1a6b30"></div>
+          <span class="pg-swatch-name">--status-success</span>
+          <span class="pg-swatch-hex">#1a6b30</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: #C41E3A"></div>
+          <span class="pg-swatch-name">--status-failure</span>
+          <span class="pg-swatch-hex">#C41E3A</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: #22A66A"></div>
+          <span class="pg-swatch-name">--status-running</span>
+          <span class="pg-swatch-hex">#22A66A</span>
+        </div>
+        <div class="pg-swatch">
+          <div class="pg-swatch-box" style="background: #2E7D32"></div>
+          <span class="pg-swatch-name">--status-success-bg</span>
+          <span class="pg-swatch-hex">#2E7D32</span>
+        </div>
+      </div>
+      <p class="pg-note">All swatches are live — toggle dark mode above to see the dark values.</p>
+    </div>
+
+    <!-- Typography -->
+    <div class="pg-subsection">
+      <div class="pg-subsection-header">
+        <h3>Typography</h3>
+        <span class="pg-source-label">From: Google Fonts + style.css vars</span>
+      </div>
+
+      <!-- Playfair Display -->
+      <div style="margin-bottom: 40px;">
+        <div class="pg-two-col">
+          <div>
+            <div class="pg-col-label">Font Info</div>
+            <div class="pg-demo">
+              <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-muted);margin-bottom:12px">Playfair Display — --serif</div>
+              <div style="font-family:var(--sans);font-size:11px;color:var(--ink-light);line-height:1.8">
+                Role: Headlines, titles, pull quotes, large numbers<br>
+                Weights: 400, 700, 700 italic<br>
+                Rule: Always 700 for headlines — never 400
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="pg-col-label">Specimens</div>
+            <div class="pg-demo">
+              <div style="font-family:var(--serif);font-size:56px;font-weight:700;letter-spacing:-0.02em;line-height:1;margin-bottom:12px">Design Playground</div>
+              <div style="font-family:var(--serif);font-size:36px;font-weight:700;line-height:1.15;margin-bottom:8px">Expanded Panel Title</div>
+              <div style="font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.2;margin-bottom:8px">Markdown Heading 1</div>
+              <div style="font-family:var(--serif);font-size:20px;font-weight:700;line-height:1.3;margin-bottom:6px">Markdown Heading 2</div>
+              <div style="font-family:var(--serif);font-size:18px;font-weight:700;line-height:1.3;margin-bottom:6px">File Item Title Featured</div>
+              <div style="font-family:var(--serif);font-size:15px;font-weight:600;line-height:1.3">File Item Title</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Source Serif 4 -->
+      <div style="margin-bottom: 40px;">
+        <div class="pg-two-col">
+          <div>
+            <div class="pg-col-label">Font Info</div>
+            <div class="pg-demo">
+              <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-muted);margin-bottom:12px">Source Serif 4 — --body</div>
+              <div style="font-family:var(--sans);font-size:11px;color:var(--ink-light);line-height:1.8">
+                Role: Body copy, paragraphs, reading text<br>
+                Weights: 400, 600<br>
+                Rule: Multi-sentence content only
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="pg-col-label">Specimens</div>
+            <div class="pg-demo">
+              <div style="font-family:var(--body);font-size:17px;line-height:1.75;margin-bottom:12px;color:var(--ink)">The editorial voice of Specview. Every braindump becomes an engineering spec — analysis, epic, architecture, implementation guide, all in minutes.</div>
+              <div style="font-family:var(--body);font-size:15px;line-height:1.65;color:var(--ink-light)">Shorter body text at 15px. Used in file item teasers and expanded content.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Source Sans 3 -->
+      <div>
+        <div class="pg-two-col">
+          <div>
+            <div class="pg-col-label">Font Info</div>
+            <div class="pg-demo">
+              <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-muted);margin-bottom:12px">Source Sans 3 — --sans</div>
+              <div style="font-family:var(--sans);font-size:11px;color:var(--ink-light);line-height:1.8">
+                Role: Labels, metadata, UI chrome, uppercase tags<br>
+                Weights: 400, 600<br>
+                Rule: Never for multi-sentence reading text
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="pg-col-label">Specimens</div>
+            <div class="pg-demo">
+              <div style="font-family:var(--sans);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;color:var(--ink)">Section Navigation Label</div>
+              <div style="font-family:var(--sans);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;color:var(--ink-light)">Widget Title / Meta Label</div>
+              <div style="font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-muted)">Micro Label / Source Attribution</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SECTION: Border System
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="pg-section" id="pg-borders">
+    <div class="pg-section-title">Border System</div>
+    <div class="pg-section-sub">The entire visual hierarchy is built on borders, not cards or shadows. Eight distinct uses.</div>
+
+    <table class="pg-comparison-table">
+      <thead>
+        <tr>
+          <th>Weight</th>
+          <th>Semantic Role</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1px solid var(--border)</td>
+          <td><em>Masthead bottom, column dividers, between sections</em></td>
+          <td><div style="border-top: 1px solid var(--border); margin: 8px 0;"></div></td>
+        </tr>
+        <tr>
+          <td>2px solid var(--ink)</td>
+          <td><em>Widget/column title underline, editor toolbar bottom</em></td>
+          <td><div style="border-top: 2px solid var(--ink); margin: 8px 0;"></div></td>
+        </tr>
+        <tr>
+          <td>3px solid var(--ink)</td>
+          <td><em>Major structural break (section-bar top, expanded panel top, footer top)</em></td>
+          <td><div style="border-top: 3px solid var(--ink); margin: 8px 0;"></div></td>
+        </tr>
+        <tr>
+          <td>3px solid var(--border-dark)</td>
+          <td><em>&lt;hr&gt; thick rule</em></td>
+          <td><div style="border-top: 3px solid var(--border-dark); margin: 8px 0;"></div></td>
+        </tr>
+        <tr>
+          <td>border-left: 3px solid var(--ink-muted)</td>
+          <td><em>Code block accent (landing)</em></td>
+          <td><div class="pg-border-demo-left" style="border-left: 3px solid var(--ink-muted)">code block</div></td>
+        </tr>
+        <tr>
+          <td>border-left: 3px solid var(--border-dark)</td>
+          <td><em>Code block accent (app markdown)</em></td>
+          <td><div class="pg-border-demo-left" style="border-left: 3px solid var(--border-dark)">code block</div></td>
+        </tr>
+        <tr>
+          <td>border-left: 2px solid var(--ink)</td>
+          <td><em>Sidebar active file</em></td>
+          <td><div class="pg-border-demo-left" style="border-left: 2px solid var(--ink)">active file</div></td>
+        </tr>
+        <tr>
+          <td>border: 1px dashed var(--accent)</td>
+          <td><em>Generate button</em></td>
+          <td><button style="border: 1px dashed var(--accent); background: none; color: var(--accent); padding: 4px 12px; font-size: 11px; font-family: var(--sans); cursor: default">Generate</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="pg-note" style="margin-top: 16px;">3px ink = major structural break. 2px ink = section label underline. 1px border = content divider.</p>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SECTION: Components
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="pg-section" id="pg-components">
+    <div class="pg-section-title">Components</div>
+    <div class="pg-section-sub">Every reusable component with live demos, key CSS, and ClawBoi origin where applicable.</div>
+
+    <!-- 5.1 Masthead -->
+    <div class="pg-subsection" id="pg-comp-masthead">
+      <div class="pg-subsection-header">
+        <h3>5.1 Masthead</h3>
+        <span class="pg-source-label">Both (shared)</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Live Demo</div>
+          <div class="pg-demo pg-demo--flush">
+            <header class="masthead" style="padding: 16px 24px;">
+              <div class="masthead-top">
+                <span class="masthead-edition">Vol. 1, No. 1</span>
+                <div class="masthead-center">
+                  <div class="masthead-date">Saturday, May 2026</div>
+                  <h1 class="masthead-title" style="font-size: 40px;">Spec Doc</h1>
+                  <div class="masthead-tagline">All the Specs Fit to Build</div>
+                </div>
+                <div class="masthead-actions">
+                  <button class="new-project-btn">New Project</button>
+                  <button class="logout-btn">Logout</button>
+                </div>
+              </div>
+            </header>
+          </div>
+          <p class="pg-note">The masthead at the top of this page is the live production demo.</p>
+        </div>
+        <div>
+          <div class="pg-col-label">Key CSS</div>
+          <pre class="pg-code">grid-template-columns: 150px 1fr 150px;
+align-items: center;    /* app */
+align-items: flex-end;  /* landing */
+
+.masthead-title {
+  font: 56px/700 Playfair;
+  letter-spacing: -0.02em;
+}
+.masthead-tagline {
+  font: 12px Source Sans;
+  font-style: italic;
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.2 Section Navigation Bar -->
+    <div class="pg-subsection" id="pg-comp-nav">
+      <div class="pg-subsection-header">
+        <h3>5.2 Section Navigation Bar</h3>
+        <span class="pg-source-label">Both (shared)</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Live Demo</div>
+          <div class="pg-demo pg-demo--flush">
+            <nav style="display:flex; justify-content:center; border-bottom: 1px solid var(--border);">
+              <a href="#" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink);font-weight:700;padding:10px 16px 10px 0;border-right:1px solid var(--border);text-decoration:none">All</a>
+              <a href="#" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-light);font-weight:600;padding:10px 16px;border-right:1px solid var(--border);text-decoration:none">Analysis</a>
+              <a href="#" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-light);font-weight:600;padding:10px 16px;border-right:1px solid var(--border);text-decoration:none">Epic</a>
+              <a href="#" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-light);font-weight:600;padding:10px 16px;text-decoration:none">Architecture</a>
+            </nav>
+          </div>
+          <p class="pg-note">The section nav at the top of this page is the live production demo.</p>
+        </div>
+        <div>
+          <div class="pg-col-label">Key CSS</div>
+          <pre class="pg-code">.section-bar {
+  display: flex;
+  justify-content: center;
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--border);
+}
+.section-bar a {
+  font: 11px/600 Source Sans;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-light);
+  border-right: 1px solid var(--border);
+  padding: 10px 16px;
+}
+.section-bar a.active {
+  color: var(--ink);
+  font-weight: 700;
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.3 File Grid -->
+    <div class="pg-subsection" id="pg-comp-file-grid">
+      <div class="pg-subsection-header">
+        <h3>5.3 File Grid</h3>
+        <span class="pg-source-label">Specview app (origin: ClawBoi)</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Specview — Live Demo</div>
+          <div class="pg-demo pg-demo--flush" style="padding: 0 24px;">
+            <div class="file-grid" style="padding: 0 0 24px;">
+              <div class="file-column">
+                <div class="file-header">
+                  <span class="col-title">Analysis</span>
+                  <span class="col-badge">3</span>
+                </div>
+                <div class="file-item featured">
+                  <div class="file-item-title">Specview UX Vision</div>
+                  <div class="file-item-teaser">Design tokens, components, and interaction principles for the newspaper aesthetic.</div>
+                  <div class="file-item-meta">2026-05-09 · analysis.md</div>
+                </div>
+                <div class="file-item">
+                  <div class="file-item-title">ClawBoi Ecosystem</div>
+                  <div class="file-item-meta">2026-05-07 · analysis.md</div>
+                </div>
+              </div>
+              <div class="file-column">
+                <div class="file-header"><span class="col-title">Epic</span><span class="col-badge">2</span></div>
+                <div class="file-item featured"><div class="file-item-title">Authentication Flow</div><div class="file-item-meta">2026-05-08 · epic.md</div></div>
+              </div>
+              <div class="file-column" style="border-right: none; padding-right: 0;">
+                <div class="file-header"><span class="col-title">Architecture</span><span class="col-badge">2</span></div>
+                <div class="file-item featured"><div class="file-item-title">Chain Adapter Pattern</div><div class="file-item-meta">2026-05-06 · architecture.md</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="pg-col-label">ClawBoi Origin (HTML pattern)</div>
+          <pre class="pg-code">&lt;div class="newspaper-grid"&gt;
+  &lt;div class="section-column"&gt;
+    &lt;div class="section-header"&gt;
+      &lt;span class="section-icon"&gt;📁&lt;/span&gt;
+      &lt;span class="section-title"&gt;Analysis&lt;/span&gt;
+      &lt;span class="section-badge"&gt;3&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class="memory-item featured"&gt;
+      &lt;div class="memory-item-title"&gt;…&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+/* ClawBoi: .newspaper-grid / .section-column
+   Specview: .file-grid / .file-column
+   Key delta: no emoji icon in Specview */</pre>
+          <div class="pg-col-label" style="margin-top: 16px;">Specview Key CSS</div>
+          <pre class="pg-code">.file-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0; /* borders do the work */
+}
+.file-column {
+  padding: 0 24px;
+  border-right: 1px solid var(--border);
+}
+.file-header {
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.4 File Item States -->
+    <div class="pg-subsection" id="pg-comp-file-item">
+      <div class="pg-subsection-header">
+        <h3>5.4 File Item States</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Live Demo</div>
+          <div class="pg-demo pg-demo--flush" style="padding: 0 16px;">
+            <div class="file-item featured">
+              <div class="file-item-title">Featured: UX Vision Document</div>
+              <div class="file-item-teaser">Design tokens, components, and interaction principles for the newspaper aesthetic. Three-line clamp teaser for featured items.</div>
+              <div class="file-item-meta">2026-05-09 · analysis.md · featured</div>
+            </div>
+            <div class="file-item">
+              <div class="file-item-title">Normal: Chain Adapter Pattern</div>
+              <div class="file-item-teaser">Standard 15px title, two-line teaser, meta below.</div>
+              <div class="file-item-meta">2026-05-08 · architecture.md</div>
+            </div>
+            <div class="file-item" style="background: rgba(0,0,0,0.025)">
+              <div class="file-item-title">Hovered: Authentication Flow</div>
+              <div class="file-item-teaser">Hover state applied via inline style to simulate background fill.</div>
+              <div class="file-item-meta">2026-05-07 · epic.md · hover state</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="pg-col-label">Key CSS</div>
+          <pre class="pg-code">.file-item {
+  padding: 12px 8px;
+  margin: 0 -8px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.file-item:hover {
+  background: rgba(0,0,0,0.025);
+}
+.file-item-title {
+  font: 15px/600 Playfair;
+  line-height: 1.3;
+}
+.file-item.featured .file-item-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+.file-item.featured .file-item-teaser {
+  -webkit-line-clamp: 3;
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.5 Expanded Panel -->
+    <div class="pg-subsection" id="pg-comp-expanded">
+      <div class="pg-subsection-header">
+        <h3>5.5 Expanded Panel</h3>
+        <span class="pg-source-label">Both (shared pattern, different layout)</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">ClawBoi original (display: block, no sidebar)</div>
+          <div class="pg-demo" style="border-top: 3px solid var(--ink); padding: 24px; background: var(--bg);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <div style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-muted)">Analysis · 2026-05-09</div>
+              <button style="background:none;border:none;color:var(--ink-muted);font-size:24px;cursor:pointer;line-height:1">×</button>
+            </div>
+            <div class="expanded-title" style="font-size:28px;margin-bottom:16px">Specview UX Vision</div>
+            <div style="font-family:var(--body);font-size:15px;line-height:1.75;color:var(--ink-light)">Expanded body in display:block — single column, no sidebar grid. ClawBoi used column-count: 2 in the body div directly.</div>
+          </div>
+        </div>
+        <div>
+          <div class="pg-col-label">Specview app (grid: 180px 1fr)</div>
+          <div class="pg-demo pg-demo--flush" style="max-height: 320px; overflow: hidden;">
+            <div class="expanded-panel pg-active">
+              <div class="expanded-sidebar">
+                <div style="font-family:var(--sans);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:0 16px 12px;border-bottom:1px solid var(--border);margin-bottom:12px;">specview-ux</div>
+                <a class="sidebar-file active">analysis.md</a>
+                <a class="sidebar-file">epic.md</a>
+                <a class="sidebar-file">architecture.md</a>
+                <button class="sidebar-generate" style="font-size:10px;">✦ Generate</button>
+                <div class="sidebar-status sidebar-status--active" style="margin-top:12px;">
+                  <div class="sidebar-status-dot sidebar-status-dot--active"></div>
+                  <span>generating…</span>
+                </div>
+              </div>
+              <div class="expanded-main" style="padding: 24px 24px 40px 32px;">
+                <div class="expanded-title" style="font-size:24px;margin-bottom:16px">Specview UX Vision</div>
+                <div style="font-family:var(--body);font-size:14px;line-height:1.75;color:var(--ink-light)">2-column newspaper layout in expanded panel. Column rule at 52px gap with 1px border.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.6 Editor Toolbar + Op Chips -->
+    <div class="pg-subsection" id="pg-comp-toolbar">
+      <div class="pg-subsection-header">
+        <h3>5.6 Editor Toolbar + Op Chips</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Live Demo (interactive)</div>
+          <div class="pg-demo pg-demo--flush">
+            <div class="editor-toolbar" style="position: static; padding: 10px 16px; top: auto;">
+              <div class="text-ops-bar pg-chip-demo">
+                <span class="text-ops-label">Rewrite</span>
+                <button class="op-chip">Condense</button>
+                <button class="op-chip active">Expand</button>
+                <button class="op-chip">Style</button>
+                <button class="op-chip--accent op-chip">Brainstorm</button>
+              </div>
+            </div>
+            <div style="padding: 12px 16px; border-top: 1px solid var(--border);">
+              <div style="display:flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <span class="text-ops-label">Style</span>
+                <button class="style-chip">Technical</button>
+                <button class="style-chip">Concise</button>
+                <button class="style-chip">Formal</button>
+                <button class="style-chip">Plain</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="pg-col-label">Key CSS</div>
+          <pre class="pg-code">.op-chip {
+  font: 11px Source Sans;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  padding: 4px 14px;
+  border-radius: 2px;
+}
+.op-chip.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.op-chip--accent {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.style-chip {
+  border-radius: 20px; /* pill — exception */
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.7 Generation Status Bar -->
+    <div class="pg-subsection" id="pg-comp-statusbar">
+      <div class="pg-subsection-header">
+        <h3>5.7 Generation Status Bar</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-col-label">All 4 states (position: static for demo)</div>
+      <div class="pg-demo pg-demo--flush">
+        <!-- Idle -->
+        <div style="background:#1a6b30; color:#fff; font-family:var(--sans); font-size:12px; padding: 8px 16px; display:flex; align-items:center; gap:8px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#fff;flex-shrink:0"></div>
+          <span style="font-weight:700">specview-ux</span>
+          <span style="opacity:0.5">·</span>
+          <span style="font-style:italic;opacity:0.85">idle — ready</span>
+        </div>
+        <!-- Active -->
+        <div style="background:#7a5800; color:#fff; font-family:var(--sans); font-size:12px; padding:2px 0;">
+          <div style="height:2px; background: linear-gradient(90deg, transparent, #7BAFC8, #fff, #7BAFC8, transparent); background-size: 200% 100%; animation: gen-shimmer 1.6s linear infinite;"></div>
+          <div style="padding: 8px 16px; display:flex; align-items:center; gap:8px;">
+            <div style="width:5px;height:5px;border-radius:50%;background:#fff;flex-shrink:0"></div>
+            <span style="font-weight:700">specview-ux</span>
+            <span style="opacity:0.5">·</span>
+            <span style="font-style:italic;opacity:0.85">generating architecture…</span>
+          </div>
+        </div>
+        <!-- Success -->
+        <div style="background:#1a6b30; color:#fff; font-family:var(--sans); font-size:12px; padding: 8px 16px; display:flex; align-items:center; gap:8px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#fff;flex-shrink:0"></div>
+          <span style="font-weight:700">specview-ux</span>
+          <span style="opacity:0.5">·</span>
+          <span style="font-style:italic;opacity:0.85">done — 5 files generated</span>
+        </div>
+        <!-- Failure -->
+        <div style="background:#C41E3A; color:#fff; font-family:var(--sans); font-size:12px; padding: 8px 16px; display:flex; align-items:center; gap:8px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#fff;flex-shrink:0"></div>
+          <span style="font-weight:700">specview-ux</span>
+          <span style="opacity:0.5">·</span>
+          <span style="font-style:italic;opacity:0.85">error — chain timed out</span>
+          <button style="margin-left:auto;background:none;border:1px solid rgba(255,255,255,0.5);color:inherit;font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:0.06em;padding:2px 8px;cursor:pointer">Retry</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:0;margin-top:8px;">
+        <div class="pg-note" style="flex:1;text-align:center">Idle</div>
+        <div class="pg-note" style="flex:1;text-align:center">Active (shimmer)</div>
+        <div class="pg-note" style="flex:1;text-align:center">Success</div>
+        <div class="pg-note" style="flex:1;text-align:center">Failure</div>
+      </div>
+    </div>
+
+    <!-- 5.8 Modal -->
+    <div class="pg-subsection" id="pg-comp-modal">
+      <div class="pg-subsection-header">
+        <h3>5.8 Modal</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Live Demo (static inline)</div>
+          <div class="pg-demo pg-demo--flush">
+            <div class="modal" style="position:static;max-width:100%;box-shadow:none;max-height:none;">
+              <div class="modal-header">
+                <span class="modal-title">New Project</span>
+                <button class="modal-close">×</button>
+              </div>
+              <div class="modal-body">
+                <label class="modal-label">Project Name</label>
+                <input class="modal-input" type="text" value="Specview UX Vision" readonly>
+                <label class="modal-label" style="margin-top:12px;display:block">Braindump</label>
+                <textarea class="modal-textarea" rows="4" readonly>Write everything you know about the feature — raw and unfiltered. The more context the better...</textarea>
+              </div>
+              <div class="modal-footer">
+                <button class="modal-cancel">Cancel</button>
+                <button class="modal-generate">✦ Generate Specs</button>
+              </div>
+            </div>
+          </div>
+          <p class="pg-note" style="margin-top:8px">
+            <button id="pg-modal-trigger" class="pg-replay-btn">Open as live overlay →</button>
+          </p>
+        </div>
+        <div>
+          <div class="pg-col-label">Key CSS</div>
+          <pre class="pg-code">.modal {
+  background: var(--bg);
+  border: 1px solid var(--border-dark);
+  max-width: 680px;
+  box-shadow: 0 8px 48px
+    rgba(0,0,0,0.18); /* intentional */
+}
+.modal-header {
+  border-bottom: 2px solid var(--border-dark);
+}
+.modal-title {
+  font: 22px/700 Playfair;
+}
+/* Fields: 1px border, focus → ink */
+/* Footer: ghost cancel, filled generate */</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.9 Pull Quote -->
+    <div class="pg-subsection" id="pg-comp-pullquote">
+      <div class="pg-subsection-header">
+        <h3>5.9 Pull Quote</h3>
+        <span class="pg-source-label">Landing (Specview) vs ClawBoi original</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Specview landing</div>
+          <div class="pg-demo">
+            <section class="pullquote-row pullquote-single" style="min-height:auto;border-bottom:none;">
+              <div class="pullquote" style="padding: 32px 24px; max-width: 100%;">
+                <div class="pullquote-mark">"</div>
+                <p class="pullquote-text" style="font-size:18px;max-width:100%">I wrote 3 paragraphs. 47 seconds later I had an analysis, an epic, and an architecture doc.</p>
+                <div class="pullquote-attr">What using Spec Doc feels like</div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div>
+          <div class="pg-col-label">ClawBoi original (CSS pattern)</div>
+          <pre class="pg-code">/* ClawBoi: ::before pseudo-element */
+.pull-quote {
+  text-align: center;
+  padding: 32px 60px;
+  position: relative;
+}
+.pull-quote::before {
+  content: '"';
+  font: 72px Playfair;
+  color: var(--border);
+  position: absolute;
+  top: 0; left: 20px;
+}
+/* Specview: .pullquote-mark as a div */
+.pullquote-mark {
+  font: 56px/700 Playfair;
+  color: var(--border);
+  line-height: 0.8;
+}
+/* Key delta: div vs ::before; size 56 vs 72 */</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.10 Step Section -->
+    <div class="pg-subsection" id="pg-comp-steps">
+      <div class="pg-subsection-header">
+        <h3>5.10 Step Section</h3>
+        <span class="pg-source-label">Specview landing</span>
+      </div>
+      <div class="pg-col-label">Live Demo (2-step condensed)</div>
+      <div class="pg-demo pg-demo--flush">
+        <div class="steps" style="grid-template-columns: 1fr 1fr; min-height: auto;">
+          <div class="step" style="padding: 40px 32px;">
+            <span class="step-num">1</span>
+            <h3 class="step-title">Braindump</h3>
+            <div class="step-code">Write everything you know
+— raw and unfiltered.
+Spec Doc generates the
+engineering docs your
+team needs to build it.</div>
+          </div>
+          <div class="step" style="padding: 40px 32px; border-right: none;">
+            <span class="step-num">2</span>
+            <h3 class="step-title">Generate</h3>
+            <div class="step-code">✦ analysis    ████████ done
+✦ epic        ████████ done
+✦ architecture ████░░░ …
+
+3 files · claude-sonnet · 47s</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.11 Buttons -->
+    <div class="pg-subsection" id="pg-comp-buttons">
+      <div class="pg-subsection-header">
+        <h3>5.11 Buttons</h3>
+        <span class="pg-source-label">Landing + App</span>
+      </div>
+      <div class="pg-col-label">All variants</div>
+      <div class="pg-demo" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+        <a href="#" class="btn-primary" onclick="return false">Try it free</a>
+        <a href="#" class="btn-secondary" onclick="return false">Pricing ↓</a>
+        <button class="new-project-btn">New Project</button>
+        <button class="logout-btn">Logout</button>
+        <button class="editor-apply-btn">Apply</button>
+        <button style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;background:none;border:1px solid var(--border);color:var(--ink-muted);padding:4px 10px;cursor:pointer;transition:color 0.15s,border-color 0.15s">Copy</button>
+        <button class="sidebar-generate" style="width:auto;margin:0;display:inline-block">✦ Generate</button>
+      </div>
+    </div>
+
+    <!-- 5.12 Diff Blocks -->
+    <div class="pg-subsection" id="pg-comp-diff">
+      <div class="pg-subsection-header">
+        <h3>5.12 Diff Blocks</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-two-col">
+        <div>
+          <div class="pg-col-label">Live Demo</div>
+          <div class="pg-demo">
+            <div class="diff-block-remove">The chain adapter pattern requires explicit error handling at every call site.</div>
+            <div class="diff-block-add">The chain adapter catches ProviderError internally — callers receive clean results or exceptions.</div>
+          </div>
+        </div>
+        <div>
+          <div class="pg-col-label">Key CSS</div>
+          <pre class="pg-code">.diff-block-remove {
+  background: rgba(196,30,58,0.05);
+  border-left: 3px solid var(--red);
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+.diff-block-add {
+  background: rgba(46,125,50,0.06);
+  border-left: 3px solid
+    var(--status-success-bg);
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.13 Update Banner -->
+    <div class="pg-subsection" id="pg-comp-banner">
+      <div class="pg-subsection-header">
+        <h3>5.13 Update Banner</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-col-label">Live Demo</div>
+      <div class="pg-demo pg-demo--flush">
+        <div class="update-banner">
+          New spec files are ready — 3 files updated.
+          <button>Reload</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.14 Context Cards -->
+    <div class="pg-subsection" id="pg-comp-context">
+      <div class="pg-subsection-header">
+        <h3>5.14 Context Cards</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-col-label">Live Demo</div>
+      <div class="pg-demo">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+          <div class="context-card">
+            <div class="context-card__label">Analysis</div>
+            <div class="context-card__desc">Problem framing, constraints, and scope definition.</div>
+          </div>
+          <div class="context-card" style="border-color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+            <div class="context-card__label">Epic</div>
+            <div class="context-card__desc">Tasks, effort estimates, and dependencies. (hover state)</div>
+          </div>
+          <div class="context-card">
+            <div class="context-card__label">Architecture</div>
+            <div class="context-card__desc">System design decisions and data flow.</div>
+          </div>
+        </div>
+        <p class="pg-note" style="margin-top:12px">Middle card shows hover state. The one place in the app where box-shadow is intentional.</p>
+      </div>
+    </div>
+
+    <!-- 5.15 Search Bar -->
+    <div class="pg-subsection" id="pg-comp-search">
+      <div class="pg-subsection-header">
+        <h3>5.15 Search Bar</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-col-label">Live Demo</div>
+      <div class="pg-demo pg-demo--flush" style="padding: 0 24px;">
+        <div class="search-bar">
+          <input type="search" placeholder="Search projects…">
+          <span class="search-count" style="font-family:var(--sans);font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.06em">36 projects</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.16 Overline + Badges -->
+    <div class="pg-subsection" id="pg-comp-overline">
+      <div class="pg-subsection-header">
+        <h3>5.16 Overline + Badges</h3>
+        <span class="pg-source-label">Both</span>
+      </div>
+      <div class="pg-col-label">Live Demo</div>
+      <div class="pg-demo">
+        <div style="margin-bottom:20px">
+          <div class="pg-col-label">Overline (landing hero)</div>
+          <span class="overline">Introducing Spec Doc</span>
+          <h2 style="font-family:var(--serif);font-size:24px;font-weight:700">Your braindump becomes a spec.</h2>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div class="pg-col-label" style="width:100%">Badges</div>
+          <span style="background:var(--border);border-radius:2px;font-family:var(--sans);font-size:10px;padding:2px 8px;color:var(--ink-light)">3</span>
+          <span style="background:var(--red);color:#fff;font-family:var(--sans);font-size:9px;font-weight:600;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:0.05em">New</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.17 Markdown Content -->
+    <div class="pg-subsection" id="pg-comp-markdown">
+      <div class="pg-subsection-header">
+        <h3>5.17 Markdown Content</h3>
+        <span class="pg-source-label">Specview app</span>
+      </div>
+      <div class="pg-col-label">Live Demo (2-column newspaper layout)</div>
+      <div class="pg-demo pg-demo--flush" style="padding: 24px;">
+        <div class="markdown-content">
+          <h1>Chain Adapter Pattern</h1>
+          <p>The chain adapter is the only AI call boundary in Specview. Feature modules import only from <code>chain/adapter.py</code> — never from providers directly.</p>
+          <h2>Core Functions</h2>
+          <p>Three functions cover all use cases: <code>generate()</code>, <code>stream()</code>, and <code>rewrite()</code>. Builder and principles context are injected automatically in the first two.</p>
+          <h3>Error Handling</h3>
+          <p>All chain errors are <code>ProviderError(msg, status)</code>. Catch this and nothing else.</p>
+          <pre><code>from modules.runtime.chain.adapter import generate
+result = generate(prompt, context=ctx)</code></pre>
+          <blockquote>The chain layer is a boundary, not an abstraction. It hides the provider, not the concept.</blockquote>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SECTION: Animations
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="pg-section" id="pg-animations">
+    <div class="pg-section-title">Animations</div>
+    <div class="pg-section-sub">All 7 defined animations. Subtle, never layout-shifting. Click Replay to re-trigger one-shot animations.</div>
+
+    <div class="pg-anim-grid">
+
+      <!-- 1. rise -->
+      <div class="pg-anim-card">
+        <span class="pg-anim-name">rise</span>
+        <span class="pg-anim-timing">0.2s ease · one-shot</span>
+        <div class="pg-anim-stage">
+          <div id="pg-anim-rise" style="padding:8px 16px;border:1px solid var(--border);font-family:var(--sans);font-size:11px;">Panel content</div>
+        </div>
+        <button class="pg-replay-btn" data-target="pg-anim-rise" data-anim="rise 0.2s ease forwards">Replay</button>
+      </div>
+
+      <!-- 2. gen-shimmer -->
+      <div class="pg-anim-card">
+        <span class="pg-anim-name">gen-shimmer</span>
+        <span class="pg-anim-timing">1.6s linear · infinite</span>
+        <div class="pg-anim-stage">
+          <div style="width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),#fff,var(--accent),transparent);background-size:200% 100%;animation:gen-shimmer 1.6s linear infinite;"></div>
+        </div>
+        <span style="font-family:var(--sans);font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.05em;">Always running</span>
+      </div>
+
+      <!-- 3. poll-pulse -->
+      <div class="pg-anim-card">
+        <span class="pg-anim-name">poll-pulse</span>
+        <span class="pg-anim-timing">0.7s ease-out · infinite alternate</span>
+        <div class="pg-anim-stage">
+          <div style="width:14px;height:14px;border-radius:50%;background:var(--status-running);animation:poll-pulse 0.7s ease-out infinite alternate;"></div>
+        </div>
+        <span style="font-family:var(--sans);font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.05em;">Always running</span>
+      </div>
+
+      <!-- 4. dot-pulse -->
+      <div class="pg-anim-card">
+        <span class="pg-anim-name">dot-pulse</span>
+        <span class="pg-anim-timing">1s ease-in-out · infinite</span>
+        <div class="pg-anim-stage">
+          <div style="display:flex;gap:5px;align-items:center;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--ink-muted);animation:dot-pulse 1s ease-in-out infinite;animation-delay:0s;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--ink-muted);animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.2s;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--ink-muted);animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.4s;"></div>
+          </div>
+        </div>
+        <span style="font-family:var(--sans);font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.05em;">Always running</span>
+      </div>
+
+      <!-- 5. thinking-pulse -->
+      <div class="pg-anim-card">
+        <span class="pg-anim-name">thinking-pulse</span>
+        <span class="pg-anim-timing">1.2s ease-in-out · infinite</span>
+        <div class="pg-anim-stage">
+          <div style="display:flex;gap:5px;align-items:center;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:thinking-pulse 1.2s ease-in-out infinite;animation-delay:0s;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:thinking-pulse 1.2s ease-in-out infinite;animation-delay:0.15s;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:thinking-pulse 1.2s ease-in-out infinite;animation-delay:0.3s;"></div>
+          </div>
+        </div>
+        <span style="font-family:var(--sans);font-size:10px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.05em;">Always running</span>
+      </div>
+
+      <!-- 6. count-pulse -->
+      <div class="pg-anim-card">
+        <span class="pg-anim-name">count-pulse</span>
+        <span class="pg-anim-timing">200ms ease-out · one-shot</span>
+        <div class="pg-anim-stage">
+          <span id="pg-anim-count" style="background:var(--border);border-radius:2px;font-family:var(--sans);font-size:14px;font-weight:700;padding:4px 12px;color:var(--ink);display:inline-block;">12</span>
+        </div>
+        <button class="pg-replay-btn" data-target="pg-anim-count" data-anim="count-pulse 200ms ease-out forwards">Replay</button>
+      </div>
+
+      <!-- 7. status-success-flash -->
+      <div class="pg-anim-card">
+        <span class="pg-anim-name">status-success-flash</span>
+        <span class="pg-anim-timing">2s ease-out · one-shot</span>
+        <div class="pg-anim-stage" style="width:100%">
+          <div id="pg-anim-flash" style="width:100%;background:var(--status-success);color:#fff;font-family:var(--sans);font-size:11px;padding:8px 12px;text-align:center;">done — 5 files</div>
+        </div>
+        <button class="pg-replay-btn" data-target="pg-anim-flash" data-anim="status-success-flash 2s ease-out forwards">Replay</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SECTION: Interaction States
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="pg-section" id="pg-states">
+    <div class="pg-section-title">Interaction States</div>
+    <div class="pg-section-sub">Default and hover/active/focus states for every interactive element. Hover states shown with forced inline style.</div>
+
+    <table class="pg-states-table">
+      <thead>
+        <tr>
+          <th>Element</th>
+          <th>Default</th>
+          <th>Hover / Active / Focus</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pg-element-name">.file-item</span></td>
+          <td>
+            <div class="file-item" style="border-bottom:none;margin:0;padding:10px 8px;">
+              <div class="file-item-title">File Title</div>
+              <div class="file-item-meta">2026-05-09</div>
+            </div>
+          </td>
+          <td>
+            <div class="file-item" style="border-bottom:none;margin:0;padding:10px 8px;background:rgba(0,0,0,0.025);">
+              <div class="file-item-title">File Title</div>
+              <div class="file-item-meta">background: rgba(0,0,0,0.025)</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.section-bar a</span></td>
+          <td><a href="#" onclick="return false" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-light);font-weight:600;text-decoration:none;padding:4px 0;display:inline-block">Analysis</a></td>
+          <td>
+            <span style="display:inline-flex;gap:12px;align-items:center;">
+              <a href="#" onclick="return false" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink);font-weight:600;text-decoration:none;padding:4px 0;display:inline-block">hover: ink</a>
+              <a href="#" onclick="return false" style="font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink);font-weight:700;text-decoration:none;padding:4px 0;display:inline-block">.active: ink 700</a>
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.btn-primary</span></td>
+          <td><a href="#" class="btn-primary" onclick="return false" style="display:inline-block">Try it free</a></td>
+          <td><a href="#" class="btn-primary" onclick="return false" style="display:inline-block;opacity:0.85">opacity: 0.85</a></td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.btn-secondary</span></td>
+          <td><a href="#" class="btn-secondary" onclick="return false" style="display:inline-block">Pricing ↓</a></td>
+          <td><a href="#" class="btn-secondary" onclick="return false" style="display:inline-block;border-color:var(--ink)">border-color: ink</a></td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.new-project-btn</span></td>
+          <td><button class="new-project-btn">New Project</button></td>
+          <td><button class="new-project-btn" style="background:var(--accent);color:var(--bg)">filled accent bg</button></td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.logout-btn</span></td>
+          <td><button class="logout-btn">Logout</button></td>
+          <td><button class="logout-btn" style="background:var(--ink);color:var(--bg)">filled ink bg</button></td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.op-chip</span></td>
+          <td><button class="op-chip">Condense</button></td>
+          <td>
+            <span style="display:inline-flex;gap:8px;">
+              <button class="op-chip" style="color:var(--ink);border-color:var(--ink-light)">hover</button>
+              <button class="op-chip active">.active</button>
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.modal-input</span></td>
+          <td><input class="modal-input" type="text" value="Default state" readonly style="max-width:200px;"></td>
+          <td><input class="modal-input" type="text" value="Focus state" readonly style="max-width:200px;border-color:var(--ink)"></td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.context-card</span></td>
+          <td>
+            <div class="context-card" style="max-width:180px;">
+              <div class="context-card__label">Analysis</div>
+              <div class="context-card__desc">Default border</div>
+            </div>
+          </td>
+          <td>
+            <div class="context-card" style="max-width:180px;border-color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+              <div class="context-card__label">Analysis</div>
+              <div class="context-card__desc">ink border + shadow</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="pg-element-name">.sidebar-file</span></td>
+          <td><a class="sidebar-file" style="display:inline-block">analysis.md</a></td>
+          <td><a class="sidebar-file active" style="display:inline-block">analysis.md (active)</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SECTION: App vs Landing
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="pg-section" id="pg-comparison">
+    <div class="pg-section-title">App vs Landing</div>
+    <div class="pg-section-sub">Where the two implementations diverge, and where Specview differs from its ClawBoi origin.</div>
+
+    <!-- Table 1: App vs Landing -->
+    <div class="pg-subsection">
+      <div class="pg-subsection-header">
+        <h3>Specview App vs Landing Page</h3>
+        <span class="pg-source-label">ux-vision.md §Specview App vs Landing</span>
+      </div>
+      <table class="pg-comparison-table">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>App (web-ng)</th>
+            <th>Landing</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Container padding</td>
+            <td>20px 40px on .page</td>
+            <td>per section, 24px 40px</td>
+          </tr>
+          <tr>
+            <td>Masthead align-items</td>
+            <td>center</td>
+            <td>flex-end (editorial)</td>
+          </tr>
+          <tr>
+            <td>Masthead actions</td>
+            <td>Theme toggle + New Project + Logout</td>
+            <td>Theme toggle only</td>
+          </tr>
+          <tr>
+            <td>Section nav</td>
+            <td>sticky, filters file grid</td>
+            <td>anchor links to sections</td>
+          </tr>
+          <tr>
+            <td>Icons</td>
+            <td>Lucide structural + text chars</td>
+            <td>Lucide in aside + toggle</td>
+          </tr>
+          <tr>
+            <td>Markdown</td>
+            <td>2-column in expanded panel</td>
+            <td>not present</td>
+          </tr>
+          <tr>
+            <td>Modal</td>
+            <td>new project entry point</td>
+            <td>not present (signup URL)</td>
+          </tr>
+          <tr>
+            <td>Status bar</td>
+            <td>fixed bottom, global indicator</td>
+            <td>not present</td>
+          </tr>
+          <tr>
+            <td>Shadows</td>
+            <td>modal + floating toolbar (deliberate)</td>
+            <td>not present</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Table 2: ClawBoi vs Specview -->
+    <div class="pg-subsection">
+      <div class="pg-subsection-header">
+        <h3>ClawBoi Origin vs Specview</h3>
+        <span class="pg-source-label">clawboi/dashboard vs specview</span>
+      </div>
+      <table class="pg-comparison-table">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>ClawBoi Original</th>
+            <th>Specview</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Product type</td>
+            <td>live dashboard (dynamic JS)</td>
+            <td>spec tool (Angular SPA)</td>
+          </tr>
+          <tr>
+            <td>Masthead right col</td>
+            <td>.masthead-search (theme btn + text input)</td>
+            <td>.masthead-actions (buttons)</td>
+          </tr>
+          <tr>
+            <td>Theme toggle</td>
+            <td>emoji ☀️/🌙</td>
+            <td>Lucide sun/moon SVG</td>
+          </tr>
+          <tr>
+            <td>Expanded panel grid</td>
+            <td>display: block (no sidebar)</td>
+            <td>grid-template-columns: 180px 1fr</td>
+          </tr>
+          <tr>
+            <td>Pull quote mark</td>
+            <td>::before pseudo-element, 72px</td>
+            <td>.pullquote-mark div, 56px</td>
+          </tr>
+          <tr>
+            <td>File grid class</td>
+            <td>.newspaper-grid / .section-column</td>
+            <td>.file-grid / .file-column</td>
+          </tr>
+          <tr>
+            <td>Column title underline</td>
+            <td>2px solid var(--ink) on .widget-title</td>
+            <td>same, on .file-header</td>
+          </tr>
+          <tr>
+            <td>2-column body text</td>
+            <td>lead + expanded panel</td>
+            <td>expanded panel (markdown-content)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <footer class="footer">
+    <div class="footer-brand">Spec Doc</div>
+    <div class="footer-copy">Design Playground · Built for reference</div>
+    <nav class="footer-links">
+      <a href="/index.html">Landing →</a>
+    </nav>
+  </footer>
+
+  <!-- Live modal overlay -->
+  <div id="pg-modal-backdrop" class="modal-backdrop" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">New Project</span>
+        <button class="modal-close" id="pg-modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="modal-label">Project Name</label>
+        <input class="modal-input" type="text" placeholder="e.g. Specview UX Playground">
+        <label class="modal-label" style="margin-top:12px;display:block">Braindump</label>
+        <textarea class="modal-textarea" rows="5" placeholder="Write everything you know about the feature — raw and unfiltered. The more context the better..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-cancel" id="pg-modal-cancel">Cancel</button>
+        <button class="modal-generate">✦ Generate Specs</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .page -->
+
+<script>
+  // Set date
+  document.getElementById('date-label').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Theme helpers
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    var sun = document.getElementById('icon-sun');
+    var moon = document.getElementById('icon-moon');
+    if (sun)  sun.style.display  = theme === 'dark' ? 'none' : '';
+    if (moon) moon.style.display = theme === 'dark' ? '' : 'none';
+  }
+
+  function toggleTheme() {
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', next);
+    applyTheme(next);
+  }
+
+  // Restore saved theme
+  applyTheme(localStorage.getItem('theme') || 'light');
+
+  // Op chip demo: only one chip active at a time within .pg-chip-demo
+  document.querySelectorAll('.pg-chip-demo .op-chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      document.querySelectorAll('.pg-chip-demo .op-chip').forEach(function(c) {
+        c.classList.remove('active');
+      });
+      chip.classList.toggle('active');
+    });
+  });
+
+  // Modal show/hide
+  var backdrop = document.getElementById('pg-modal-backdrop');
+  document.getElementById('pg-modal-trigger').addEventListener('click', function() {
+    backdrop.style.display = 'flex';
+  });
+  function closeModal() { backdrop.style.display = 'none'; }
+  document.getElementById('pg-modal-close').addEventListener('click', closeModal);
+  document.getElementById('pg-modal-cancel').addEventListener('click', closeModal);
+  backdrop.addEventListener('click', function(e) {
+    if (e.target === backdrop) closeModal();
+  });
+
+  // Animation replay buttons
+  document.querySelectorAll('.pg-replay-btn[data-target]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = document.getElementById(btn.getAttribute('data-target'));
+      var anim   = btn.getAttribute('data-anim');
+      if (!target || !anim) return;
+      target.style.animation = 'none';
+      // Force reflow
+      void target.offsetWidth;
+      target.style.animation = anim;
+    });
+  });
+
+  // Auto-play rise on load
+  (function() {
+    var riseEl = document.getElementById('pg-anim-rise');
+    if (riseEl) {
+      riseEl.style.animation = 'none';
+      void riseEl.offsetWidth;
+      riseEl.style.animation = 'rise 0.2s ease forwards';
+    }
+  })();
+
+  // Section nav active link on scroll
+  var pgSections = ['pg-tokens','pg-borders','pg-components','pg-animations','pg-states','pg-comparison'];
+  var pgNavLinks = document.querySelectorAll('#pg-nav a');
+
+  function pgUpdateNav() {
+    var scrollY = window.scrollY + 80;
+    var active = pgSections[0];
+    pgSections.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el && el.offsetTop <= scrollY) active = id;
+    });
+    pgNavLinks.forEach(function(a) {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + active);
+    });
+  }
+
+  window.addEventListener('scroll', pgUpdateNav, { passive: true });
+  pgUpdateNav();
+</script>
+</body>
+</html>

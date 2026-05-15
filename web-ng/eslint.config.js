@@ -7,7 +7,7 @@ const angular = require("angular-eslint");
 module.exports = defineConfig([
   // Ignore auto-generated API client (ng-openapi-gen output)
   {
-    ignores: ["src/app/api/**"],
+    ignores: ["src/app/api/**", "src/assets/**", "public/assets/**"],
   },
   {
     files: ["**/*.ts"],
