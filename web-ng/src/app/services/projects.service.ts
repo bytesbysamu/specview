@@ -133,6 +133,14 @@ export class ProjectsService {
     );
   }
 
+  shareProject(projectId: string): Promise<{ shareSlug: string; url: string }> {
+    return firstValueFrom(
+      this.http.post<{ shareSlug: string; url: string }>(
+        `/api/projects/${projectId}/share`, {}
+      )
+    );
+  }
+
   startEpicGuide(projectId: string): Promise<{ started: boolean; alreadyRunning?: boolean }> {
     return firstValueFrom(
       this.http.post<{ started: boolean; alreadyRunning?: boolean }>(

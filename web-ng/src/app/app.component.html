@@ -74,6 +74,7 @@
             <span class="gen-status-sep">·</span>
             <span class="gen-status-step">{{ specGenStep() }}</span>
           }
+          <span class="gen-status-timer" data-test="gen-status-timer">{{ specGenElapsed() }}</span>
           @if (specGenJobId()) {
             <button
               class="gen-status-cancel"
@@ -90,6 +91,7 @@
           <span class="gen-status-project">{{ specGenProjectName() ?? 'done' }}</span>
           <span class="gen-status-sep">·</span>
           <span class="gen-status-step">done</span>
+          <span class="gen-status-timer" data-test="gen-status-timer-done">{{ specGenElapsed() }}</span>
         </div>
       }
       @case ('failure') {
@@ -280,6 +282,29 @@
                 <span class="sidebar-status-dot"></span>
                 <span class="sidebar-status-text">connected</span>
               }
+            }
+          </div>
+
+          <!-- Share button -->
+          <div class="sidebar-share">
+            <button
+              class="sidebar-share-btn"
+              data-test="share-button"
+              [disabled]="shareLoading()"
+              (click)="shareProject()"
+              title="Copy shareable link to clipboard">
+              @if (shareLoading()) {
+                <span class="thinking-dot"></span>
+                <span class="thinking-dot"></span>
+                <span class="thinking-dot"></span>
+              } @else if (shareCopied()) {
+                <span class="btn-icon">✓</span> Copied!
+              } @else {
+                <span class="btn-icon">↗</span> Share
+              }
+            </button>
+            @if (shareUrl() && !shareCopied()) {
+              <span class="sidebar-share-url" title="{{ shareUrl() }}">{{ shareUrl() }}</span>
             }
           </div>
 
