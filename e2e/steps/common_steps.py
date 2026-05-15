@@ -160,6 +160,12 @@ def selector_visible_after_retries(page: Page, selector: str, seconds: str, cont
     app.wait_visible(selector, timeout_ms=int(seconds) * 1000)
 
 
+@then(parsers.re(r'the guide file appears within (?P<seconds>\d+) seconds'))
+def guide_file_appears(page: Page, seconds: str, context):
+    app: AppPage = context.get("app") or AppPage(page, "")
+    app.wait_visible("[data-test='epic-guide-result']", timeout_ms=int(seconds) * 1000)
+
+
 @then("the sidebar shows generated spec files within 180 seconds")
 def sidebar_shows_spec_files(page: Page, context):
     app: AppPage = context.get("app") or AppPage(page, "")
