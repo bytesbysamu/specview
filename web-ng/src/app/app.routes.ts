@@ -4,13 +4,13 @@ import { SignupComponent } from './pages/signup/signup.component';
 import { UpgradeComponent } from './components/upgrade/upgrade.component';
 import { PublicSpecComponent } from './pages/public-spec/public-spec.component';
 import { AppComponent } from './app.component';
-import { LivePlaygroundComponent } from './live-playground.component';
+import { PgCaseStudyComponent } from './pg-case-study.component';
 
 export const routes: Routes = [
   { path: 'signup', component: SignupComponent },
   { path: 'upgrade', component: UpgradeComponent },
   { path: 's/:slug', component: PublicSpecComponent },
-  { path: 'playground', component: LivePlaygroundComponent },
+  { path: 'playground', component: PgCaseStudyComponent },
   { path: 'v1', component: AppComponent },
   { path: 'v2', redirectTo: '', pathMatch: 'full' },
   { path: 'v3', redirectTo: '', pathMatch: 'full' },
