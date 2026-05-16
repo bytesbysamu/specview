@@ -41,6 +41,8 @@ Before acting on any request, check whether a skill or agent applies:
 
 Do not bypass these — the agents load conventions automatically. Doing it yourself skips the reference files and risks convention violations.
 
+- **When a skill is invoked, execute every step in its Procedure — no skipping.** Post-implementation steps (dev-test, dev-review, commit, PR, CI, merge, summary file) are mandatory, not optional. Re-read the skill's Procedure before reporting done.
+
 ## Non-negotiable rules
 
 - `CHAIN_PROVIDER=cli` always — never use the SDK provider in Docker.
@@ -48,7 +50,6 @@ Do not bypass these — the agents load conventions automatically. Doing it your
 - Run `pytest` in `api/` before any merge.
 - Never import from `modules/runtime/chain/providers/*` in feature modules — import only from `chain/adapter.py`. Enforced by `test_structural.py`.
 - Angular state is signals only — no BehaviorSubject, no Observable for local state.
-- **When a skill is invoked, execute every step in its Procedure — no skipping.** Post-implementation steps (dev-test, dev-review, summary file) are mandatory, not optional. Re-read the skill's Procedure before reporting done.
 - **Always commit generated files** (e.g. `web-ng/src/app/api/`, migration files, spec outputs) — do not leave them unstaged.
 - **Contract-first API development**: `api/openapi.yaml` is the source of truth. `npm run generate:api` in `web-ng/` regenerates Angular API clients + DTOs. After adding/changing any backend route, update `openapi.yaml` first, regenerate, then update services. The contract test `test_app_routes_are_documented` enforces every Flask route has an OpenAPI entry.
 - **Product behavior is defined in `product-behavior.md`** — five core flows, expected steps, duration classes, and failure shapes; mirrored 1:1 by `e2e/features/`.
