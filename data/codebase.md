@@ -23,7 +23,44 @@ generates analysis, epic, architecture, timeline, and implementation guide.
 │       ├── data/                   Projects CRUD, context file service
 │       └── quality/                lint_task_guide() — pre-write lint gate
 ├── web-ng/                         Angular 17 SPA (signals, no NgRx)
-│   └── src/app/                    Components, services, routing
+│   └── src/app/                    FLAT structure — no feature sub-modules or subdirectories
+│       ├── app.component.ts        V1 root component (1,189 lines, being retired)
+│       ├── app-v2.component.ts     V2 root component (1,087 lines, production at /)
+│       ├── app.routes.ts           Route table (/, /v1, /v2, /playground, /signup, etc.)
+│       ├── app.config.ts           Bootstrap configuration
+│       ├── services/               All HTTP + state services (the ONLY subdirectory)
+│       │   ├── projects.service.ts All project CRUD + polling
+│       │   ├── auth.service.ts     JWT auth via TokenLifecycleService
+│       │   ├── ai.service.ts       AI text operation endpoints
+│       │   ├── subscription.service.ts  Billing plan + checkout
+│       │   ├── token-lifecycle.service.ts  JWT refresh + expiry
+│       │   ├── section-taxonomy.service.ts  Project section classification
+│       │   └── project-teaser.ts   Teaser text extraction
+│       ├── project-grid.component.*     V2 sub-component (grid view)
+│       ├── reader-panel.component.*     V2 sub-component (spec reader)
+│       ├── sidebar-v2.component.*       V2 sub-component (file nav + AI ops)
+│       ├── status-bar.component.*       V2 sub-component (gen status)
+│       ├── section-nav.component.*      V2 sub-component (section tabs)
+│       ├── landing-pitch.component.*    Landing hero (from landing-v2.html)
+│       ├── live-playground.component.*  Live design system playground
+│       ├── pg-tokens.component.*        Playground: live CSS token swatches
+│       ├── pg-borders.component.*       Playground: border catalog
+│       ├── pg-animations.component.*    Playground: keyframe gallery
+│       ├── pg-state-matrix.component.*  Playground: component state matrix
+│       ├── pg-components-app.component.* Playground: app component demos
+│       ├── pg-components-ui.component.*  Playground: UI component demos
+│       ├── playground-demo-data.ts      Hardcoded demo projects for playground
+│       ├── css-read.util.ts             getCssVar() helper
+│       ├── word-count.pipe.ts           Word count pipe
+│       ├── components/login/            Login page
+│       ├── components/upgrade/          Upgrade page
+│       ├── components/usage-meter/      Usage meter widget
+│       ├── pages/signup/                Signup page
+│       └── pages/public-spec/           Public shareable spec viewer
+│   ├── src/styles.css              Global newspaper design system (1,769 lines)
+│   │                               Tokens: --ink, --bg, --serif, --sans, --body, --border, --accent
+│   │                               All V2 components use these global classes — NO component-scoped CSS
+│   └── public/                     Static assets (favicon only)
 ├── landing/                        Static marketing page (nginx:alpine)
 ├── plugin/                         Claude Code plugin
 │   ├── agents/                     chain-agent, spec-backend, spec-frontend, chain-developer
