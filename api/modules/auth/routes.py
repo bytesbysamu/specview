@@ -9,7 +9,6 @@ from sqlmodel import Session
 
 from modules.auth.decorators import require_auth
 from modules.auth.models import User
-from modules.auth.rate_limit import ip_rate_limit
 from modules.auth.service import (
     create_token,
     create_user,
