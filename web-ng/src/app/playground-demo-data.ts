@@ -68,6 +68,70 @@ Checkout abandonment costs the business an estimated $2.1M in lost GMV per quart
 4. A/B test infrastructure + launch — Week 6–7
 `;
 
+// ── Pipeline Preview Content ─────────────────────────────────────────────────
+
+export const PIPELINE_BRAINDUMP_PREVIEW = `ok so i want to build this thing where users can paste like a big messy brain dump of their idea — doesnt matter how rough, just stream of consciousness — and then the system figures out what theyre actually trying to build and spits out like a full spec document set.
+
+analysis of the problem space first, then an epic with user stories, then a proper architecture doc with tech choices, and finally an impl guide that a dev could actually follow. it should work for any kind of software project, not just web apps.
+
+also need auth so people cant just spam it, maybe usage limits too. and it needs to be fast — nobody wants to wait 10 minutes, should be under a minute ideally. the output should be structured enough that you could hand it to a junior dev and theyd know exactly what to build.
+
+probably a flask backend and some kind of simple frontend. maybe a cli mode too for power users who want to pipe things in.`;
+
+export const PIPELINE_ANALYSIS_PREVIEW = `## Executive Summary
+
+The existing payment gateway has accumulated significant technical debt over three years of incremental patching. Conversion rates have dropped 4.2% quarter-over-quarter, and checkout abandonment now exceeds 67% on mobile devices.
+
+The root cause is a fragmented frontend built across four separate frameworks — an inheritance from two acquisitions — that renders a different experience depending on device type. Backend validation logic is duplicated in six places, making bug fixes expensive and error-prone.
+
+## Key Problems
+
+The current checkout flow requires an average of 11 user interactions on mobile versus 6 on desktop. Industry benchmarks sit at 4–5 for both platforms. Every extra tap represents measurable drop-off.
+
+PCI DSS scope currently touches 14 services. The redesign targets 3, dramatically reducing audit surface and annual compliance cost. Error messaging is generic — when a card declines, users see "Payment error" with no actionable guidance.`;
+
+export const PIPELINE_EPIC_PREVIEW = `## Problem Statement
+
+Checkout abandonment costs the business an estimated $2.1M in lost GMV per quarter. The mobile experience is the primary driver; secondary is confusing error recovery and a fragmented multi-framework frontend inherited from two acquisitions.
+
+## Success Criteria
+
+Mobile checkout completion rate reaches 38% (from 24% baseline) within 60 days of launch. Average checkout interactions drops below 6 on all device types. PCI DSS scope reduced from 14 services to 3. Support tickets for payment failures drop by 55% within 30 days.
+
+## Scope
+
+**In scope:** New checkout shell, Stripe Elements integration, address autocomplete, error message taxonomy, webhook reliability layer.
+
+**Out of scope:** Subscription billing, multi-currency display, B2B invoice flow, saved payment methods (phase 2).`;
+
+export const PIPELINE_ARCHITECTURE_PREVIEW = `## System Design
+
+The checkout shell is a React single-page application hosted on a CDN edge network. Card capture delegates entirely to Stripe Elements iframes — no raw card data ever touches our servers, collapsing PCI DSS scope from 14 services to 3.
+
+## Key Decisions
+
+A progressive disclosure flow — shipping address first, then payment method — matches the mental model users bring from e-commerce and reduces perceived complexity. Address autocomplete via Google Places API eliminates the largest source of form abandonment.
+
+## Data Flow
+
+Order intent is created server-side before the payment sheet mounts. Stripe webhook events drive order state transitions; the frontend polls a lightweight status endpoint rather than holding a WebSocket connection. This keeps the reliability surface small and observable.`;
+
+export const PIPELINE_GUIDE_PREVIEW = `## Implementation Order
+
+Tasks are sequenced so that each unblocks the next. The Stripe integration must land before the checkout shell, because the shell renders Elements components. The error taxonomy must be defined before any form error states are implemented.
+
+## Task 1: Stripe Elements Integration (Days 1–3)
+
+Install \`@stripe/stripe-js\` and \`@stripe/react-stripe-js\`. Implement \`useStripeIntent\` hook that creates a PaymentIntent server-side and returns the client secret. Wrap the checkout tree in \`<Elements stripe={stripePromise} options={options}>\`.
+
+## Task 2: Checkout Shell — Address Step (Days 4–6)
+
+Build the address form using react-hook-form with zod validation. Wire Google Places autocomplete to the street-address field. On submit, persist to the order intent via PATCH and advance to the payment step.
+
+## Task 3: Checkout Shell — Payment Step (Days 7–9)
+
+Render \`<PaymentElement />\` with the appearance API configured to match the brand token set. Implement \`handleSubmit\` calling \`stripe.confirmPayment()\`. Map Stripe decline codes to the error taxonomy strings defined in the design doc.`;
+
 // ── Demo Projects ────────────────────────────────────────────────────────────
 
 export const DEMO_PROJECTS: Project[] = [
