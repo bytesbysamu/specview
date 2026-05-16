@@ -13,7 +13,7 @@ describe('getCssVar', () => {
 
   it('returns the trimmed value from getComputedStyle', () => {
     window.getComputedStyle = jasmine.createSpy('getComputedStyle').and.returnValue({
-      getPropertyValue: (_name: string) => '  #ff0000  ',
+      getPropertyValue: () => '  #ff0000  ',
     } as unknown as CSSStyleDeclaration);
 
     const result = getCssVar('--accent');
@@ -23,7 +23,7 @@ describe('getCssVar', () => {
 
   it('returns "not set" sentinel when getComputedStyle returns empty string', () => {
     window.getComputedStyle = jasmine.createSpy('getComputedStyle').and.returnValue({
-      getPropertyValue: (_name: string) => '',
+      getPropertyValue: () => '',
     } as unknown as CSSStyleDeclaration);
 
     const result = getCssVar('--missing-var');
@@ -33,7 +33,7 @@ describe('getCssVar', () => {
 
   it('returns "not set" sentinel when getComputedStyle returns whitespace-only string', () => {
     window.getComputedStyle = jasmine.createSpy('getComputedStyle').and.returnValue({
-      getPropertyValue: (_name: string) => '   ',
+      getPropertyValue: () => '   ',
     } as unknown as CSSStyleDeclaration);
 
     const result = getCssVar('--whitespace-var');
@@ -43,7 +43,7 @@ describe('getCssVar', () => {
 
   it('handles a missing property gracefully by returning "not set"', () => {
     window.getComputedStyle = jasmine.createSpy('getComputedStyle').and.returnValue({
-      getPropertyValue: (_name: string) => '',
+      getPropertyValue: () => '',
     } as unknown as CSSStyleDeclaration);
 
     const result = getCssVar('--undefined-property');

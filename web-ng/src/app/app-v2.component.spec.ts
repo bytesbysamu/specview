@@ -40,11 +40,6 @@ function makeAuthServiceMock(isLoggedIn = false): jasmine.SpyObj<AuthService> {
   return mock;
 }
 
-function makeRouterMock(): jasmine.SpyObj<Router> {
-  const mock = jasmine.createSpyObj<Router>('Router', ['navigate']);
-  mock.navigate.and.returnValue(Promise.resolve(true));
-  return mock;
-}
 
 // ---------------------------------------------------------------------------
 // TestBed factory — reused across all describe groups
