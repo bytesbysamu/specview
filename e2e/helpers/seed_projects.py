@@ -11,8 +11,15 @@ section-taxonomy.service.ts based solely on which .md files are present:
   - Ready to Build — has epic.md or architecture.md (but no implementation-guide.md)
   - Braindumps   — only braindump.md (or empty)
 
-Projects are written directly to the filesystem so no API auth is required for
-the bulk of seeding. The active project is provisioned via the bootstrap API
+When JWT_SECRET + E2E_USER_ID env vars are set (real server mode), projects are
+provisioned via the POST /api/projects API so they are registered in the
+database for the authenticated user. This is necessary because the real server's
+GET /api/projects endpoint filters by user ID using the database.
+
+When JWT_SECRET is not set (local dev / SKIP_AUTH=1 mode), projects are written
+directly to the filesystem so no API auth is required.
+
+The active project is always provisioned via the bootstrap API
 (POST /api/ai/text/bootstrap-project) using SKIP_AUTH=1 mode.
 
 All project directories are named with a "e2e-seed-" prefix and a timestamp so
@@ -55,16 +62,23 @@ _SECTION_FILES: dict[str, list[tuple[str, str]]] = {
 
 # Matrix: section → list of project names to create.
 _PROJECT_MATRIX: list[tuple[str, str]] = [
-    # 3 Specced projects
+    # Specced projects (includes named fixture required by OV-08 card-renders scenario)
     ("Specced", "E2E Seed Alpha"),
     ("Specced", "E2E Seed Beta"),
     ("Specced", "E2E Seed Gamma"),
+    # "My Spec" is required by the OV-08 card-renders scenario which expects a
+    # Specced project with exactly 4 spec files (braindump, epic, arch, impl-guide).
+    ("Specced", "My Spec"),
     # 2 Ready to Build projects
     ("Ready to build", "E2E Seed Delta"),
     ("Ready to build", "E2E Seed Epsilon"),
-    # 2 Braindumps projects
+    # 3 Braindumps projects (includes a named fixture for the search/card tests)
     ("Braindumps", "E2E Seed Zeta"),
     ("Braindumps", "E2E Seed Eta"),
+    # "Alpha Project" is required by the case-insensitive search scenario (OV-07)
+    # and the card-renders scenario (OV-08).  Use a Braindumps project so it
+    # appears in the All view without needing mock generation.
+    ("Braindumps", "Alpha Project"),
     # 1 Active project (handled separately via bootstrap API)
     ("Active", "E2E Seed Active"),
 ]
@@ -99,6 +113,69 @@ def _make_slug(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     timestamp = int(time.time() * 1000)
     return f"{slug}-{timestamp}"
+
+
+def _make_auth_token() -> str | None:
+    """Create a signed JWT for API authentication using env vars.
+
+    Returns None if JWT_SECRET is not set (local dev / SKIP_AUTH=1 mode).
+    """
+    jwt_secret = os.environ.get("JWT_SECRET")
+    if not jwt_secret:
+        return None
+    try:
+        import jwt as _jwt
+        user_id = os.environ.get("E2E_USER_ID", "1")
+        email = os.environ.get("E2E_USER_EMAIL", "test@test.com")
+        payload = {
+            "sub": str(user_id),
+            "email": email,
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 72 * 3600,
+        }
+        return _jwt.encode(payload, jwt_secret, algorithm="HS256")
+    except Exception:
+        return None
+
+
+def _provision_project_via_api(
+    api_base_url: str,
+    name: str,
+    files: list[tuple[str, str]],
+    auth_token: str,
+) -> ProjectInfo | None:
+    """Create a project via the POST /api/projects endpoint.
+
+    This registers the project in the database for the authenticated user so
+    that GET /api/projects returns it (real server mode with user-filtered DB).
+
+    Then, writes the additional spec files directly to the filesystem (the
+    create endpoint only accepts braindump content, not arbitrary files).
+
+    Returns a ProjectInfo on success, or None on failure.
+    """
+    # The create endpoint requires at least one file.
+    file_dtos = [{"filename": fn, "content": content} for fn, content in files]
+    try:
+        resp = requests.post(
+            f"{api_base_url}/api/projects",
+            json={"name": name, "files": file_dtos},
+            headers={"Authorization": f"Bearer {auth_token}"},
+            timeout=10,
+        )
+    except requests.RequestException:
+        return None
+
+    if resp.status_code not in (200, 201):
+        return None
+
+    data = resp.json()
+    project_id = data.get("id")
+    if not project_id:
+        return None
+
+    created_at = data.get("createdAt", "")
+    return ProjectInfo(id=project_id, name=name, section="", created_at=created_at)
 
 
 def _write_project(
@@ -187,18 +264,27 @@ def _provision_active_project(
 def seed_project_matrix(
     api_base_url: str,
     projects_dir: Path | None = None,
+    skip_active_project: bool = False,
 ) -> SeedMatrix:
     """Provision the eight-project seed matrix.
 
-    Creates projects by writing directly to the filesystem for Braindumps, Ready
-    to Build, and Specced sections (no API auth needed). The Active project is
-    provisioned via the bootstrap API so a real job entry exists in the server's
-    in-process registry.
+    When JWT_SECRET + E2E_USER_ID are set (real server mode), projects are
+    created via POST /api/projects so they are registered in the database for
+    the authenticated user. This is necessary because GET /api/projects filters
+    by user ID when a real database is connected.
+
+    Without JWT_SECRET (local SKIP_AUTH=1 mode), projects are written directly
+    to the filesystem so no API auth is required.
+
+    The Active project is always provisioned via the bootstrap API.
 
     Args:
-        api_base_url: Base URL of the running Flask server (e.g. "http://127.0.0.1:5001").
-        projects_dir:  Override the projects directory (for testing this module).
-                       Defaults to the directory resolved from SPEC_DOC_DIR env var.
+        api_base_url:         Base URL of the running Flask server.
+        projects_dir:         Override the projects directory (for testing this module).
+                              Defaults to the directory resolved from SPEC_DOC_DIR env var.
+        skip_active_project:  When True, skip the Active project seeding entirely.
+                              Use this when running against the Docker stack where
+                              CHAIN_PROVIDER=mock is not available.
 
     Returns:
         A SeedMatrix dict with all created projects keyed by section.
@@ -208,11 +294,16 @@ def seed_project_matrix(
 
     projects_dir.mkdir(parents=True, exist_ok=True)
 
+    # Attempt to get an auth token for API-based provisioning.
+    auth_token = _make_auth_token()
+
     all_projects: list[ProjectInfo] = []
     active_job_id: str | None = None
 
     for section, name in _PROJECT_MATRIX:
         if section == "Active":
+            if skip_active_project:
+                continue
             info, job_id = _provision_active_project(api_base_url, projects_dir, name)
             if info is not None:
                 info["section"] = "Active"
@@ -220,9 +311,19 @@ def seed_project_matrix(
                 active_job_id = job_id
         else:
             files = _SECTION_FILES[section]
-            info = _write_project(projects_dir, name, files)
+            if auth_token:
+                # Real server: provision via API so the DB record is created.
+                info = _provision_project_via_api(api_base_url, name, files, auth_token)
+                if info is None:
+                    # Fall back to filesystem write on API failure.
+                    info = _write_project(projects_dir, name, files)
+            else:
+                # Local dev / SKIP_AUTH=1: write directly to filesystem.
+                info = _write_project(projects_dir, name, files)
             info["section"] = section
             all_projects.append(info)
+        # Small delay to ensure unique millisecond timestamps for project IDs.
+        time.sleep(0.002)
 
     by_section: dict[str, list[ProjectInfo]] = {}
     for p in all_projects:
@@ -238,21 +339,39 @@ def seed_project_matrix(
 def teardown_seed_matrix(
     seed_matrix: SeedMatrix,
     projects_dir: Path | None = None,
+    api_base_url: str | None = None,
 ) -> None:
     """Remove all seeded project directories created by seed_project_matrix.
 
-    Deletes project directories directly from the filesystem so no API auth is
-    needed for cleanup. This is safe because all seeded projects use the "e2e-seed-"
-    name prefix, and teardown only touches directories listed in the seed_matrix.
+    When JWT_SECRET is set (real server mode), deletes projects via the API so
+    the DB records are also removed. Falls back to filesystem deletion for any
+    projects that the API cannot reach.
 
     Args:
         seed_matrix:  The SeedMatrix returned by seed_project_matrix.
         projects_dir: Override the projects directory. Defaults to SPEC_DOC_DIR-based path.
+        api_base_url: Base URL for API-based deletion (optional).
     """
     if projects_dir is None:
         projects_dir = _resolve_projects_dir()
 
+    auth_token = _make_auth_token()
+
     for project in seed_matrix["projects"]:
-        project_path = projects_dir / project["id"]
+        project_id = project["id"]
+
+        # Attempt API deletion first when token is available.
+        if auth_token and api_base_url:
+            try:
+                requests.delete(
+                    f"{api_base_url}/api/projects/{project_id}",
+                    headers={"Authorization": f"Bearer {auth_token}"},
+                    timeout=5,
+                )
+            except requests.RequestException:
+                pass  # Fall through to filesystem deletion
+
+        # Always attempt filesystem deletion as a safety net.
+        project_path = projects_dir / project_id
         if project_path.exists() and project_path.is_dir():
             shutil.rmtree(project_path, ignore_errors=True)

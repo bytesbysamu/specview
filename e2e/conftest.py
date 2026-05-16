@@ -1,4 +1,12 @@
-"""E2E session-scoped server fixtures for pytest-playwright + pytest-bdd."""
+"""E2E session-scoped server fixtures for pytest-playwright + pytest-bdd.
+
+When E2E_BASE_URL and E2E_API_URL are set, the angular_server and flask_server
+fixtures yield those URLs directly without starting new processes.  This allows
+the test suite to run against the Docker stack (or any already-running server)
+without spawning duplicate dev servers.
+
+Without those env vars the fixtures start their own servers (original behaviour).
+"""
 import json
 import os
 import socket
@@ -72,13 +80,24 @@ def page(browser):
 
 @pytest.fixture(scope="session")
 def flask_server():
-    """Start Flask on port 5001 with mock provider and auth bypass for E2E.
+    """Return the API base URL, starting a local Flask server if needed.
 
-    Session-scoped so the server process starts once and is reused across all
-    scenarios. Starting a new Flask process per test would add ~1–2 s per
-    scenario and destroy the in-process bootstrap job registry that the Active
-    seed project depends on.
+    When E2E_API_URL is set, that URL is yielded directly without starting
+    any process.  This lets the suite run against the Docker stack.
+
+    Without E2E_API_URL a local Flask server is started on port 5001 with
+    CHAIN_PROVIDER=mock and SKIP_AUTH=1 so seed helpers work without real
+    user records.
     """
+    api_url = os.environ.get("E2E_API_URL")
+    if api_url:
+        # Strip trailing /api suffix so callers receive the base URL.
+        base = api_url.rstrip("/")
+        if base.endswith("/api"):
+            base = base[: -len("/api")]
+        yield base
+        return
+
     env = {
         **os.environ,
         "CHAIN_PROVIDER": "mock",
@@ -103,16 +122,21 @@ def flask_server():
 
 @pytest.fixture(scope="session")
 def angular_server(flask_server):
-    """Start Angular dev server on port 4201 with API proxy to E2E Flask.
+    """Return the Angular app URL, starting a dev server if needed.
 
-    Session-scoped for the same reason as flask_server — the Angular build
-    takes 15–30 s on first compile and must be shared across scenarios. The
-    dev server is stateless from the test perspective; each scenario controls
-    state via localStorage and JWT injection, not by restarting the server.
+    When E2E_BASE_URL is set that URL is yielded directly.  The suite then
+    runs against whatever server is already listening there (Docker, a
+    pre-started dev server, etc.).
 
-    Depends on flask_server so the proxy target is the E2E Flask instance
-    (port 5001) rather than the Docker container (port 8095).
+    Without E2E_BASE_URL an Angular dev server is started on port 4201 with
+    a proxy config that forwards /api requests to the local Flask server
+    started by the flask_server fixture.
     """
+    base_url = os.environ.get("E2E_BASE_URL")
+    if base_url:
+        yield base_url.rstrip("/")
+        return
+
     proxy_conf = {
         "/api": {
             "target": flask_server,
@@ -156,6 +180,13 @@ def seed_data(flask_server):
     write-capable projects, create a separate function-scoped fixture in that
     test module rather than downgrading this one.
 
+    When E2E_BASE_URL is set (running against Docker), the bootstrap API
+    requires a real user token and CHAIN_PROVIDER=mock — conditions that don't
+    hold for the Docker stack.  In that mode the seed matrix is built from
+    projects that already exist on the filesystem without calling the bootstrap
+    API (active_job_id will be None).  Step definitions that require a seeded
+    Active project must skip when running against Docker.
+
     Creates three Specced, two Ready to Build, two Braindumps, and one Active
     project. Projects are written directly to the filesystem (no auth needed)
     except for the Active project which is created via the bootstrap API.
@@ -165,8 +196,12 @@ def seed_data(flask_server):
 
     A finalizer removes all seeded project directories after the session ends.
     """
-    matrix = seed_project_matrix(api_base_url=flask_server)
+    skip_active = bool(os.environ.get("E2E_BASE_URL"))
+    matrix = seed_project_matrix(
+        api_base_url=flask_server,
+        skip_active_project=skip_active,
+    )
 
     yield matrix
 
-    teardown_seed_matrix(matrix)
+    teardown_seed_matrix(matrix, api_base_url=flask_server)
