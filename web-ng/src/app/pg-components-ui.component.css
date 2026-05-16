@@ -1,0 +1,86 @@
+.pg-comp-ui-root {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* ── Section wrapper ─────────────────────────────────────────────────────── */
+
+.pg-comp-ui-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pg-comp-ui-section-title {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted, #999);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border, #dfdfdf);
+  margin: 0;
+}
+
+/* ── Demo frame ──────────────────────────────────────────────────────────── */
+
+.pg-comp-ui-demo-frame {
+  border: 1px solid var(--border, #dfdfdf);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Buttons grid ────────────────────────────────────────────────────────── */
+
+.pg-comp-ui-buttons-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.pg-comp-ui-btn-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  align-items: flex-start;
+}
+
+.pg-comp-ui-btn-label {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.5625rem;
+  color: var(--ink-muted, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* sidebar-generate inside a flex container needs width reset */
+.pg-comp-ui-btn-cell .sidebar-generate {
+  margin: 0;
+  width: auto;
+}
+
+/* ── Badge rows ──────────────────────────────────────────────────────────── */
+
+.pg-comp-ui-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pg-comp-ui-badge-row--spaced {
+  margin-top: 0.5rem;
+}
+
+.pg-comp-ui-badge-meta {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.6875rem;
+  color: var(--ink-muted, #999);
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}

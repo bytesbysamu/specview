@@ -1,0 +1,83 @@
+<div class="pg-comp-app-root">
+
+  <!-- ── Masthead ─────────────────────────────────────────────────────────── -->
+  <section class="pg-comp-app-section">
+    <div class="pg-comp-app-section-title">Masthead</div>
+    <div class="masthead pg-comp-app-demo-frame">
+      <div class="masthead-top">
+        <span class="edition">Specview Design System</span>
+        <div class="masthead-center">
+          <div class="masthead-date">Saturday, May 16, 2026</div>
+          <div class="masthead-title">Design Playground</div>
+          <div class="masthead-tagline">Every Component &middot; Every State &middot; Every Token</div>
+        </div>
+        <div class="masthead-actions">
+          <button class="new-project-btn">New Project</button>
+          <button class="logout-btn">Logout</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Modal ────────────────────────────────────────────────────────────── -->
+  <section class="pg-comp-app-section">
+    <div class="pg-comp-app-section-title">Modal (inline, position overridden via component CSS)</div>
+    <div class="pg-comp-app-modal-wrap">
+      <div class="modal pg-comp-app-modal-static">
+        <div class="modal-header">
+          <div class="modal-title">New Project</div>
+          <button class="modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <label class="modal-label">Project name</label>
+          <input class="modal-input" type="text" placeholder="e.g. Payment Gateway Redesign" />
+          <label class="modal-label">Braindump</label>
+          <textarea
+            class="modal-textarea"
+            rows="5"
+            placeholder="Paste your notes, requirements, or ideas here..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-cancel" type="button">Cancel</button>
+          <button class="modal-generate" type="button">Generate Spec</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Search Bar ────────────────────────────────────────────────────────── -->
+  <section class="pg-comp-app-section">
+    <div class="pg-comp-app-section-title">Search Bar</div>
+    <div class="pg-comp-app-demo-frame">
+      <div class="search-bar">
+        <input type="search" placeholder="Search projects..." />
+        <span class="search-count">12 projects</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Update Banner ─────────────────────────────────────────────────────── -->
+  <section class="pg-comp-app-section">
+    <div class="pg-comp-app-section-title">Update Banner</div>
+    <div class="pg-comp-app-demo-frame">
+      <div class="update-banner">
+        A new version of Specview is available.
+        <button type="button">Reload</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Context Cards ─────────────────────────────────────────────────────── -->
+  <section class="pg-comp-app-section">
+    <div class="pg-comp-app-section-title">Context Cards</div>
+    <div class="pg-comp-app-context-grid">
+      @for (card of contextCards; track card.label) {
+        <div class="context-card">
+          <div class="context-card__label">{{ card.label }}</div>
+          <div class="context-card__desc">{{ card.desc }}</div>
+        </div>
+      }
+    </div>
+  </section>
+
+</div>

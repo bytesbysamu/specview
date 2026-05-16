@@ -1,0 +1,159 @@
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+
+.pg-interactions-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pg-interactions-header {
+  font-family: var(--sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  margin-bottom: 16px;
+}
+
+.pg-interactions-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.pg-interactions-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pg-interactions-row:last-child {
+  border-bottom: none;
+}
+
+.pg-interactions-cell-label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-light);
+}
+
+.pg-interactions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pg-interactions-state-label {
+  font-family: var(--sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
+/* ── Demo size constraints ────────────────────────────────────────────────── */
+
+.pg-demo-context-card {
+  max-width: 220px;
+}
+
+.pg-demo-search {
+  border-bottom: none;
+  padding: 0;
+}
+
+.pg-demo-search input {
+  max-width: 200px;
+}
+
+.pg-demo-file-item {
+  max-width: 220px;
+  border-left: none;
+}
+
+/* ── Forced-state classes — replicate :hover/:focus/:active from styles.css ── */
+
+.op-chip.force-hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.new-project-btn.force-hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.logout-btn.force-hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.context-card.force-hover {
+  border-color: var(--ink);
+  background: rgba(0, 0, 0, 0.015);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-file.force-hover {
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.pg-search-input {
+  font-family: var(--sans);
+  font-size: 13px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  padding: 4px 0;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 200px;
+}
+
+.pg-search-input::placeholder {
+  color: var(--ink-muted);
+}
+
+.pg-search-input.force-focus {
+  border-bottom-color: var(--ink);
+}
+
+.section-link.force-hover {
+  color: var(--ink);
+}
+
+.theme-toggle.force-hover {
+  border-color: var(--ink);
+}
+
+.file-item.force-hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.style-chip.force-hover {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+/* ── Dark mode overrides for forced hover states ─────────────────────────── */
+
+[data-theme="dark"] .context-card.force-hover {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .sidebar-file.force-hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .file-item.force-hover {
+  background: rgba(255, 255, 255, 0.03);
+}
