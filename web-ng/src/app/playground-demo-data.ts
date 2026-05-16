@@ -220,14 +220,128 @@ export const DEMO_PROJECTS: Project[] = [
       { filename: 'braindump.md', label: 'Braindump', teaser: 'Gradual rollout infrastructure with targeting rules and kill switches' },
     ],
   },
+
+  // Active — generation in progress (ninth project)
+  {
+    id: 'demo-active-2',
+    name: 'API Platform Spec',
+    createdAt: '2026-05-16T08:45:00Z',
+    specs: [
+      {
+        filename: 'braindump.md',
+        label: 'Braindump',
+        content: `We need a unified API platform that acts as a gateway for all internal services. Right now every team publishes their own endpoints with different auth schemes, rate limiting strategies, and versioning conventions. It's a mess.
+
+The platform should handle auth (OAuth2 + API keys), rate limiting per consumer tier, request/response logging, and automatic SDK generation from OpenAPI specs. We want teams to register their services via a manifest file and the platform handles the rest.
+
+Probably built on Kong or a custom Go service sitting in front of everything. Need to support REST and gRPC, maybe GraphQL federation later. Key metric: reduce integration time for a new service consumer from 2 weeks to 1 day.`,
+      },
+      {
+        filename: 'analysis.md',
+        label: 'Analysis',
+        content: `# Analysis — API Platform Spec
+
+## Executive Summary
+
+Internal service proliferation has reached an inflection point. Fourteen distinct authentication schemes are in production, three of which are deprecated but still serving traffic. Consumer onboarding averages 11 business days — largely spent navigating undocumented auth flows and per-service rate limit semantics.
+
+## Key Problems
+
+**Authentication fragmentation**: OAuth2, API keys, mutual TLS, and three legacy session-cookie schemes coexist without a unified revocation surface. A compromised credential in one service cannot be invalidated globally.
+
+**Observability gaps**: Request tracing stops at service boundaries. Cross-service latency attribution is manual and unreliable, delaying incident response by an average of 47 minutes.
+
+**Onboarding friction**: New consumers must read four separate runbooks to integrate a single upstream service. SDK generation is ad-hoc — some teams publish SDKs, most do not.
+
+## Recommended Approach
+
+A centralized API gateway (Kong Enterprise or custom Go service) registered as the single ingress point for all internal APIs. Services publish an OpenAPI 3.1 manifest; the platform derives auth policy, rate limits, and SDK stubs automatically.`,
+      },
+      {
+        filename: 'epic.md',
+        label: 'Epic',
+        teaser: 'Unified gateway with OAuth2, per-tier rate limiting, and automatic SDK generation — still generating…',
+      },
+    ],
+  },
+];
+
+// ── Case Study Acts ──────────────────────────────────────────────────────────
+//
+// The case study sticky nav is structured into four narrative acts.
+// Each act has a display label and the ordered list of section IDs it contains.
+// These IDs must match the `id` attributes on the <section> elements in
+// PgCaseStudyComponent.
+
+export interface CaseStudyAct {
+  label: string;
+  sections: CaseStudyNavItem[];
+}
+
+export interface CaseStudyNavItem {
+  id: string;
+  label: string;
+}
+
+/** Full ordered list of section IDs in narrative sequence. */
+export const DEMO_CASE_STUDY_SECTION_IDS: string[] = [
+  'hero',
+  'problem',
+  'pipeline',
+  'live-demo',
+  'landing-showcase',
+  'design-language',
+  'screen-gallery',
+  'patterns',
+  'dark-mode',
+  'journey',
+  'cta',
+];
+
+/** Four narrative acts grouping the 11 case study sections. */
+export const DEMO_CASE_STUDY_ACTS: CaseStudyAct[] = [
+  {
+    label: 'The Problem',
+    sections: [
+      { id: 'hero',    label: 'The Pitch' },
+      { id: 'problem', label: 'The Problem' },
+    ],
+  },
+  {
+    label: 'The Product',
+    sections: [
+      { id: 'pipeline',          label: 'The Pipeline' },
+      { id: 'live-demo',         label: 'Live Demo' },
+      { id: 'landing-showcase',  label: 'The Landing' },
+    ],
+  },
+  {
+    label: 'The Craft',
+    sections: [
+      { id: 'design-language', label: 'Design Language' },
+      { id: 'screen-gallery',  label: 'Screen Gallery' },
+      { id: 'patterns',        label: 'Patterns' },
+      { id: 'dark-mode',       label: 'Dark Mode' },
+    ],
+  },
+  {
+    label: 'The Journey',
+    sections: [
+      { id: 'journey', label: 'The Journey' },
+      { id: 'cta',     label: 'Get Started' },
+    ],
+  },
 ];
 
 // ── Demo Section Counts ──────────────────────────────────────────────────────
 
 export const DEMO_SECTION_COUNTS: Record<string, number> = {
-  all:              8,
-  Active:           1,
+  all:              9,
+  Active:           2,
   'Ready to build': 2,
   Specced:          2,
   Braindumps:       3,
 };
+
+/** Set of project IDs that should be treated as "Active" (generation in progress). */
+export const DEMO_ACTIVE_IDS = new Set<string>(['demo-active-1', 'demo-active-2']);
