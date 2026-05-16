@@ -42,3 +42,19 @@
 ## Next steps
 - Phase 2: Add 10 remaining sections (masthead, op chips, modal, buttons, etc.)
 - Braindump: `playground-phase2-missing-sections-1778919412`
+
+## Post-execution cleanup (2026-05-16)
+
+### Dead code deleted
+| File | Lines | Reason |
+|------|-------|--------|
+| web/style.css | 621 | Legacy pre-Angular CSS, zero references |
+| web/app.js | 323 | Legacy pre-Angular JS, zero references |
+| web/index.html | 70 | Legacy pre-Angular HTML, zero references |
+| **Total** | **1,014** | Entire `web/` directory removed |
+
+### Cumulative line impact
+- Phase 1 static playground deletion: -3,562
+- Legacy web/ deletion: -1,014
+- Phase 1 live components added: +1,194
+- **Net: -3,382 lines removed**
