@@ -208,3 +208,80 @@ describe('PgBordersComponent', () => {
 - `ng test` passes with 340+ tests
 - `ng build` passes
 - Zero regressions in existing 257 tests
+
+---
+
+## AppStateService pre-tests (write now, migrate to service later)
+
+AppStateService doesn't exist yet — it gets created in V3. But we can write tests NOW against `app-v2.component.ts` that target the exact signals, computed values, and methods that will move into the service. When V3 extracts them, we copy the test file and change `component.x()` → `service.x()`.
+
+### What to test on app-v2 that maps 1:1 to AppStateService
+
+**Signal initialization (~10 tests):**
+- `projects()` starts as empty array
+- `activeProject()` starts as null
+- `activeFile()` starts as null
+- `activeSection()` starts as 'all'
+- `searchQuery()` starts as ''
+- `statusMode()` starts as 'idle'
+- `specGenLoading()` starts as false
+- `showCreateModal()` starts as false
+- `isDark()` reads from localStorage
+
+**Computed values (~10 tests):**
+- `filteredProjects()` filters by section + search query
+- `sectionCounts()` counts projects per section correctly
+- `projectsBySection()` groups in canonical order (Active → Ready to build → Specced → Braindumps)
+- `showGrid()` true when no active project
+- `showExpanded()` true when active project set
+- `mode()` derives from specGenLoading/error/success signals
+- `currentSpec()` resolves from activeProject + activeFile
+- `canGenerateSpecs()` true when no analysis.md exists
+- `canGenerateEpicGuide()` true when epic.md exists
+- `columns()` computes column count from project count
+
+**Method behavior (~15 tests):**
+- `selectProject(id)` sets activeProject + loads first file
+- `selectFile(filename)` updates activeFile
+- `closeExpanded()` resets activeProject and activeFile to null
+- `selectSection(id)` updates activeSection, clears search
+- `onSearch(query)` updates searchQuery signal
+- `toggleTheme()` flips isDark, updates localStorage + document attribute
+- `openCreateModal()` / `closeCreateModal()` toggle signal
+- `toggleOp(op)` sets/clears activeOp
+- `applyResult()` writes to spec, pushes to undo stack
+- `undoVersion()` pops undo stack, pushes to redo
+- `redoVersion()` pops redo stack, pushes to undo
+- `logout()` calls auth.signOut()
+- `navigateToUpgrade()` calls router.navigate
+
+**Polling lifecycle (~5 tests):**
+- Starts polling on login (auth.isLoggedIn becomes true)
+- Stops polling on logout
+- Increments pollRetries on failure
+- Stops after max retries
+- Resets on fresh login
+
+**Bootstrap pipeline (~8 tests):**
+- `createProject()` calls ProjectsService.createProject then starts bootstrap
+- `_runBootstrap()` polls until done
+- Saves partial files during polling
+- Sets specGenStep from poll response
+- Handles cancellation (cancelling signal)
+- Handles failure (specGenError signal)
+- Retry step calls retryBootstrapStep
+- Success navigates to first file
+
+### Total: ~48 tests on app-v2 that pre-validate AppStateService
+
+These tests mock all services (ProjectsService, AiService, AuthService, SubscriptionService) and test the signal/computed/method logic in isolation. When V3 extracts to AppStateService, the test file moves with minimal changes:
+
+```diff
+- const component = TestBed.createComponent(AppV2Component).componentInstance;
++ const service = TestBed.inject(AppStateService);
+
+- expect(component.projects()).toEqual([]);
++ expect(service.projects()).toEqual([]);
+```
+
+### Combined target: 87 (playground) + 48 (pre-V3) = 135 new tests → total ~392
