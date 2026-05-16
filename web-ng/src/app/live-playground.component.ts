@@ -14,6 +14,10 @@ import { ProjectGridComponent } from './project-grid.component';
 import { SidebarV2Component } from './sidebar-v2.component';
 import { ReaderPanelComponent } from './reader-panel.component';
 import { LandingPitchComponent } from './landing-pitch.component';
+import { PgTokensComponent } from './pg-tokens.component';
+import { PgBordersComponent } from './pg-borders.component';
+import { PgAnimationsComponent } from './pg-animations.component';
+import { PgStateMatrixComponent } from './pg-state-matrix.component';
 
 import {
   DEMO_PROJECTS,
@@ -30,6 +34,10 @@ import {
     SidebarV2Component,
     ReaderPanelComponent,
     LandingPitchComponent,
+    PgTokensComponent,
+    PgBordersComponent,
+    PgAnimationsComponent,
+    PgStateMatrixComponent,
   ],
   templateUrl: './live-playground.component.html',
   styleUrl: './live-playground.component.css',

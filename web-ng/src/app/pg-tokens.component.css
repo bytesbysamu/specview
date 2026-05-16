@@ -1,0 +1,129 @@
+.tokens-root {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+
+.tokens-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tokens-heading {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted, #999);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border, #dfdfdf);
+  margin: 0;
+}
+
+/* ── Color grid ──────────────────────────────────────────────────────────── */
+
+.tokens-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.color-swatch {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border, #dfdfdf);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.color-name {
+  font-family: 'SF Mono', Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--ink, #121212);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.color-value {
+  font-family: 'SF Mono', Consolas, monospace;
+  font-size: 0.6875rem;
+  color: var(--ink-muted, #999);
+  flex-shrink: 0;
+}
+
+/* ── Typography list ─────────────────────────────────────────────────────── */
+
+.typo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.typo-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border, #dfdfdf);
+}
+
+.typo-row:last-child {
+  border-bottom: none;
+}
+
+.typo-label {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.6875rem;
+  color: var(--ink-muted, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 7rem;
+  flex-shrink: 0;
+}
+
+.typo-sample {
+  color: var(--ink, #121212);
+  line-height: 1.3;
+}
+
+/* ── Spacing row ─────────────────────────────────────────────────────────── */
+
+.spacing-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.spacing-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.spacing-box {
+  background: var(--accent, #567b95);
+  opacity: 0.7;
+  border-radius: 2px;
+}
+
+.spacing-label {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.6875rem;
+  color: var(--ink-muted, #999);
+  text-align: center;
+}

@@ -1,0 +1,134 @@
+.matrix-root {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.matrix-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.matrix-section-title {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted, #999);
+}
+
+/* ── Cards row ─────────────────────────────────────────────────── */
+
+.matrix-cards-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.matrix-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.matrix-cell-label {
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  font-size: 0.6875rem;
+  color: var(--ink-muted, #999);
+  letter-spacing: 0.03em;
+  border-bottom: 1px dashed var(--border, #dfdfdf);
+  padding-bottom: 0.25rem;
+}
+
+/* ── Sidebar file nav ──────────────────────────────────────────── */
+
+.matrix-sidenav-wrap {
+  border: 1px solid var(--border, #dfdfdf);
+  max-width: 320px;
+  padding: 0.5rem 0;
+}
+
+.matrix-sidenav {
+  padding: 0;
+}
+
+.matrix-sidenav-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.matrix-sidenav-state-tag {
+  font-size: 0.5625rem;
+  font-family: var(--sans, 'Source Sans 3', sans-serif);
+  color: var(--ink-muted, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Section nav column ────────────────────────────────────────── */
+
+.matrix-nav-demos {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.matrix-nav-demos .matrix-cell {
+  flex: none;
+  min-width: 0;
+}
+
+/* ── Reader panel row ──────────────────────────────────────────── */
+
+.matrix-reader-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.matrix-reader-cell {
+  flex: 1 1 280px;
+}
+
+.matrix-reader-frame {
+  border: 1px solid var(--border, #dfdfdf);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 12rem;
+}
+
+.matrix-reader-body {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* scoped prose styles for inline spec content */
+.matrix-reader-body h1,
+.matrix-reader-body h2,
+.matrix-reader-body h3 {
+  font-family: var(--serif, 'Playfair Display', serif);
+  margin: 0.5rem 0 0.25rem;
+}
+
+.matrix-reader-body p {
+  margin-bottom: 0.5rem;
+}
+
+.matrix-reader-body ul {
+  padding-left: 1.25rem;
+}
+
+/* diff block spacing */
+.diff-block {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 4px 0;
+}

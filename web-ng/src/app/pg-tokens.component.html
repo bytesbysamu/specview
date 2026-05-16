@@ -1,0 +1,45 @@
+<div class="tokens-root">
+
+  <!-- ── Colors ──────────────────────────────────────────────────────────── -->
+  <section class="tokens-section">
+    <h3 class="tokens-heading">Colors</h3>
+    <div class="tokens-grid">
+      @for (token of colorTokens(); track token.name) {
+        <div class="color-row">
+          <div class="color-swatch" [style.background]="token.value"></div>
+          <code class="color-name">{{ token.name }}</code>
+          <span class="color-value">{{ token.value }}</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── Typography ─────────────────────────────────────────────────────── -->
+  <section class="tokens-section">
+    <h3 class="tokens-heading">Typography</h3>
+    <div class="typo-list">
+      @for (spec of typographySpecimens; track spec.label) {
+        <div class="typo-row">
+          <span class="typo-label">{{ spec.label }}</span>
+          <span class="typo-sample"
+                [style.font-family]="spec.family"
+                [style.font-size]="spec.size">{{ spec.sample }}</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── Spacing ────────────────────────────────────────────────────────── -->
+  <section class="tokens-section">
+    <h3 class="tokens-heading">Spacing</h3>
+    <div class="spacing-row">
+      @for (size of spacingSizes; track size) {
+        <div class="spacing-item">
+          <div class="spacing-box" [style.width.px]="size" [style.height.px]="size"></div>
+          <span class="spacing-label">{{ size }}px</span>
+        </div>
+      }
+    </div>
+  </section>
+
+</div>

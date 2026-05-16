@@ -1,0 +1,41 @@
+<div class="anims-root">
+  <div class="anims-grid">
+    @for (anim of animations; track anim.name) {
+      <div class="anim-card">
+        <div class="anim-header">
+          <span class="anim-name">{{ anim.name }}</span>
+          <span class="anim-timing">{{ anim.timing }}</span>
+        </div>
+        <p class="anim-desc">{{ anim.description }}</p>
+
+        <div class="anim-demo-area">
+          <div #demoEl class="anim-demo-el" [class]="anim.cssClass">
+            @if (anim.name === 'gen-shimmer') {
+              <div class="anim-shimmer-track"></div>
+            } @else if (anim.name === 'dot-pulse' || anim.name === 'thinking-pulse') {
+              <span class="anim-dot anim-dot--1"></span>
+              <span class="anim-dot anim-dot--2"></span>
+              <span class="anim-dot anim-dot--3"></span>
+            } @else if (anim.name === 'poll-pulse') {
+              <span class="anim-poll-dot"></span>
+            } @else if (anim.name === 'status-success-flash') {
+              <span class="anim-sf-bar-inner"></span>
+            } @else if (anim.name === 'count-pulse') {
+              <span class="anim-badge">42</span>
+            } @else {
+              <span class="anim-box"></span>
+            }
+          </div>
+        </div>
+
+        <div class="anim-footer">
+          @if (anim.infinite) {
+            <span class="anim-badge-label">Always Running</span>
+          } @else {
+            <button class="anim-replay-btn" (click)="replay(demoEl, anim.cssClass)">Replay</button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

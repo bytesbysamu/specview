@@ -1,0 +1,17 @@
+<div class="borders-root">
+  <div class="borders-grid">
+    @for (demo of demos; track demo.cssClass) {
+      <div class="border-card">
+        <div class="border-meta">
+          <span class="border-description">{{ demo.description }}</span>
+          <code class="border-label">{{ demo.label }}</code>
+        </div>
+        <div class="border-demo-area">
+          <div class="border-demo-element" [class]="demo.cssClass">
+            <span class="border-demo-text">Demo element</span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

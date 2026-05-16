@@ -1,0 +1,119 @@
+<div class="matrix-root">
+
+  <!-- ── Project Cards ──────────────────────────────────────────────────── -->
+  <div class="matrix-section">
+    <div class="matrix-section-title">Project Cards (5 variants)</div>
+    <div class="matrix-cards-row">
+      @for (card of cards; track card.label) {
+        <div class="matrix-cell">
+          <div class="matrix-cell-label">{{ card.label }}</div>
+          <div
+            class="file-item"
+            [class.featured]="card.featured">
+            <div class="file-item-title">{{ card.title }}</div>
+            <div class="file-item-teaser">{{ card.teaser }}</div>
+            <div class="file-item-meta">
+              <span class="badge">{{ card.badge }}</span>
+              <span>{{ card.sectionLabel }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ── Sidebar File Nav ───────────────────────────────────────────────── -->
+  <div class="matrix-section">
+    <div class="matrix-section-title">Sidebar File Nav (4 states)</div>
+    <div class="matrix-sidenav-wrap">
+      <nav class="sidebar-nav matrix-sidenav">
+        @for (item of fileNavItems; track item.label) {
+          <button
+            class="sidebar-file"
+            [class.active]="item.active">
+            <span class="matrix-sidenav-label-wrap">
+              <span class="matrix-sidenav-state-tag">{{ item.stateLabel }}</span>
+              {{ item.label }}
+            </span>
+            @if (item.dotState) {
+              <span
+                class="file-dot"
+                [class.file-dot--running]="item.dotState === 'running'"
+                [class.file-dot--success]="item.dotState === 'success'"
+                [class.file-dot--failure]="item.dotState === 'failure'">
+              </span>
+            }
+          </button>
+        }
+      </nav>
+    </div>
+  </div>
+
+  <!-- ── Section Nav ────────────────────────────────────────────────────── -->
+  <div class="matrix-section">
+    <div class="matrix-section-title">Section Nav (3 states)</div>
+    <div class="matrix-nav-demos">
+      @for (demo of sectionNavDemos; track demo.label) {
+        <div class="matrix-cell">
+          <div class="matrix-cell-label">{{ demo.label }}</div>
+          <app-section-nav
+            [sections]="demoSections"
+            [activeSection]="demo.activeId"
+            [sectionCounts]="demoCounts"
+            [pulsingSections]="getPulsingSet(demo.pulsing)"
+            [contextFileCount]="0"
+          />
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ── Reader Panel ───────────────────────────────────────────────────── -->
+  <div class="matrix-section">
+    <div class="matrix-section-title">Reader Panel (3 states)</div>
+    <div class="matrix-reader-row">
+
+      <!-- State 1: Normal spec content -->
+      <div class="matrix-cell matrix-reader-cell">
+        <div class="matrix-cell-label">Normal spec content</div>
+        <div class="matrix-reader-frame">
+          <div class="expanded-title">Analysis</div>
+          <div class="matrix-reader-body" [innerHTML]="parsedSpec"></div>
+        </div>
+      </div>
+
+      <!-- State 2: Access denied -->
+      <div class="matrix-cell matrix-reader-cell">
+        <div class="matrix-cell-label">Access denied (403)</div>
+        <div class="matrix-reader-frame">
+          <div class="access-denied-state">
+            <span class="overline">Access Denied</span>
+            <p class="access-denied-heading">You don't have access to this project.</p>
+            <p class="access-denied-sub">This project belongs to another account. Only the owner can view or edit it.</p>
+            <button class="access-denied-back">Back to projects</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- State 3: AI diff view -->
+      <div class="matrix-cell matrix-reader-cell">
+        <div class="matrix-cell-label">AI diff view (add/remove blocks)</div>
+        <div class="matrix-reader-frame">
+          <div class="expanded-title">AI Result — Diff</div>
+          <div class="diff-unified">
+            @for (block of diffBlocks; track $index) {
+              <div
+                class="diff-block"
+                [class.diff-block-remove]="block.type === 'remove'"
+                [class.diff-block-add]="block.type === 'add'">
+                {{ block.text }}
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
