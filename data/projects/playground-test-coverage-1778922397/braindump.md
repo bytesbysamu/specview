@@ -285,3 +285,58 @@ These tests mock all services (ProjectsService, AiService, AuthService, Subscrip
 ```
 
 ### Combined target: 87 (playground) + 48 (pre-V3) = 135 new tests → total ~392
+
+---
+
+## 100% Coverage Target — Files That Survive V3
+
+### Already covered ✅ (5 sub-components + 7 services + 1 pipe = 13 files)
+| File | Tests | Coverage |
+|------|-------|----------|
+| project-grid.component | 11 | ✅ |
+| reader-panel.component | 35 | ✅ |
+| sidebar-v2.component | 35 | ✅ |
+| status-bar.component | 10 | ✅ |
+| section-nav.component | 11 | ✅ |
+| projects.service | 20 | ✅ |
+| auth.service | 11 | ✅ |
+| ai.service | 22 | ✅ |
+| subscription.service | 9 | ✅ |
+| token-lifecycle.service | 18 | ✅ |
+| section-taxonomy.service | 6 | ✅ |
+| project-teaser | 41 | ✅ |
+| word-count.pipe | 11 | ✅ |
+
+### Needs spec files NOW (8 playground components + 2 utilities = 10 files)
+| File | Lines | Tests needed |
+|------|-------|-------------|
+| live-playground.component | 197 | ~20 |
+| pg-tokens.component | 78 | ~15 |
+| pg-borders.component | 54 | ~5 |
+| pg-animations.component | 76 | ~12 |
+| pg-state-matrix.component | 131 | ~15 |
+| pg-components-app.component | 30 | ~8 |
+| pg-components-ui.component | 63 | ~10 |
+| landing-pitch.component | 12 | ~3 |
+| css-read.util | 3 | ~5 |
+| playground-demo-data | 169 | ~8 |
+
+### Needs spec files DURING V3 (4 new files)
+| File | Lines | Tests needed |
+|------|-------|-------------|
+| app-state.service | ~400 | ~48 (migrated from app-v2 pre-tests) |
+| app-v3.component | ~30 | ~5 |
+| utils/paragraph-diff | ~30 | ~8 |
+| constants/nav-sections | ~20 | ~5 |
+
+### Files that DON'T need tests (getting deleted)
+- app.component.ts — deleted in V3
+- app-v2.component.ts — deleted in V3 (but pre-tests written to validate extraction)
+- app.component.html, app-v2.component.html/css — templates, no tests
+
+### Grand total for 100% coverage of surviving files
+- Already covered: 13 files, 240 tests
+- Write now (before V3): 10 files, ~101 tests
+- Write during V3: 4 files, ~66 tests
+- **Target: 27 files, ~407 total tests**
+- **Current: 257 tests → need +150 more**
