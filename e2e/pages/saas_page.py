@@ -267,12 +267,14 @@ class SaasPage(AppPage):
 
     def expire_jwt(self) -> None:
         """Replace the stored JWT with one that has already expired and reload."""
+        import os as _os
         import time as _time
         import jwt as _jwt
 
+        secret = _os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
         expired_token = _jwt.encode(
-            {"sub": "1", "exp": int(_time.time()) - 1},
-            "dev-secret-change-in-prod",
+            {"sub": "1", "email": "test@test.com", "exp": int(_time.time()) - 1},
+            secret,
             algorithm="HS256",
         )
         self.inject_jwt(expired_token)
