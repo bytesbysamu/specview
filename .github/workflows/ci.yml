@@ -207,9 +207,6 @@ jobs:
             --tb=short \
             -v \
             2>&1 | tee e2e-output.txt
-          # Exit code 5 = no tests collected (E2E infra not fully wired yet).
-          # Treat as success until step definitions are complete.
-        continue-on-error: true
       - name: Upload E2E output
         uses: actions/upload-artifact@v7
         if: always()

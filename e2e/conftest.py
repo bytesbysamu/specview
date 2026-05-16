@@ -23,6 +23,10 @@ pytest_plugins = [
     "e2e.steps.common_steps",
     "e2e.steps.overview_preconditions",
     "e2e.steps.overview_steps",
+    "e2e.steps.detail_preconditions",
+    "e2e.steps.detail_steps",
+    "e2e.steps.saas_preconditions",
+    "e2e.steps.saas_steps",
 ]
 
 
@@ -196,6 +200,11 @@ def seed_data(flask_server):
 
     A finalizer removes all seeded project directories after the session ends.
     """
+    # Skip active project when running against the Docker stack (E2E_BASE_URL set).
+    # The Active section in Angular only appears when the app itself initiates spec
+    # generation (specGenLoading signal). Externally-started bootstrap jobs do not
+    # set this signal. With CHAIN_PROVIDER=mock (local dev only), mock generation
+    # completes fast enough for polling to detect the running state.
     skip_active = bool(os.environ.get("E2E_BASE_URL"))
     matrix = seed_project_matrix(
         api_base_url=flask_server,

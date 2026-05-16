@@ -236,15 +236,17 @@
         <div class="sidebar-project">{{ expandedProject() }}</div>
 
         @if (activeProject()) {
-          <nav class="sidebar-nav">
+          <nav class="sidebar-nav" data-test="sidebar-nav">
             @for (s of activeProject()!.specs; track s.filename) {
               <button
                 class="sidebar-file"
+                data-test="sidebar-file"
                 [class.active]="activeFile() === s.filename"
                 (click)="selectFile(s.filename)">
                 {{ s.label }}
                 @if (fileOpState()[s.filename]) {
                   <span class="file-dot"
+                        data-test="file-dot"
                         [class.file-dot--running]="fileOpState()[s.filename] === 'running'"
                         [class.file-dot--success]="fileOpState()[s.filename] === 'success'"
                         [class.file-dot--failure]="fileOpState()[s.filename] === 'failure'"></span>
@@ -255,6 +257,7 @@
 
           <!-- Sidebar status row — immediately below file nav -->
           <div class="sidebar-status"
+               data-test="sidebar-status"
                [class.sidebar-status--active]="mode() === 'active'"
                [class.sidebar-status--success]="mode() === 'success-flash'"
                [class.sidebar-status--failure]="mode() === 'failure'">
@@ -376,7 +379,7 @@
       </aside>
 
       <!-- Main content -->
-      <div class="expanded-main">
+      <div class="expanded-main" data-test="reader-panel">
 
         <!-- Access denied (403) state -->
         @if (accessDenied()) {
@@ -479,7 +482,7 @@
             <span>{{ currentSpec()?.content | wordCount }} words</span>
           </div>
         }
-        <h2 class="expanded-title">{{ expandedTitle() }}</h2>
+        <h2 class="expanded-title" data-test="reader-title">{{ expandedTitle() }}</h2>
 
         <!-- AI result / diff view -->
         @if (activeProject() && aiResult()) {
@@ -511,7 +514,7 @@
             <div class="diff-unified markdown-content" [innerHTML]="diffHtmlUnified()"></div>
           }
         } @else {
-          <div class="expanded-body markdown-content" [innerHTML]="parsedContent()"></div>
+          <div class="expanded-body markdown-content" data-test="reader-content" [innerHTML]="parsedContent()"></div>
         }
 
       </div>

@@ -11,12 +11,12 @@ import { AuthService } from '../../services/auth.service';
         <div class="login-title">Specview</div>
         <div class="login-sub">Sign in to continue</div>
         @if (error()) {
-          <div class="login-error">{{ error() }}</div>
+          <div class="login-error" data-test="login-error">{{ error() }}</div>
         }
         <form (submit)="submit($event)">
-          <input #emailEl type="email" placeholder="Email" autocomplete="username" required />
-          <input #passEl type="password" placeholder="Password" autocomplete="current-password" required />
-          <button type="submit" [disabled]="loading()">
+          <input #emailEl data-test="login-email" type="email" placeholder="Email" autocomplete="username" required />
+          <input #passEl data-test="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
+          <button type="submit" data-test="login-submit" [disabled]="loading()">
             {{ loading() ? 'Signing in…' : 'Sign in' }}
           </button>
         </form>

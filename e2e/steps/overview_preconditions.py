@@ -215,10 +215,18 @@ def project_in_section_with_specs(
 
 
 @given(parsers.parse("the user is logged in and projects exist in the Active, Specced, and Braindumps sections"))
-def projects_in_three_sections(page: Page, angular_server: str, context: dict) -> None:
+def projects_in_three_sections(page: Page, angular_server: str, context: dict, seed_data: SeedMatrix) -> None:
+    """Login to the overview page. Seed matrix provisions Active, Specced, and Braindumps projects.
+
+    The Active section in the Angular app only appears when the app itself initiates
+    a spec generation (specGenLoading signal is set). This requires CHAIN_PROVIDER=mock
+    so generation completes fast enough for the bootstrap seed to finish before the test
+    navigates to the overview. Without mock, Active section is never visible.
+    """
+    context["seed_data"] = seed_data
     if _SKIP_MOCK:
         pytest.skip(
-            "Requires CHAIN_PROVIDER=mock to seed an Active project via the bootstrap API"
+            "Requires CHAIN_PROVIDER=mock: Active section only appears when Angular initiates generation"
         )
     _do_login_overview(page, angular_server, context)
 
