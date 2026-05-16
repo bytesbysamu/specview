@@ -98,3 +98,28 @@ ClawBoi → Specview evolution. The newspaper grid, the editorial voice, the Pla
 - All components are live (not screenshots)
 - A visitor who reads top to bottom understands what Specview does, how it's built, and why it looks the way it does
 - Dark mode works across the entire narrative
+
+---
+
+## Source collection
+
+All source files are collected in the UX audit project: `ux-audit-design-refs-1778945980` (23 files). That project is the archive — this braindump references it, doesn't duplicate it.
+
+### Active inputs → use directly
+- `ux-audit.../groad-analysis.md` — narrative template
+- `ux-audit.../design-system.md` — design philosophy + tokens
+- `ux-audit.../static-playground-original.html` — component demos + CSS snippets
+- `ux-audit.../landing-v2.html` — polished landing page
+- `ux-audit.../landing-index.html` — original landing
+- `ux-audit.../specview-landing-wireframe.jsx` — wireframe
+- `ux-audit.../clawboi-design-system.md` — heritage story
+
+### Archived (reference only, stay in UX audit project)
+- `ux-audit.../constellation-colors-themes.md` — Ionic theming (dark mode inspiration)
+- `ux-audit.../cbtbuddy-ux-plan.md` — UX methodology reference
+- `ux-audit.../cbtbuddy-ui-mockups.md` — mockup patterns reference
+- `ux-audit.../cbtbuddy-chat-ui.md` — chat UI reference
+- `ux-audit.../wireframe.html` — early wireframe (before/after)
+- `ux-audit.../app-overview.html` — app overview structure
+- 6 exec-summary files — completed work, historical
+- 2 braindump files — executed, historical
