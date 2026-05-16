@@ -1,0 +1,83 @@
+<div class="pg-comp-ui-root">
+
+  <!-- ── Op Chips ──────────────────────────────────────────────────────────── -->
+  <section class="pg-comp-ui-section">
+    <div class="pg-comp-ui-section-title">Op Chips</div>
+    <div class="pg-comp-ui-demo-frame">
+      <div class="text-ops-bar">
+        <span class="text-ops-label">Operations</span>
+        @for (chip of opChips; track chip.label) {
+          <button
+            class="op-chip"
+            [class.active]="chip.active"
+            [class.op-chip--accent]="chip.accent"
+            type="button">
+            {{ chip.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Style Chips ───────────────────────────────────────────────────────── -->
+  <section class="pg-comp-ui-section">
+    <div class="pg-comp-ui-section-title">Style Chips</div>
+    <div class="pg-comp-ui-demo-frame">
+      <div class="style-presets">
+        <span class="style-presets-label">Style</span>
+        @for (chip of styleChips; track chip.label) {
+          <button class="style-chip" type="button">{{ chip.label }}</button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Buttons ───────────────────────────────────────────────────────────── -->
+  <section class="pg-comp-ui-section">
+    <div class="pg-comp-ui-section-title">Buttons (all variants + disabled states)</div>
+    <div class="pg-comp-ui-demo-frame">
+      <div class="pg-comp-ui-buttons-row">
+        @for (btn of buttons; track btn.label) {
+          <div class="pg-comp-ui-btn-cell">
+            <div class="pg-comp-ui-btn-label">{{ btn.label }}</div>
+            <button
+              [class]="btn.cssClass"
+              [disabled]="btn.disabled"
+              type="button">
+              {{ btn.label }}
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Overlines ─────────────────────────────────────────────────────────── -->
+  <section class="pg-comp-ui-section">
+    <div class="pg-comp-ui-section-title">Overlines</div>
+    <div class="pg-comp-ui-demo-frame">
+      <span class="overline">Section Label</span>
+      <span class="overline">Status Indicator</span>
+      <span class="overline">Category Heading</span>
+    </div>
+  </section>
+
+  <!-- ── Col Badges + Badges ───────────────────────────────────────────────── -->
+  <section class="pg-comp-ui-section">
+    <div class="pg-comp-ui-section-title">Badges (col-badge + badge variants)</div>
+    <div class="pg-comp-ui-demo-frame">
+      <div class="pg-comp-ui-badge-row">
+        <span class="pg-comp-ui-badge-meta">col-badge:</span>
+        <span class="col-badge">4 files</span>
+        <span class="col-badge">12 projects</span>
+      </div>
+      <div class="pg-comp-ui-badge-row pg-comp-ui-badge-row--spaced">
+        <span class="pg-comp-ui-badge-meta">badge variants:</span>
+        @for (b of badges; track b.label) {
+          <span class="badge" [class]="b.modifier">{{ b.label }}</span>
+        }
+      </div>
+    </div>
+  </section>
+
+</div>

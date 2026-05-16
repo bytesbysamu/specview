@@ -18,6 +18,10 @@ import { PgTokensComponent } from './pg-tokens.component';
 import { PgBordersComponent } from './pg-borders.component';
 import { PgAnimationsComponent } from './pg-animations.component';
 import { PgStateMatrixComponent } from './pg-state-matrix.component';
+import { PgInteractionsComponent } from './pg-interactions.component';
+import { PgComponentsAppComponent } from './pg-components-app.component';
+import { PgComponentsUiComponent } from './pg-components-ui.component';
+import { PgLandingComponent } from './pg-landing.component';
 
 import {
   DEMO_PROJECTS,
@@ -38,6 +42,10 @@ import {
     PgBordersComponent,
     PgAnimationsComponent,
     PgStateMatrixComponent,
+    PgInteractionsComponent,
+    PgComponentsAppComponent,
+    PgComponentsUiComponent,
+    PgLandingComponent,
   ],
   templateUrl: './live-playground.component.html',
   styleUrl: './live-playground.component.css',

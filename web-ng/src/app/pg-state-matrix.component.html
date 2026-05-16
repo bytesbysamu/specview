@@ -68,6 +68,52 @@
     </div>
   </div>
 
+  <!-- ── App vs Landing Comparison ───────────────────────────────────────── -->
+  <div class="matrix-section">
+    <div class="matrix-section-title">App vs. Landing — CSS Domain Comparison</div>
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>App (styles.css)</th>
+          <th>Landing (style.css)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Typography scale</td><td>15px body, 11px labels</td><td>15px body, 22px headings</td></tr>
+        <tr><td>Button styling</td><td>Ghost borders, dashed accent</td><td>Solid fills, pill radius</td></tr>
+        <tr><td>Layout model</td><td>CSS Grid 3-col file grid</td><td>CSS Grid full-width sections</td></tr>
+        <tr><td>Color palette</td><td>Shared :root vars</td><td>Shared :root vars + section bg</td></tr>
+        <tr><td>Spacing</td><td>Compact (8–16px)</td><td>Generous (40–80px)</td></tr>
+        <tr><td>Encapsulation</td><td>Global stylesheet</td><td>Scoped in Angular components</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── ClawBoi vs. Specview Heritage ────────────────────────────────────── -->
+  <div class="matrix-section">
+    <div class="matrix-section-title">ClawBoi vs. Specview — Design Heritage</div>
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Element</th>
+          <th>Heritage</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Masthead</td><td>ClawBoi</td><td>Newspaper chrome, edition label</td></tr>
+        <tr><td>Op chips</td><td>Specview</td><td>Uppercase pill buttons, accent variant</td></tr>
+        <tr><td>Pull quote</td><td>Both</td><td>ClawBoi ::before → Specview .pullquote-mark div</td></tr>
+        <tr><td>Step section</td><td>Specview</td><td>Landing-only, terminal aesthetic</td></tr>
+        <tr><td>File grid</td><td>ClawBoi</td><td>3-col newspaper layout</td></tr>
+        <tr><td>Modal</td><td>Specview</td><td>Clean minimal, no decoration</td></tr>
+        <tr><td>Context cards</td><td>Specview</td><td>Dashed border, hover lift</td></tr>
+        <tr><td>Status bar</td><td>Specview</td><td>4-state color system</td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <!-- ── Reader Panel ───────────────────────────────────────────────────── -->
   <div class="matrix-section">
     <div class="matrix-section-title">Reader Panel (3 states)</div>
