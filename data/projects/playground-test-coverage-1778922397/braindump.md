@@ -49,18 +49,18 @@ V3 extracts state from app-v2 into a service. If we don't have tests on the V2 s
 
 ```
 describe('PgTokensComponent', () => {
-  it('should create')
-  it('should read color tokens from CSS on init')
-  it('should display correct number of color swatches')
-  it('should show token variable name and hex value')
-  it('should read typography tokens on init')
-  it('should display typography specimens')
-  it('should show spacing scale boxes')
-  it('should update all token values when dark mode toggles')
-  it('should set up MutationObserver on document.documentElement')
-  it('should clean up MutationObserver on destroy')
-  it('should handle missing CSS variables gracefully (return "not set")')
-  it('should display status color tokens separately from base colors')
+  it('create')
+  it('read color tokens from CSS on init')
+  it('display correct number of color swatches')
+  it('show token variable name and hex value')
+  it('read typography tokens on init')
+  it('display typography specimens')
+  it('show spacing scale boxes')
+  it('update all token values when dark mode toggles')
+  it('set up MutationObserver on document.documentElement')
+  it('clean up MutationObserver on destroy')
+  it('handle missing CSS variables gracefully (return "not set")')
+  it('display status color tokens separately from base colors')
 })
 ```
 
@@ -70,14 +70,14 @@ Key testing challenge: MutationObserver needs to be mocked or triggered via DOM 
 
 ```
 describe('PgAnimationsComponent', () => {
-  it('should create')
-  it('should render all 7 animation demo cards')
-  it('should show "Always Running" label for infinite animations')
-  it('should show "Replay" button for one-shot animations')
-  it('should remove and re-add class on replay click')
-  it('should force reflow between remove and re-add (offsetWidth read)')
-  it('should display animation name and timing label')
-  it('should distinguish between one-shot and infinite animations')
+  it('create')
+  it('render all 7 animation demo cards')
+  it('show "Always Running" label for infinite animations')
+  it('show "Replay" button for one-shot animations')
+  it('remove and re-add class on replay click')
+  it('force reflow between remove and re-add (offsetWidth read)')
+  it('display animation name and timing label')
+  it('distinguish between one-shot and infinite animations')
 })
 ```
 
@@ -87,17 +87,17 @@ Key testing challenge: `replay()` method uses `void el.offsetWidth` for reflow. 
 
 ```
 describe('PgStateMatrixComponent', () => {
-  it('should create')
-  it('should render 5 project card variants')
-  it('should render featured card with .featured class')
-  it('should render sidebar nav with 5 file states (idle, active, running, success, failure)')
-  it('should render 3 section nav instances with different active states')
-  it('should render reader panel with normal content')
-  it('should render reader panel with access denied state')
-  it('should render reader panel with AI diff view')
-  it('should parse demo markdown via marked + DOMPurify')
-  it('should sanitize HTML content (no XSS)')
-  it('should apply correct CSS classes for file dot states')
+  it('create')
+  it('render 5 project card variants')
+  it('render featured card with .featured class')
+  it('render sidebar nav with 5 file states (idle, active, running, success, failure)')
+  it('render 3 section nav instances with different active states')
+  it('render reader panel with normal content')
+  it('render reader panel with access denied state')
+  it('render reader panel with AI diff view')
+  it('parse demo markdown via marked + DOMPurify')
+  it('sanitize HTML content (no XSS)')
+  it('apply correct CSS classes for file dot states')
 })
 ```
 
@@ -105,24 +105,24 @@ describe('PgStateMatrixComponent', () => {
 
 ```
 describe('LivePlaygroundComponent', () => {
-  it('should create')
-  it('should initialize with 8 demo projects')
-  it('should compute section counts from demo projects')
-  it('should compute filtered projects based on active section')
-  it('should select a project and set activeProject signal')
-  it('should select a file and update activeFile signal')
-  it('should compute parsed markdown content for selected spec')
-  it('should close expanded panel and reset activeProject')
-  it('should toggle dark mode on document element')
-  it('should render section nav component')
-  it('should render all 4 status bar states')
-  it('should render project grid with demo data')
-  it('should render expanded panel when project is selected')
-  it('should render landing pitch component')
-  it('should bind teaserFn and sectionFn to project grid')
-  it('should compute columns based on filtered project count')
-  it('should update demo section counts reactively')
-  it('should handle empty filtered projects (show grid with no cards)')
+  it('create')
+  it('initialize with 8 demo projects')
+  it('compute section counts from demo projects')
+  it('compute filtered projects based on active section')
+  it('select a project and set activeProject signal')
+  it('select a file and update activeFile signal')
+  it('compute parsed markdown content for selected spec')
+  it('close expanded panel and reset activeProject')
+  it('toggle dark mode on document element')
+  it('render section nav component')
+  it('render all 4 status bar states')
+  it('render project grid with demo data')
+  it('render expanded panel when project is selected')
+  it('render landing pitch component')
+  it('bind teaserFn and sectionFn to project grid')
+  it('compute columns based on filtered project count')
+  it('update demo section counts reactively')
+  it('handle empty filtered projects (show grid with no cards)')
 })
 ```
 
@@ -132,21 +132,21 @@ Key testing challenge: This component composes 6+ sub-components. Use shallow re
 
 ```
 describe('AppV2Component', () => {
-  it('should create')
-  it('should inject AuthService')
-  it('should inject ProjectsService')
-  it('should inject AiService')
-  it('should inject SubscriptionService')
-  it('should show landing pitch when not logged in')
-  it('should show workspace when logged in')
-  it('should load projects on login')
-  it('should navigate to /upgrade on upgrade button click')
-  it('should call logout on sign out button click')
-  it('should toggle dark mode')
-  it('should open create modal')
-  it('should close create modal')
-  it('should start bootstrap on project creation')
-  it('should handle polling lifecycle (start/stop on auth change)')
+  it('create')
+  it('inject AuthService')
+  it('inject ProjectsService')
+  it('inject AiService')
+  it('inject SubscriptionService')
+  it('show landing pitch when not logged in')
+  it('show workspace when logged in')
+  it('load projects on login')
+  it('navigate to /upgrade on upgrade button click')
+  it('call logout on sign out button click')
+  it('toggle dark mode')
+  it('open create modal')
+  it('close create modal')
+  it('start bootstrap on project creation')
+  it('handle polling lifecycle (start/stop on auth change)')
 })
 ```
 
@@ -156,10 +156,10 @@ Key testing challenge: 1,087-line component with many dependencies. Use mock ser
 
 ```
 describe('getCssVar', () => {
-  it('should return computed value for existing CSS variable')
-  it('should return "not set" for undefined CSS variable')
-  it('should trim whitespace from returned values')
-  it('should handle empty string values')
+  it('return computed value for existing CSS variable')
+  it('return "not set" for undefined CSS variable')
+  it('trim whitespace from returned values')
+  it('handle empty string values')
 })
 ```
 
@@ -167,10 +167,10 @@ describe('getCssVar', () => {
 
 ```
 describe('PgBordersComponent', () => {
-  it('should create')
-  it('should render all 7 border demos')
-  it('should apply correct CSS class to each border demo')
-  it('should display label and description for each border')
+  it('create')
+  it('render all 7 border demos')
+  it('apply correct CSS class to each border demo')
+  it('display label and description for each border')
 })
 ```
 
