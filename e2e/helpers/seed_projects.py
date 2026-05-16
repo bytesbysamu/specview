@@ -221,8 +221,13 @@ def _provision_active_project(
     moment the seed step runs, the job is "running" from the Angular frontend's
     perspective (it polls GET /bootstrap-project/status/{job_id}).
 
+    When JWT_SECRET is set (real server mode), uses a real JWT for auth.
+    When SKIP_AUTH=1 is active (local dev mode), uses "Bearer test-token".
+
     Returns (ProjectInfo, job_id) on success, or (None, None) on failure.
     """
+    auth_token = _make_auth_token()
+    auth_header = f"Bearer {auth_token}" if auth_token else "Bearer test-token"
     try:
         resp = requests.post(
             f"{api_base_url}/api/ai/text/bootstrap-project",
@@ -230,14 +235,14 @@ def _provision_active_project(
                 "project_name": name,
                 "braindump": "This is an actively generating E2E seed project.",
             },
-            headers={"Authorization": "Bearer test-token"},
+            headers={"Authorization": auth_header},
             timeout=10,
         )
     except requests.RequestException:
         # Server not available — skip active project seeding gracefully.
         return None, None
 
-    if resp.status_code != 202:
+    if resp.status_code not in (200, 202):
         return None, None
 
     data = resp.json()
@@ -276,15 +281,17 @@ def seed_project_matrix(
     Without JWT_SECRET (local SKIP_AUTH=1 mode), projects are written directly
     to the filesystem so no API auth is required.
 
-    The Active project is always provisioned via the bootstrap API.
+    The Active project is provisioned via the bootstrap API using the available
+    auth token. On a real server with CLI provider, the job starts a real
+    generation — but the job is immediately "running" from the Angular app's
+    perspective, so it appears in the Active section during the test.
 
     Args:
         api_base_url:         Base URL of the running Flask server.
         projects_dir:         Override the projects directory (for testing this module).
                               Defaults to the directory resolved from SPEC_DOC_DIR env var.
         skip_active_project:  When True, skip the Active project seeding entirely.
-                              Use this when running against the Docker stack where
-                              CHAIN_PROVIDER=mock is not available.
+                              Only used when E2E_BASE_URL is not set (legacy local mode).
 
     Returns:
         A SeedMatrix dict with all created projects keyed by section.

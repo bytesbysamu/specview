@@ -3,6 +3,6 @@
     class="usage-meter"
     [class.usage-meter--warning]="isWarning()"
     data-test="usage-meter">
-    {{ usage()!.remaining }}/{{ usage()!.limit }} remaining
+    <span data-test="usage-count">{{ usage()!.remaining }}/{{ usage()!.limit }} remaining</span>
   </span>
 }

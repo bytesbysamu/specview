@@ -5,15 +5,18 @@
   <div class="sidebar-project">{{ expandedProject }}</div>
 
   @if (activeProject) {
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" data-test="sidebar-nav">
       @for (s of activeProject.specs; track s.filename) {
         <button
           class="sidebar-file"
+          data-test="sidebar-file"
           [class.active]="activeFile === s.filename"
           (click)="onFileSelect(s.filename)">
           {{ s.label }}
           @if (fileOpState[s.filename]) {
             <span class="file-dot"
+                  data-test="file-dot"
+                  [attr.data-state]="fileOpState[s.filename]"
                   [class.file-dot--running]="fileOpState[s.filename] === 'running'"
                   [class.file-dot--success]="fileOpState[s.filename] === 'success'"
                   [class.file-dot--failure]="fileOpState[s.filename] === 'failure'"></span>
@@ -24,6 +27,7 @@
 
     <!-- Sidebar status row -->
     <div class="sidebar-status"
+         data-test="sidebar-status"
          [class.sidebar-status--active]="mode === 'active'"
          [class.sidebar-status--success]="mode === 'success-flash'"
          [class.sidebar-status--failure]="mode === 'failure'">
@@ -112,33 +116,33 @@
 
     <!-- AI op chips (only when a spec file is open) -->
     @if (currentSpec) {
-      <div class="sidebar-ops">
+      <div class="sidebar-ops" data-test="sidebar-ops">
         <span class="text-ops-label">AI</span>
         @if (isBraindump) {
           <button class="op-chip op-chip--accent" data-test="brainstorm-button"
                   [class.active]="activeOp === 'brainstorm'"
                   (click)="onToggleOp('brainstorm')"><span class="btn-icon">✦</span> Brainstorm</button>
         }
-        <button class="op-chip" [class.active]="activeOp === 'expand'"   (click)="onToggleOp('expand')"><span class="btn-icon">↕</span> Expand</button>
-        <button class="op-chip" [class.active]="activeOp === 'compress'" (click)="onToggleOp('compress')"><span class="btn-icon">⊡</span> Compress</button>
-        <button class="op-chip" [class.active]="activeOp === 'clarify'"  (click)="onToggleOp('clarify')"><span class="btn-icon">?</span> Clarify</button>
-        <button class="op-chip" [class.active]="activeOp === 'simplify'" (click)="onToggleOp('simplify')"><span class="btn-icon">◁</span> Simplify</button>
-        <button class="op-chip" [class.active]="activeOp === 'tldr'"     (click)="onToggleOp('tldr')"><span class="btn-icon">≡</span> TL;DR</button>
-        <button class="op-chip" [class.active]="activeOp === 'bullets'"  (click)="onToggleOp('bullets')"><span class="btn-icon">≔</span> Bullets</button>
-        <button class="op-chip" [class.active]="activeOp === 'style'"    (click)="onToggleOp('style')"><span class="btn-icon">◈</span> Style…</button>
+        <button class="op-chip" data-test="ai-op-chip" [class.active]="activeOp === 'expand'"   (click)="onToggleOp('expand')"><span class="btn-icon">↕</span> Expand</button>
+        <button class="op-chip" data-test="ai-op-chip" [class.active]="activeOp === 'compress'" (click)="onToggleOp('compress')"><span class="btn-icon">⊡</span> Compress</button>
+        <button class="op-chip" data-test="ai-op-chip" [class.active]="activeOp === 'clarify'"  (click)="onToggleOp('clarify')"><span class="btn-icon">?</span> Clarify</button>
+        <button class="op-chip" data-test="ai-op-chip" [class.active]="activeOp === 'simplify'" (click)="onToggleOp('simplify')"><span class="btn-icon">◁</span> Simplify</button>
+        <button class="op-chip" data-test="ai-op-chip" [class.active]="activeOp === 'tldr'"     (click)="onToggleOp('tldr')"><span class="btn-icon">≡</span> TL;DR</button>
+        <button class="op-chip" data-test="ai-op-chip" [class.active]="activeOp === 'bullets'"  (click)="onToggleOp('bullets')"><span class="btn-icon">≔</span> Bullets</button>
+        <button class="op-chip" data-test="ai-op-chip" [class.active]="activeOp === 'style'"    (click)="onToggleOp('style')"><span class="btn-icon">◈</span> Style…</button>
         @if (canRevert) {
-          <button class="op-chip editor-hist-btn" (click)="onUndo()"><span class="btn-icon">↩</span> Undo</button>
+          <button class="op-chip editor-hist-btn" data-test="undo-button" (click)="onUndo()"><span class="btn-icon">↩</span> Undo</button>
         }
         @if (canRedo) {
-          <button class="op-chip editor-hist-btn" (click)="onRedo()"><span class="btn-icon">↻</span> Redo</button>
+          <button class="op-chip editor-hist-btn" data-test="redo-button" (click)="onRedo()"><span class="btn-icon">↻</span> Redo</button>
         }
       </div>
       <!-- Style preset chips — shown below chip row when Style is active -->
       @if (activeOp === 'style' && !aiLoading && !aiResult) {
-        <div class="style-presets sidebar-style-presets">
+        <div class="style-presets sidebar-style-presets" data-test="style-presets">
           <span class="style-presets-label">Style as</span>
           @for (s of stylePresets; track s) {
-            <button class="style-chip" (click)="onRunStyle(s)">{{ s }}</button>
+            <button class="style-chip" data-test="style-chip" (click)="onRunStyle(s)">{{ s }}</button>
           }
         </div>
       }

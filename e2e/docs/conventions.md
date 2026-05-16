@@ -281,3 +281,74 @@ The following table maps each epic success criterion to its status in Run 1.
 | Generate button disabled during active generation | Passing | `overview-create.feature` |
 | OV-14 through OV-17 | Excluded — out of Run 1 scope | (documented exclusion) |
 | Animation timing assertions | Excluded — non-deterministic in CI | (documented exclusion) |
+
+---
+
+## 9. Run 2 Scenario Inventory (Project Detail — PD-01 through PD-16)
+
+The following table lists every Run 2 scenario. Docker classification: **pass** means
+the scenario runs under `CHAIN_PROVIDER=mock`; **skip** means the scenario carries
+`@SKIP_MOCK` and is skipped when the mock provider is active.
+
+| Feature ID | Scenario name | Feature file | Docker classification |
+|---|---|---|---|
+| PD-01 | Full spec-gen pipeline runs and completes with incremental file saves | `detail-specgen.feature` | skip |
+| PD-02 | Selecting a project opens the expanded reader panel | `detail-reader.feature` | pass |
+| PD-03 | Clicking a filename in the sidebar loads that file in the reader | `detail-sidebar.feature` | pass |
+| PD-03 | The active sidebar file entry is highlighted | `detail-sidebar.feature` | pass |
+| PD-04 | The sidebar status row shows the current connection state | `detail-sidebar.feature` | pass |
+| PD-05 | Per-file dot indicators appear next to each file during generation | `detail-sidebar.feature` | skip |
+| PD-06 | Clicking Generate Specs triggers the pipeline and shows loading state | `detail-specgen.feature` | skip |
+| PD-07 | Clicking Generate Guide triggers guide generation and shows loading state | `detail-specgen.feature` | skip |
+| PD-08 | AI operation chips are visible when a spec file is open | `detail-ai-ops.feature` | skip |
+| PD-08 | An AI op chip can be toggled to the active state | `detail-ai-ops.feature` | skip |
+| PD-09 | Style preset chips render when the Style op is selected | `detail-ai-ops.feature` | skip |
+| PD-09 | A style preset chip can be selected to trigger a style rewrite | `detail-ai-ops.feature` | skip |
+| PD-10 | AI result panel displays a diff view after an operation completes | `detail-results.feature` | skip |
+| PD-11 | Apply button applies the AI result to the file content | `detail-results.feature` | skip |
+| PD-11 | Dismiss button removes the AI result without applying it | `detail-results.feature` | skip |
+| PD-11 | Copy button is available in the result toolbar | `detail-results.feature` | skip |
+| PD-12 | Undo button appears after applying an AI result | `detail-results.feature` | skip |
+| PD-12 | Undo reverts applied change and redo becomes available | `detail-results.feature` | skip |
+| PD-13 | Brainstorm follow-up input is visible after a brainstorm result | `detail-brainstorm.feature` | skip |
+| PD-13 | User can type a follow-up question and submit it | `detail-brainstorm.feature` | skip |
+| PD-14 | Generate Specs button is visible after a brainstorm result on a braindump | `detail-brainstorm.feature` | skip |
+| PD-14 | Clicking Generate Specs from brainstorm triggers the spec pipeline | `detail-brainstorm.feature` | skip |
+| PD-15 | Spec files appear in canonical order in the sidebar | `detail-reader.feature` | pass |
+| PD-16 | Markdown content renders with formatting in the reader | `detail-reader.feature` | pass |
+| PD-16 | Script tags are stripped from rendered markdown content | `detail-reader.feature` | pass |
+
+**Run 2 totals (under mock):** 7 pass, 18 skip, 0 fail.
+
+---
+
+## 10. Run 3 Scenario Inventory (SaaS — SA-01 through SA-21)
+
+The following table lists every Run 3 scenario. The SA-03, SA-05, and SA-07 spec IDs
+are implicitly covered by tagged co-scenarios; each implicit mapping is noted in the
+"Feature ID" column. Docker classification follows the same `@SKIP_MOCK` rule as Run 2.
+
+| Feature ID | Scenario name | Feature file | Docker classification |
+|---|---|---|---|
+| SA-01, SA-03 | User logs in with valid credentials and lands on the overview page | `saas-auth.feature` | pass |
+| SA-02 | New user signs up and account is created successfully | `saas-auth.feature` | pass |
+| SA-04, SA-05 | Expired JWT causes redirect to the login page | `saas-auth.feature` | pass |
+| SA-06 | User B navigating to user A's project receives a 403 access-denied response | `saas-isolation.feature` | pass |
+| SA-06 | The 403 page displays an ownership error message | `saas-isolation.feature` | pass |
+| SA-06 | The back button on the 403 page navigates the user away from the denied project | `saas-isolation.feature` | pass |
+| SA-08 | A 429 rate-limit response redirects the user to the upgrade page | `saas-billing.feature` | skip |
+| SA-09 | The usage remaining count displays in the header for free-plan users | `saas-billing.feature` | pass |
+| SA-10, SA-07 | The usage meter is visible for a free-plan user | `saas-billing.feature` | pass |
+| SA-11 | The upgrade button appears in the masthead for non-pro users | `saas-billing.feature` | pass |
+| SA-12 | The upgrade page renders the free plan call-to-action for a free-plan user | `saas-upgrade.feature` | pass |
+| SA-13 | The signup route renders as a full-page layout without the app shell | `saas-auth.feature` | pass |
+| SA-13 | The upgrade route renders as a full-page layout without the app shell | `saas-auth.feature` | pass |
+| SA-20 | A lapsed plan shows a different call-to-action than a free plan | `saas-upgrade.feature` | skip |
+| SA-21 | The checkout button triggers a redirect to the Stripe checkout URL | `saas-upgrade.feature` | skip |
+
+**Run 3 totals (under mock):** 12 pass, 3 skip, 0 fail.
+
+**SA coverage note:** SA-03 (auth service) is implicitly covered by the SA-01 login scenario.
+SA-05 (HTTP interceptor) is implicitly covered by the SA-04 expired-token scenario.
+SA-07 (subscription service) is implicitly covered by the SA-10 usage meter scenario.
+All 21 SA spec IDs have at least one tagged scenario.

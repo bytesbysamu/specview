@@ -1,4 +1,4 @@
-<div class="expanded-main">
+<div class="expanded-main" data-test="reader-panel">
 
   <!-- Access denied (403) state -->
   @if (accessDenied) {
@@ -6,7 +6,7 @@
       <span class="overline">Access Denied</span>
       <p class="access-denied-heading">You don't have access to this project.</p>
       <p class="access-denied-sub">This project belongs to another account. Only the owner can view or edit it.</p>
-      <button class="access-denied-back" (click)="onClose()">Back to projects</button>
+      <button class="access-denied-back" data-test="access-denied-back" (click)="onClose()">Back to projects</button>
     </div>
   }
 
@@ -14,15 +14,16 @@
   @if (activeProject && currentSpec) {
     @if (aiResult) {
       <div class="editor-toolbar editor-toolbar--floating"
+           data-test="result-toolbar"
            [style.bottom]="specGenLoading || aiLoading ? '42px' : null">
         <div class="editor-toolbar-row">
           <div class="editor-toolbar-actions">
             @if (aiLatencyMs) {
               <span class="latency-badge"><span class="btn-icon">⚡</span> {{ (aiLatencyMs / 1000).toFixed(1) }}s</span>
             }
-            <button class="editor-apply-btn" (click)="onApply()"><span class="btn-icon">✓</span> Apply</button>
-            <button (click)="onCopy()">@if (copied) { <span class="btn-icon">✓</span> Copied } @else { Copy }</button>
-            <button (click)="onDismiss()"><span class="btn-icon">×</span></button>
+            <button class="editor-apply-btn" data-test="apply-button" (click)="onApply()"><span class="btn-icon">✓</span> Apply</button>
+            <button data-test="copy-button" (click)="onCopy()">@if (copied) { <span class="btn-icon">✓</span> Copied } @else { Copy }</button>
+            <button data-test="dismiss-button" (click)="onDismiss()"><span class="btn-icon">×</span></button>
           </div>
         </div>
       </div>
@@ -99,7 +100,7 @@
       <span>{{ activeProject.name }}</span>
     </div>
   }
-  <h2 class="expanded-title">{{ expandedTitle }}</h2>
+  <h2 class="expanded-title" data-test="reader-title">{{ expandedTitle }}</h2>
 
   <!-- AI result / diff view -->
   @if (activeProject && aiResult) {
@@ -112,15 +113,16 @@
             #followupEl
             type="text"
             class="brainstorm-followup-input"
+            data-test="brainstorm-followup-input"
             placeholder="Ask a follow-up or drill into an open question…"
             [value]="brainstormQuestion"
             (input)="onQuestionChange($any($event.target).value)"
             (keydown.enter)="onFollowup(followupEl.value)" />
-          <button class="brainstorm-followup-btn" (click)="onFollowup(followupEl.value)">↵</button>
+          <button class="brainstorm-followup-btn" data-test="brainstorm-followup-btn" (click)="onFollowup(followupEl.value)">↵</button>
         </div>
         @if (canGenerateSpecs) {
           <div class="brainstorm-generate-row">
-            <button class="brainstorm-generate-btn" [disabled]="specGenLoading" (click)="onGenerateFromBrainstorm()">
+            <button class="brainstorm-generate-btn" data-test="brainstorm-generate-btn" [disabled]="specGenLoading" (click)="onGenerateFromBrainstorm()">
               <span class="btn-icon">✦</span> Generate Specs from this brainstorm
             </button>
           </div>
@@ -128,10 +130,10 @@
       }
     } @else {
       <!-- Other ops: paragraph-level diff rendered as markdown sections -->
-      <div class="diff-unified markdown-content" [innerHTML]="diffHtmlUnified"></div>
+      <div class="diff-unified markdown-content" data-test="diff-view" [innerHTML]="diffHtmlUnified"></div>
     }
   } @else {
-    <div class="expanded-body markdown-content" [innerHTML]="parsedContent"></div>
+    <div class="expanded-body markdown-content" data-test="reader-content" [innerHTML]="parsedContent"></div>
   }
 
 </div>

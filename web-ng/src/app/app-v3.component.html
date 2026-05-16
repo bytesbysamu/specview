@@ -17,7 +17,7 @@
       <div class="masthead-actions">
         <app-usage-meter />
         @if (!subscription.isPro()) {
-          <button class="upgrade-btn" (click)="state.navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
+          <button class="upgrade-btn" data-test="upgrade-masthead-btn" (click)="state.navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
         }
         <button class="new-project-btn" data-test="create-button" (click)="state.openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
         <button class="theme-toggle" data-test="dark-mode-toggle" (click)="state.toggleTheme()" title="Toggle dark mode">

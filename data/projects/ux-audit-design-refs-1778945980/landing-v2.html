@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spec Doc — Engineering Specs from Braindumps</title>
+
+  <meta name="description" content="Turn your braindump into a full engineering spec set in under a minute.">
+  <meta property="og:title" content="Spec Doc — Engineering Specs from Braindumps">
+  <meta property="og:description" content="Turn your braindump into a full engineering spec set in under a minute.">
+  <meta property="og:type" content="website">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="masthead-edition">Vol. II, No. 1</span>
+      <div class="masthead-center">
+        <div class="masthead-date" id="date-label"></div>
+        <h1 class="masthead-title">Spec Doc</h1>
+        <div class="masthead-tagline">All the Specs Fit to Build</div>
+      </div>
+      <div class="masthead-actions">
+        <button class="theme-toggle" id="theme-btn" title="Toggle dark mode">
+          <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+          <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section nav -->
+  <nav class="section-bar">
+    <a href="#what" class="active">What</a>
+    <a href="#how">What ships</a>
+    <a href="#see">See it</a>
+    <a href="#start">Start</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+
+  <!-- 1. Hero -->
+  <section class="lede" id="what">
+    <div class="lede-main">
+      <span class="overline">Engineering Specs</span>
+      <h2 class="headline">Write messy.<br>Ship clean.</h2>
+      <p class="deck">Paste your braindump. Five engineering documents back in under a minute.</p>
+      <div class="cta-row">
+        <a href="https://app.specview.io/signup" class="btn-primary">Try it free</a>
+        <a href="#how" class="btn-secondary">What ships</a>
+      </div>
+    </div>
+
+    <div class="lede-divider"></div>
+
+    <aside class="lede-aside">
+      <div class="aside-label">In under a minute</div>
+      <div class="gen-status-bar gen-status-bar--active">
+        <div class="gen-status-track"></div>
+        <div class="gen-status-content">
+          <div class="gen-status-dot"></div>
+          <span class="gen-status-name">spec-doc</span>
+          <span style="color:var(--ink-muted)">·</span>
+          <span style="font-style:italic;color:var(--ink-muted)">generating architecture…</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--ink-muted)">47s</span>
+        </div>
+      </div>
+      <ul class="aside-list">
+        <li>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>analysis.md</strong> <span>12.3s</span>
+        </li>
+        <li>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>epic.md</strong> <span>18.1s</span>
+        </li>
+        <li>
+          <span style="display:flex;gap:3px">
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0s"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.2s"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--ink-muted);display:inline-block;animation:dot-pulse 1s ease-in-out infinite;animation-delay:0.4s"></span>
+          </span>
+          <strong>architecture.md</strong> <span style="color:var(--ink-muted)">generating…</span>
+        </li>
+        <li style="color:var(--ink-muted)"><strong>timeline.md</strong> <span>—</span></li>
+        <li style="color:var(--ink-muted)"><strong>implementation-guide.md</strong> <span>—</span></li>
+      </ul>
+    </aside>
+  </section>
+
+  <!-- Stat strip -->
+  <div class="stat-strip">
+    <div class="stat-item">
+      <div class="stat-value">44.5s</div>
+      <div class="stat-label">avg generation</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">5</div>
+      <div class="stat-label">files per run</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">0</div>
+      <div class="stat-label">human code lines</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">Free</div>
+      <div class="stat-label">to start</div>
+    </div>
+  </div>
+
+  <!-- Metrics bar -->
+  <div class="metrics-bar">
+    <span>Claude Sonnet 4.5</span>
+    <span class="metrics-sep">·</span>
+    <span>5 files per run</span>
+    <span class="metrics-sep">·</span>
+    <span>avg 44.5s</span>
+    <span class="metrics-sep">·</span>
+    <span>Markdown output — you own the files</span>
+    <span class="metrics-sep">·</span>
+    <span class="metrics-plus">Open source</span>
+  </div>
+
+  <!-- 2. What ships -->
+  <div class="section-heading">What ships &nbsp;<span style="background:var(--border);border-radius:2px;font-family:var(--sans);font-size:10px;padding:1px 6px;color:var(--ink-light);vertical-align:middle">5</span></div>
+  <section class="section-page" id="how">
+    <div class="output-grid">
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <div class="output-card__title">Analysis</div>
+        <div class="output-card__filename">analysis.md</div>
+        <div class="output-card__body">Surfaces the real problem, constraints, and scope before a single line of code is written.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </span>
+        <div class="output-card__title">Epic</div>
+        <div class="output-card__filename">epic.md</div>
+        <div class="output-card__body">Breaks the feature into tasks with effort estimates and explicit dependency ordering.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </span>
+        <div class="output-card__title">Architecture</div>
+        <div class="output-card__filename">architecture.md</div>
+        <div class="output-card__body">Documents component design, data flow, and the key decisions that shape every implementation choice.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </span>
+        <div class="output-card__title">Timeline</div>
+        <div class="output-card__filename">timeline.md</div>
+        <div class="output-card__body">Maps each task to a delivery window so the team can track progress and spot slippage early.</div>
+      </div>
+
+      <div class="output-card">
+        <span class="output-card__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
+        </span>
+        <div class="output-card__title">Implementation Guide</div>
+        <div class="output-card__filename">implementation-guide.md</div>
+        <div class="output-card__body">Hands each task to an agent with exact steps, files, and verify criteria needed to ship it.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 3. How it works -->
+  <div class="section-heading">How it works</div>
+  <section class="steps" id="howworks">
+
+    <div class="step">
+      <span class="step-num">1</span>
+      <div class="step-title">Braindump</div>
+      <p class="step-body">Write everything you know about the feature — raw, unfiltered, unstructured. Three paragraphs is enough. The messier the better.</p>
+      <div class="step-code">We need a billing system. Stripe.
+Free tier = 3 projects/month,
+Pro = unlimited at $29/mo.
+Usage tracking per user.
+Don't overbuild — just works.</div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">2</span>
+      <div class="step-title">Generate</div>
+      <p class="step-body">One click. The AI chain runs: analysis → epic → architecture → timeline → implementation guide. Each file appears as it completes.</p>
+      <div class="step-code">✦ analysis.md    done  (12.3s)
+✦ epic.md        done  (18.1s)
+✦ architecture   done  (31.7s)
+✦ timeline       done  ( 2.1s)
+✦ impl-guide     done  (44.5s)
+5 files · claude-sonnet · done</div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">3</span>
+      <div class="step-title">Read &amp; Build</div>
+      <p class="step-body">Open the specs. Read them like a newspaper. Hand the implementation guide to your agent — every task has file paths, tests, and a commit plan.</p>
+      <div class="step-code">Task 1: Wire Stripe Adapter
+├─ Files: billing/adapter.py
+├─ Tests: 7 assertions, full bodies
+├─ Commit: feat(billing): wire checkout
+└─ Verify: pytest — 7 passed</div>
+    </div>
+
+  </section>
+
+  <!-- 4. See it -->
+  <div class="section-heading">See it</div>
+  <section class="section-page" id="see">
+
+    <!-- Status: done -->
+    <div class="gen-status-bar gen-status-bar--success" style="animation:status-success-flash 2s ease-out forwards;margin-bottom:24px;">
+      <div class="gen-status-content">
+        <div class="gen-status-dot"></div>
+        <span class="gen-status-name">spec-doc</span>
+        <span style="color:var(--ink-muted)">·</span>
+        <span style="font-style:italic;color:var(--ink-muted)">done — 5 files generated</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--ink-muted)">47s</span>
+      </div>
+    </div>
+
+    <div class="demo-strip">
+      <div class="demo-strip-inner">
+
+        <div class="demo-masthead">
+          <div class="demo-title">Project Spec</div>
+          <div class="demo-tagline">All the Specs Fit to Build &nbsp;·&nbsp; Est. 2024 &nbsp;·&nbsp; claude-sonnet</div>
+        </div>
+
+        <div class="demo-body">
+          <div class="demo-sidebar">
+            <div class="demo-sidebar-label">Artifacts</div>
+            <div class="demo-sidebar-item">braindump</div>
+            <div class="demo-sidebar-item">analysis</div>
+            <div class="demo-sidebar-item">epic</div>
+            <div class="demo-sidebar-item active">architecture</div>
+            <div class="demo-sidebar-item">timeline</div>
+            <div class="demo-sidebar-item">implementation-guide</div>
+          </div>
+          <div class="demo-sidebar-divider"></div>
+          <div class="demo-content">
+            <span class="demo-tag">architecture</span>
+            <div class="markdown-content">
+              <h1>Component Design &amp; Boundaries</h1>
+              <p>The chain adapter is the single AI call boundary. Feature modules import only from <code>chain/adapter.py</code> and never reach into provider implementations directly — this keeps the provider swappable without touching any feature code.</p>
+              <p>Flask blueprints are registered with a versioned prefix, services own all transaction boundaries, and background jobs are coordinated through a module-level state dict so route handlers remain stateless.</p>
+              <h2>Data Flow</h2>
+              <p>Every spec generation request follows a single path: route → service → chain adapter → provider. The route validates auth, the service owns the transaction, the adapter calls the model.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Pull quote -->
+  <section class="pullquote-single">
+    <div class="pullquote">
+      <div class="pullquote-mark">"</div>
+      <p class="pullquote-text">3 paragraphs in. 47 seconds later — analysis, epic, architecture, implementation guide. Human code lines written: 0.</p>
+      <div class="pullquote-attr">What using Spec Doc feels like</div>
+    </div>
+  </section>
+
+  <!-- 4. Start -->
+  <!-- Comparison table -->
+  <div class="section-heading">Specview vs AI app builders</div>
+  <section class="section-page section-page--compact" id="compare">
+    <div class="compare-table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="col-them">Lovable / Bolt / Kiro</th>
+          <th>Specview</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Input</td>
+          <td class="col-them">Chat prompt</td>
+          <td>Braindump — 3 paragraphs</td>
+        </tr>
+        <tr>
+          <td>Output</td>
+          <td class="col-them">Code you didn't write</td>
+          <td>Specs you review, then code that matches</td>
+        </tr>
+        <tr>
+          <td>Architecture</td>
+          <td class="col-them">AI decides</td>
+          <td>You review before a line is written</td>
+        </tr>
+        <tr>
+          <td>Docs</td>
+          <td class="col-them">None</td>
+          <td>Built-in — every feature is documented</td>
+        </tr>
+        <tr>
+          <td>Quality</td>
+          <td class="col-them">Hope it works</td>
+          <td>Spec → implement → verify loop</td>
+        </tr>
+        <tr>
+          <td>Pricing</td>
+          <td class="col-them">$20–550/mo credits</td>
+          <td>$29/mo flat, unlimited</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- Two-column pull quote -->
+  <section class="pullquote-row">
+    <div class="pullquote">
+      <div class="pullquote-mark">"</div>
+      <p class="pullquote-text">We shipped three features last sprint. The architecture doc kept the team aligned — no one had to ask why.</p>
+      <div class="pullquote-attr">Solo founder, SaaS product</div>
+    </div>
+    <div class="pullquote-divider"></div>
+    <div class="pullquote">
+      <div class="pullquote-mark">"</div>
+      <p class="pullquote-text">The implementation guide handed each task to an agent with exact files and verify criteria. Review instead of rebuild.</p>
+      <div class="pullquote-attr">Engineering lead, 4-person team</div>
+    </div>
+  </section>
+
+  <div class="section-heading">Start building</div>
+  <section class="section-page pricing" id="start">
+    <div class="pricing-grid">
+
+      <div class="pricing-tier">
+        <p class="pricing-tier-name">Free</p>
+        <p class="pricing-price">
+          <span class="pricing-amount">$0</span>
+          <span class="pricing-period">/ month</span>
+        </p>
+        <p class="pricing-desc">Three full spec generations to evaluate.</p>
+        <ul class="pricing-features">
+          <li>3 projects / month</li>
+          <li>Full spec pipeline</li>
+          <li>No credit card required</li>
+        </ul>
+        <div class="pricing-cta">
+          <a href="https://app.specview.io/signup" class="btn-secondary">Try it free</a>
+        </div>
+      </div>
+
+      <div class="pricing-divider" aria-hidden="true"></div>
+
+      <div class="pricing-tier">
+        <p class="pricing-tier-name">Pro</p>
+        <p class="pricing-price">
+          <span class="pricing-amount">$29</span>
+          <span class="pricing-period">/ month</span>
+        </p>
+        <p class="pricing-desc">Unlimited. One seat, one decision.</p>
+        <ul class="pricing-features">
+          <li>Unlimited projects</li>
+          <li>Full spec pipeline</li>
+          <li>Priority support</li>
+        </ul>
+        <div class="pricing-cta">
+          <a href="https://buy.stripe.com/test_6oUeVdaA1aVF27s1JVao800" class="btn-primary" target="_blank" rel="noopener noreferrer">Get Pro — $29/mo</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <div class="section-heading">Questions</div>
+  <section class="section-page section-page--compact" id="faq">
+    <div class="faq-list">
+
+      <details class="faq-item">
+        <summary>What do I need to use Specview?</summary>
+        <p class="faq-answer">A browser. Sign up, paste a braindump, click generate. The hosted version runs everything — no CLI, no local setup, no API key required.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Is this like Lovable or Bolt?</summary>
+        <p class="faq-answer">No. Lovable generates code from prompts. Specview generates specs from braindumps. You review the architecture before any code is written. The specs become the documentation — they don't disappear after deploy.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>What if the generated specs are wrong?</summary>
+        <p class="faq-answer">Edit the braindump and regenerate. Or edit the markdown directly. The specs are files you own — not locked in a platform. Wrong architecture before you build beats wrong code after you ship.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Can I self-host?</summary>
+        <p class="faq-answer">Yes. Specview is open-source. <code>git clone</code>, <code>docker compose up</code>, done. The hosted version at app.specview.io saves you the setup and keeps you on the latest model.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Why $29/month?</summary>
+        <p class="faq-answer">Unlimited spec generation. No credits. No per-request charges. Kiro costs $20–550/month in credits. Cursor is $20/month for code suggestions. $29/month for full architecture documents that your whole team reads is a different category of value.</p>
+      </details>
+
+    </div>
+  </section>
+
+  <!-- Who it's for -->
+  <div class="section-heading">Who it's for</div>
+  <section class="section-page section-page--compact">
+    <div class="context-grid">
+      <div class="context-card">
+        <div class="context-card__label">Solo Founder</div>
+        <div class="context-card__desc">You're building alone. You know what to build — you need the architecture written down before you build it wrong.</div>
+      </div>
+      <div class="context-card">
+        <div class="context-card__label">Small Team</div>
+        <div class="context-card__desc">Four engineers, one product. A spec keeps everyone aligned without a 2-hour kickoff meeting.</div>
+      </div>
+      <div class="context-card">
+        <div class="context-card__label">Consulting</div>
+        <div class="context-card__desc">Client work. The spec is the deliverable that survives the handoff — not the chat log.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Update banner -->
+  <div class="update-banner">
+    <span>Spec Doc is in early access — pricing locks in at $29/mo for the first 100 users.</span>
+    <a href="https://app.specview.io/signup">Get started</a>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-brand">Spec Doc</div>
+    <div class="footer-copy">Built by Sam · Powered by Claude</div>
+    <nav class="footer-links">
+      <a href="https://github.com/bytesbysamu/specview">GitHub</a>
+      <a href="https://x.com/bytesbysamu">Twitter/X</a>
+      <a href="mailto:sam@specview.io">Contact</a>
+    </nav>
+  </footer>
+
+</div><!-- .page -->
+
+  <script>
+    document.getElementById('date-label').textContent =
+      new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('icon-sun').style.display = theme === 'dark' ? 'none' : '';
+      document.getElementById('icon-moon').style.display = theme === 'dark' ? '' : 'none';
+    }
+
+    function toggleTheme() {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      applyTheme(next);
+    }
+
+    document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+    applyTheme(localStorage.getItem('theme') || 'light');
+  </script>
+</body>
+</html>
