@@ -3,7 +3,6 @@ import { LoginComponent } from './components/login/login.component';
 import { SignupComponent } from './pages/signup/signup.component';
 import { UpgradeComponent } from './components/upgrade/upgrade.component';
 import { PublicSpecComponent } from './pages/public-spec/public-spec.component';
-import { AppV2Component } from './app-v2.component';
 import { AppComponent } from './app.component';
 import { LivePlaygroundComponent } from './live-playground.component';
 
@@ -14,7 +13,7 @@ export const routes: Routes = [
   { path: 'playground', component: LivePlaygroundComponent },
   { path: 'v1', component: AppComponent },
   { path: 'v2', redirectTo: '', pathMatch: 'full' },
-  { path: 'v3', component: AppV2Component },
-  { path: '', component: AppV2Component },
+  { path: 'v3', redirectTo: '', pathMatch: 'full' },
+  { path: '', loadComponent: () => import('./app-v3.component').then(m => m.AppV3Component) },
   { path: '**', component: LoginComponent },
 ];

@@ -1,0 +1,240 @@
+<!-- Landing pitch — always visible -->
+<app-landing-pitch />
+
+<!-- App workspace — visible when logged in -->
+@if (auth.isLoggedIn()) {
+<div class="v2-shell page">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="edition">Spec Doc</span>
+      <div class="masthead-center">
+        <div class="masthead-date">{{ state.today }}</div>
+        <h1 class="masthead-title" data-test="masthead-title">Specview</h1>
+        <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
+      </div>
+      <div class="masthead-actions">
+        <app-usage-meter />
+        @if (!subscription.isPro()) {
+          <button class="upgrade-btn" (click)="state.navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
+        }
+        <button class="new-project-btn" data-test="create-button" (click)="state.openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
+        <button class="theme-toggle" data-test="dark-mode-toggle" (click)="state.toggleTheme()" title="Toggle dark mode">
+          @if (state.isDark()) {
+            <span class="btn-icon">&#9788;</span>
+          } @else {
+            <span class="btn-icon">&#9790;</span>
+          }
+        </button>
+        <button class="logout-btn" (click)="state.logout()" title="Sign out">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section nav -->
+  <app-section-nav
+    [sections]="state.sections"
+    [activeSection]="state.activeSection()"
+    [sectionCounts]="state.sectionCounts()"
+    [pulsingSections]="state.pulsingSections()"
+    [contextFileCount]="state.contextFiles.length"
+    (sectionSelected)="state.selectSection($event)" />
+
+  <!-- Generation status bar -->
+  <app-status-bar
+    [mode]="state.mode()"
+    [specGenProjectName]="state.specGenProjectName()"
+    [specGenStep]="state.specGenStep()"
+    [specGenElapsed]="state.specGenElapsed()"
+    [specGenJobId]="state.specGenJobId()"
+    [statusFailureMsg]="state.statusFailureMsg()"
+    [cancelling]="state.cancelling()"
+    (cancelClicked)="state.onCancel()"
+    (retryClicked)="state.retryLastOp()" />
+
+  <!-- Update banner -->
+  @if (state.updateBanner()) {
+    <div class="update-banner" data-test="update-banner">
+      {{ state.updateBanner() }} · <button (click)="state.updateBanner.set('')">dismiss</button>
+    </div>
+  }
+
+  @if (state.pollingError()) {
+    <div class="error-state" data-test="polling-error">
+      <span class="overline">Error</span>
+      {{ state.pollingError() }}
+    </div>
+  }
+
+  <!-- Search bar (hidden when viewing project or context section) -->
+  @if (state.activeSection() !== 'context' && state.showGrid()) {
+    <div class="search-bar">
+      <input
+        type="search"
+        data-test="search-input"
+        placeholder="Filter projects…"
+        autocomplete="off"
+        [value]="state.searchQuery()"
+        (input)="state.onSearch($any($event.target).value)" />
+      <span class="search-count" data-test="search-count">
+        @if (state.searchQuery()) {
+          {{ state.filteredProjects().length }} match{{ state.filteredProjects().length !== 1 ? 'es' : '' }}
+        } @else {
+          {{ state.projects().length }} projects
+        }
+      </span>
+    </div>
+  }
+
+  <div class="divider thick" [style.display]="state.showGrid() ? '' : 'none'"></div>
+
+  <!-- Project grid (no active project) -->
+  @if (state.showGrid()) {
+    <app-project-grid
+      [activeSection]="state.activeSection()"
+      [filteredProjects]="state.filteredProjects()"
+      [projectsBySection]="state.projectsBySection()"
+      [columns]="state.columns()"
+      [contextFiles]="state.contextFiles"
+      [sectionLabel]="state.sectionLabel()"
+      [teaserFn]="state.teaserFor.bind(state)"
+      [sectionFn]="state.sectionForProject.bind(state)"
+      (projectSelected)="state.selectProject($event)"
+      (contextOpened)="state.openContext($event)" />
+  }
+
+  <!-- Expanded panel (project reader + sidebar) -->
+  @if (state.showExpanded()) {
+    <div class="expanded-panel active">
+      <app-sidebar-v2
+        [activeProject]="state.activeProject()"
+        [activeFile]="state.activeFile()"
+        [expandedProject]="state.expandedProject()"
+        [mode]="state.mode()"
+        [specGenLoading]="state.specGenLoading()"
+        [specGenStep]="state.specGenStep()"
+        [activeStepLabel]="state.activeStepLabel()"
+        [statusFailureMsg]="state.statusFailureMsg()"
+        [shareLoading]="state.shareLoading()"
+        [shareUrl]="state.shareUrl()"
+        [shareCopied]="state.shareCopied()"
+        [canGenerateSpecs]="state.canGenerateSpecs()"
+        [canGenerateEpicGuide]="state.canGenerateEpicGuide()"
+        [epicGuideLoading]="state.epicGuideLoading()"
+        [currentSpec]="state.currentSpec()"
+        [isBraindump]="state.isBraindump()"
+        [activeOp]="state.activeOp()"
+        [aiLoading]="state.aiLoading()"
+        [aiResult]="state.aiResult()"
+        [canRevert]="state.canRevert()"
+        [canRedo]="state.canRedo()"
+        [fileOpState]="state.fileOpState()"
+        [stylePresets]="state.STYLE_PRESETS"
+        (closeExpanded)="state.closeExpanded()"
+        (fileSelected)="state.selectFile($event)"
+        (retryClicked)="state.retryLastOp()"
+        (shareClicked)="state.shareProject()"
+        (generateSpecsClicked)="state.generateFromBraindump()"
+        (generateGuideClicked)="state.generateEpicGuide()"
+        (opToggled)="state.toggleOp($event)"
+        (styleRun)="state.runStyle($event)"
+        (undoClicked)="state.undoVersion()"
+        (redoClicked)="state.redoVersion()" />
+
+      <app-reader-panel
+        [activeProject]="state.activeProject()"
+        [currentSpec]="state.currentSpec()"
+        [accessDenied]="state.accessDenied()"
+        [expandedTitle]="state.expandedTitle()"
+        [expandedProject]="state.expandedProject()"
+        [activeFileType]="state.activeFileType()"
+        [parsedContent]="state.parsedContent()"
+        [parsedAiResult]="state.parsedAiResult()"
+        [diffHtmlUnified]="state.diffHtmlUnified()"
+        [aiResult]="state.aiResult()"
+        [aiLoading]="state.aiLoading()"
+        [aiError]="state.aiError()"
+        [aiLatencyMs]="state.aiLatencyMs()"
+        [activeOp]="state.activeOp()"
+        [isAdditiveOp]="state.isAdditiveOp()"
+        [billingError]="state.billingError()"
+        [copied]="state.copied()"
+        [brainstormQuestion]="state.brainstormQuestion()"
+        [canGenerateSpecs]="state.canGenerateSpecs()"
+        [specGenLoading]="state.specGenLoading()"
+        [specGenProjectName]="state.specGenProjectName()"
+        [specGenStep]="state.specGenStep()"
+        [specGenError]="state.specGenError()"
+        [specGenFailedStep]="state.specGenFailedStep()"
+        [cancelling]="state.cancelling()"
+        (closeExpanded)="state.closeExpanded()"
+        (applyResult)="state.applyResult()"
+        (dismissResult)="state.dismissResult()"
+        (copyResult)="state.copyResult()"
+        (followupBrainstorm)="state.followupBrainstorm($event)"
+        (brainstormQuestionChange)="state.brainstormQuestion.set($event)"
+        (generateFromBrainstormResult)="state.generateFromBrainstormResult()"
+        (cancelClicked)="state.onCancel()"
+        (retryFailedStep)="state.onRetry()" />
+    </div>
+  }
+
+</div>
+}
+
+<!-- New Project Modal -->
+@if (state.showCreateModal()) {
+  <div class="modal-backdrop" (click)="state.closeCreateModal()">
+    <div class="modal" data-test="create-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">New Project</h2>
+        <button class="modal-close" (click)="state.closeCreateModal()"><span class="btn-icon">&#215;</span></button>
+      </div>
+
+      <div class="modal-body">
+        <label class="modal-label" for="v3ProjectName">Project name</label>
+        <input
+          #projectNameEl
+          id="v3ProjectName"
+          class="modal-input"
+          type="text"
+          placeholder="e.g. Flask / Angular Plugin"
+          (keydown.enter)="projectNameEl.value && braindumpEl.value && state.createProject(projectNameEl, braindumpEl)" />
+
+        <label class="modal-label" for="v3Braindump">Brain dump</label>
+        <textarea
+          #braindumpEl
+          id="v3Braindump"
+          data-test="braindump-input"
+          class="modal-textarea"
+          placeholder="Paste your brain dump here — everything you know about this project, unfiltered."
+          rows="14"></textarea>
+
+        @if (state.specGenError()) {
+          <div class="text-ops-error">
+            <span class="overline">Error</span>
+            {{ state.specGenError() }}
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="modal-cancel" (click)="state.closeCreateModal()">Cancel</button>
+        <button
+          class="modal-generate"
+          [disabled]="state.specGenLoading()"
+          (click)="state.createProject(projectNameEl, braindumpEl)">
+          @if (state.specGenLoading()) {
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            Generating…
+          } @else {
+            <span class="btn-icon">&#10022;</span> Generate Specs
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
