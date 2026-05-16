@@ -55,8 +55,15 @@ class OverviewPage(AppPage):
     # ── Status bar ────────────────────────────────────────────────────────
 
     def get_status_bar_text(self) -> str:
-        """Return the concatenated visible text of the status bar."""
-        return self.page.locator("[data-test='status-bar']").inner_text().strip()
+        """Return the concatenated visible text of the status bar.
+
+        Normalises runs of whitespace (including newlines from inline spans) to
+        a single space so that status bar text assertions are robust to HTML
+        layout differences between component versions.
+        """
+        raw = self.page.locator("[data-test='status-bar']").inner_text()
+        import re
+        return re.sub(r"\s+", " ", raw).strip()
 
     def get_status_bar_state(self) -> str:
         """Return the modifier class active on the status bar element.
@@ -120,13 +127,18 @@ class OverviewPage(AppPage):
             return False
 
     def get_section_group_order(self) -> list[str]:
-        """Return section group titles in DOM order."""
+        """Return section group section IDs in DOM order.
+
+        Reads the data-section attribute (e.g. 'Active', 'Specced') rather than
+        the visual title text, because CSS text-transform: uppercase makes
+        inner_text() return 'SPECCED' instead of 'Specced'.
+        """
         locators = self.page.locator("[data-test='section-group']").all()
-        titles = []
+        sections = []
         for loc in locators:
-            title = loc.locator(".section-group-title").inner_text().strip()
-            titles.append(title)
-        return titles
+            section = loc.get_attribute("data-section") or ""
+            sections.append(section.strip())
+        return sections
 
     def is_empty_state_visible(self) -> bool:
         return self.is_visible(".empty-state", timeout_ms=3_000)
@@ -174,10 +186,33 @@ class OverviewPage(AppPage):
         return not self.is_visible("[data-test='create-modal']", timeout_ms=2_000)
 
     def click_modal_backdrop(self) -> None:
-        self.click(".modal-backdrop")
+        """Click the modal backdrop area outside the modal dialog.
+
+        Clicking the centre of .modal-backdrop would hit the modal element
+        itself (which stops propagation). Instead we click the top-left corner
+        of the backdrop where no child element is present.
+        """
+        backdrop = self.page.locator(".modal-backdrop")
+        box = backdrop.bounding_box()
+        if box:
+            # Click near the top-left corner of the backdrop (outside the centred modal)
+            self.page.mouse.click(box["x"] + 5, box["y"] + 5)
+        else:
+            self.click(".modal-backdrop")
 
     def fill_create_form(self, name: str, braindump: str) -> None:
-        self.enter_text("#projectName", name)
+        """Fill the create project modal form fields.
+
+        Try the versioned IDs first (v2ProjectName, v3ProjectName) then fall
+        back to the generic id="projectName" used by the Docker-compiled build.
+        """
+        if self.page.locator("#v2ProjectName").count() > 0:
+            name_selector = "#v2ProjectName"
+        elif self.page.locator("#v3ProjectName").count() > 0:
+            name_selector = "#v3ProjectName"
+        else:
+            name_selector = "#projectName"
+        self.enter_text(name_selector, name)
         self.enter_text("[data-test='braindump-input']", braindump)
 
     def click_generate_button(self) -> None:
@@ -203,9 +238,13 @@ class OverviewPage(AppPage):
         return attr == "dark"
 
     def get_theme_preference_from_storage(self) -> str | None:
-        """Return the theme string stored in localStorage under the app's key."""
+        """Return the theme string stored in localStorage under the app's key.
+
+        The AppStateService stores the theme under the key 'theme' (not
+        'specview_theme').
+        """
         return self.page.evaluate(
-            "() => localStorage.getItem('specview_theme')"
+            "() => localStorage.getItem('theme')"
         )
 
     # ── Auth helpers ──────────────────────────────────────────────────────
