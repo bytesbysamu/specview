@@ -139,7 +139,7 @@ export default function SpecviewLanding() {
           <a href="#what" style={{ color: "#121212", textDecoration: "none" }}>What</a>
           <a href="#how" style={{ color: "#121212", textDecoration: "none" }}>How</a>
           <a href="#pricing" style={{ color: "#121212", textDecoration: "none" }}>Pricing</a>
-          <a href="https://app.specview.dev/signup" style={{
+          <a href="https://app.specview.dev/" style={{
             color: "#FFFEF9",
             background: "#121212",
             padding: "6px 16px",
@@ -217,7 +217,7 @@ export default function SpecviewLanding() {
           Write everything you know — raw and unfiltered. Specview generates the documents your team needs to build it.
         </p>
         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <a href="https://app.specview.dev/signup" style={{
+          <a href="https://app.specview.dev/" style={{
             background: "#121212",
             color: "#FFFEF9",
             padding: "14px 32px",
@@ -543,7 +543,7 @@ export default function SpecviewLanding() {
                 </li>
               ))}
             </ul>
-            <a href="https://app.specview.dev/signup" style={{
+            <a href="https://app.specview.dev/" style={{
               display: "block",
               textAlign: "center",
               border: "1px solid #121212",
