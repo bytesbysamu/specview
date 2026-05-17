@@ -1380,7 +1380,9 @@ body {
 
 /* ── Inline generation status bar (playground 5.7 colors) ── */
 .gen-status-bar {
-  position: relative;
+  position: sticky;
+  top: 28px; /* below sticky .section-nav */
+  z-index: 9;
   color: #fff;
   font-family: 'Source Sans 3', sans-serif;
   font-size: 12px;

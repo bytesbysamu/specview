@@ -433,29 +433,6 @@
           }
         }
 
-        <!-- Inline generation status for this project -->
-        @if (specGenLoading() && activeProject()) {
-          <div class="gen-status-bar gen-status-bar--active">
-            <div class="gen-status-track"></div>
-            <div class="gen-status-content">
-              <span class="thinking-dot gen-dot"></span>
-              <span class="thinking-dot gen-dot"></span>
-              <span class="thinking-dot gen-dot"></span>
-              <span class="gen-status-project">{{ specGenProjectName() }}</span>
-              @if (specGenStep()) {
-                <span class="gen-status-sep">·</span>
-                <span class="gen-status-step">{{ specGenStep() }}</span>
-              }
-              <button
-                class="gen-status-cancel"
-                data-test="cancel-generation"
-                [disabled]="cancelling()"
-                (click)="onCancel()">
-                {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
-              </button>
-            </div>
-          </div>
-        }
 
         @if (specGenError() && activeProject()) {
           <div class="text-ops-error">
