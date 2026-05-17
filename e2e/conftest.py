@@ -41,6 +41,21 @@ def _wait_for_port(host: str, port: int, timeout: float = 30.0) -> None:
     raise RuntimeError(f"Server did not start on {host}:{port} within {timeout}s")
 
 
+def _wait_for_http(url: str, timeout: float = 120.0) -> None:
+    """Wait until *url* returns an HTTP response (any status)."""
+    import urllib.request
+    import urllib.error
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            urllib.request.urlopen(url, timeout=5)
+            return
+        except (urllib.error.URLError, OSError):
+            time.sleep(2)
+    raise RuntimeError(f"HTTP server at {url} not ready within {timeout}s")
+
+
 @pytest.fixture
 def scenario_context():
     """Mutable dict shared across steps in a single scenario.
@@ -170,6 +185,9 @@ def angular_server(flask_server):
         cwd=str(os.path.join(os.path.dirname(__file__), "..", "web-ng")),
     )
     _wait_for_port("127.0.0.1", 4201, timeout=120.0)
+    # Port being open doesn't mean the dev server has finished compiling.
+    # Wait for an actual HTTP 200 before yielding to tests.
+    _wait_for_http("http://localhost:4201/", timeout=120.0)
     yield "http://localhost:4201"
     proc.terminate()
     proc.wait()

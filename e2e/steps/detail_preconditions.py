@@ -247,6 +247,6 @@ def sidebar_status_visible(context: dict) -> None:
     records the expectation for downstream Then assertions.
     """
     detail: DetailPage = context["detail"]
-    assert detail.is_sidebar_status_visible(), (
+    assert detail.is_sidebar_status_visible(timeout_ms=15_000), (
         "Expected sidebar status row to be visible after opening a project"
     )
