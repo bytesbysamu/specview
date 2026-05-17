@@ -33,8 +33,9 @@
  *   - Desktop: fade-in + 24 px upward shift over 400 ms.
  *   - Mobile: opacity-only (no translate).
  *
- * Dark-mode toggle: scoped to Section 3 (Main Course) only.
- *   Does NOT propagate to the scroll shell or other sections.
+ * Dark-mode toggle: whole-page scope.
+ *   Toggle in Section 3 applies [data-theme="dark"] on the .pg-shell wrapper,
+ *   affecting all sections uniformly.
  *
  * Section nav: renders inside Section 3 as part of the embedded app demo.
  *   NOT used as scroll-level navigation.
@@ -55,7 +56,8 @@ import { PgSectionGreetingComponent } from './pg-section-greeting.component';
 import { PgSectionKitchenComponent } from './pg-section-kitchen.component';
 import { PgSectionPatternsComponent } from './pg-section-patterns.component';
 import { PgSectionSendoffComponent } from './pg-section-sendoff.component';
-import { PgSectionLiveAppComponent, DEMO_MODE } from './pg-section-live-app.component';
+import { PgSectionLiveAppComponent } from './pg-section-live-app.component';
+import { DEMO_MODE } from './tokens/demo-mode.token';
 import { PIPELINE_STAGES } from './playground-demo-data';
 
 // ── Section State ─────────────────────────────────────────────────────────────

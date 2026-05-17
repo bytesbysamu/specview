@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { DEMO_MODE } from '../pg-section-live-app.component';
+import { DEMO_MODE } from '../tokens/demo-mode.token';
 import { DEMO_PROJECTS } from '../playground-demo-data';
 
 export class AccessDeniedError extends Error {

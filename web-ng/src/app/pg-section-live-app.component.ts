@@ -51,7 +51,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  InjectionToken,
   signal,
   computed,
   input,
@@ -75,14 +74,8 @@ import { Project, Spec } from './services/projects.service';
 import { sectionFor } from './services/section-taxonomy.service';
 import { SECTION_ORDER } from './services/section-taxonomy.service';
 
-// ── DEMO_MODE injection token ─────────────────────────────────────────────────
-
-/**
- * When true, ProjectsService returns fixture data instead of making HTTP calls.
- * Provided with value `true` by PgScrollShellComponent.
- * All other consumers receive `null` (optional injection).
- */
-export const DEMO_MODE = new InjectionToken<boolean>('DEMO_MODE');
+// Re-export for backwards compatibility
+export { DEMO_MODE } from './tokens/demo-mode.token';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 

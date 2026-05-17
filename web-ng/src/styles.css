@@ -24,6 +24,10 @@
   --status-running:    #22A66A;
   --status-success-bg: #2E7D32;
 
+  /* Surface tokens (light mode) */
+  --surface: #FAFAF7;
+  --surface-raised: #F5F5F0;
+
   /* Section identity colors (header titles only — not on cards) */
   --color-active:    #22A66A;
   --color-specced:   #567B95;
