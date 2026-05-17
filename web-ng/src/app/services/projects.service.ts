@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { DEMO_MODE } from '../pg-section-live-app.component';
+import { DEMO_PROJECTS } from '../playground-demo-data';
 
 export class AccessDeniedError extends Error {
   readonly status = 403;
@@ -75,13 +77,26 @@ function sortSpecs(specs: Spec[]): Spec[] {
 export class ProjectsService {
   constructor(private http: HttpClient) {}
 
+  /** True when the service is running inside the playground demo shell. */
+  private readonly demoMode = inject(DEMO_MODE, { optional: true }) === true;
+
   listProjects(): Promise<Project[]> {
+    if (this.demoMode) {
+      return Promise.resolve(
+        DEMO_PROJECTS.map(p => ({ ...p, specs: sortSpecs(p.specs) }))
+      );
+    }
     return firstValueFrom(this.http.get<Project[]>('/api/projects')).then(
       projects => projects.map(p => ({ ...p, specs: sortSpecs(p.specs) }))
     );
   }
 
   getProject(id: string): Promise<Project> {
+    if (this.demoMode) {
+      const found = DEMO_PROJECTS.find(p => p.id === id);
+      if (found) return Promise.resolve({ ...found, specs: sortSpecs(found.specs) });
+      return Promise.reject(new Error(`Demo project not found: ${id}`));
+    }
     return firstValueFrom(this.http.get<Project>(`/api/projects/${id}`)).then(
       p => ({ ...p, specs: sortSpecs(p.specs) })
     ).catch((err: HttpErrorResponse) => {

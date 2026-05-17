@@ -132,6 +132,59 @@ Build the address form using react-hook-form with zod validation. Wire Google Pl
 
 Render \`<PaymentElement />\` with the appearance API configured to match the brand token set. Implement \`handleSubmit\` calling \`stripe.confirmPayment()\`. Map Stripe decline codes to the error taxonomy strings defined in the design doc.`;
 
+// ── Pipeline Stage Fixtures (V3 Section 2 — Kitchen) ─────────────────────────
+
+export interface PipelineStageFixture {
+  key: string;
+  label: string;
+  title: string;
+  description: string;
+  snippet: string;
+}
+
+/**
+ * Four ordered stages of the Specview pipeline.
+ * Reuses the existing PIPELINE_*_PREVIEW constants for representative snippets.
+ */
+export const PIPELINE_STAGES: PipelineStageFixture[] = [
+  {
+    key: 'braindump',
+    label: 'Stage 01',
+    title: 'Braindump',
+    description:
+      'Start with whatever you have — stream of consciousness, bullet points, half-formed ideas. ' +
+      'Rough is fine. The pipeline reads intent, not polish.',
+    snippet: PIPELINE_BRAINDUMP_PREVIEW,
+  },
+  {
+    key: 'analysis',
+    label: 'Stage 02',
+    title: 'Analysis',
+    description:
+      'The AI distills the problem space: root causes, key metrics, recommended approach. ' +
+      'One document you could hand to a stakeholder.',
+    snippet: PIPELINE_ANALYSIS_PREVIEW,
+  },
+  {
+    key: 'epic',
+    label: 'Stage 03',
+    title: 'Epic',
+    description:
+      'Success criteria, scope boundaries, and milestones — scoped tightly so the team ' +
+      'knows exactly what is and is not on the table.',
+    snippet: PIPELINE_EPIC_PREVIEW,
+  },
+  {
+    key: 'architecture',
+    label: 'Stage 04',
+    title: 'Architecture',
+    description:
+      'System design, key decisions, and data flow. Enough detail to unblock technical ' +
+      'planning without over-specifying implementation.',
+    snippet: PIPELINE_ARCHITECTURE_PREVIEW,
+  },
+];
+
 // ── Demo Projects ────────────────────────────────────────────────────────────
 
 export const DEMO_PROJECTS: Project[] = [
@@ -345,3 +398,155 @@ export const DEMO_SECTION_COUNTS: Record<string, number> = {
 
 /** Set of project IDs that should be treated as "Active" (generation in progress). */
 export const DEMO_ACTIVE_IDS = new Set<string>(['demo-active-1', 'demo-active-2']);
+
+// ── V3 Extended Demo Data Interfaces ─────────────────────────────────────────
+//
+// These interfaces support the five-section scroll-shell introduced in
+// Playground V3 (Task 1).  Downstream tasks (2–5) import these types to
+// drive per-section content rendering.
+
+/**
+ * A single entry in the V3 section taxonomy.
+ * Maps a scroll-shell section to its display metadata and Phase 2 sources.
+ */
+export interface SectionTaxonomyEntry {
+  /** Stable machine identifier matching `ScrollSection.id` in pg-scroll-shell.component.ts. */
+  id: string;
+
+  /** Human-readable section title used in teaser labels and headings. */
+  label: string;
+
+  /**
+   * Short descriptor of the section's narrative purpose.
+   * Rendered as the locked-state teaser line (uppercase, single line).
+   */
+  teaser: string;
+
+  /**
+   * Phase 2 source section IDs absorbed into this V3 section.
+   * Empty for sections with no Phase 2 counterpart (e.g. Send-Off).
+   */
+  phase2Sources: string[];
+}
+
+/**
+ * Generation status shape for a spec document being produced by the AI chain.
+ * Mirrors the backend job-status payload consumed by the polling pattern.
+ */
+export interface GenerationStatus {
+  /** The spec document type being generated. */
+  docType: 'analysis' | 'epic' | 'architecture' | 'implementation-guide';
+
+  /** Whether the generation job has finished (success or error). */
+  done: boolean;
+
+  /** True when the job completed without error and content is available. */
+  success: boolean;
+
+  /** Error message if `done` is true and `success` is false. */
+  errorMessage: string | null;
+
+  /**
+   * Approximate completion fraction in [0, 1].
+   * Used to animate the progress indicator while streaming.
+   */
+  progress: number;
+}
+
+/**
+ * A markdown content fixture used to pre-populate demo sections
+ * without making live HTTP calls.
+ */
+export interface MarkdownContentFixture {
+  /** Identifier for the fixture, typically matching the spec filename (without extension). */
+  key: string;
+
+  /** The full markdown string. */
+  content: string;
+
+  /**
+   * Display label shown in tabs and headings.
+   * Matches the `label` field on the corresponding `Spec` entry.
+   */
+  label: string;
+}
+
+// ── Section Taxonomy Fixtures ─────────────────────────────────────────────────
+
+/** Ordered five-section taxonomy for the V3 scroll shell. */
+export const DEMO_SECTION_TAXONOMY: SectionTaxonomyEntry[] = [
+  {
+    id: 'greeting',
+    label: 'Greeting',
+    teaser: 'Where it all begins',
+    phase2Sources: ['hero'],
+  },
+  {
+    id: 'kitchen',
+    label: 'Kitchen',
+    teaser: 'Watch the pipeline cook',
+    phase2Sources: ['pipeline', 'journey'],
+  },
+  {
+    id: 'main-course',
+    label: 'Main Course',
+    teaser: 'The live app, in full',
+    phase2Sources: ['live-demo', 'screen-gallery'],
+  },
+  {
+    id: 'presentation',
+    label: 'Presentation',
+    teaser: 'Design language and dark mode',
+    phase2Sources: ['design-language', 'patterns', 'dark-mode'],
+  },
+  {
+    id: 'send-off',
+    label: 'Send-Off',
+    teaser: 'Your turn',
+    phase2Sources: [],
+  },
+];
+
+// ── Generation Status Fixtures ────────────────────────────────────────────────
+
+/** Demo generation status for a project where analysis is complete and epic is in-progress. */
+export const DEMO_GENERATION_STATUS_IN_PROGRESS: GenerationStatus[] = [
+  { docType: 'analysis',            done: true,  success: true,  errorMessage: null, progress: 1 },
+  { docType: 'epic',                done: false, success: false, errorMessage: null, progress: 0.6 },
+  { docType: 'architecture',        done: false, success: false, errorMessage: null, progress: 0 },
+  { docType: 'implementation-guide', done: false, success: false, errorMessage: null, progress: 0 },
+];
+
+/** Demo generation status for a fully completed project. */
+export const DEMO_GENERATION_STATUS_COMPLETE: GenerationStatus[] = [
+  { docType: 'analysis',            done: true, success: true, errorMessage: null, progress: 1 },
+  { docType: 'epic',                done: true, success: true, errorMessage: null, progress: 1 },
+  { docType: 'architecture',        done: true, success: true, errorMessage: null, progress: 1 },
+  { docType: 'implementation-guide', done: true, success: true, errorMessage: null, progress: 1 },
+];
+
+// ── Markdown Content Fixtures ─────────────────────────────────────────────────
+
+/** Pre-populated markdown fixtures for the V3 demo sections. */
+export const DEMO_MARKDOWN_FIXTURES: MarkdownContentFixture[] = [
+  {
+    key: 'analysis',
+    label: 'Analysis',
+    content: PIPELINE_ANALYSIS_PREVIEW,
+  },
+  {
+    key: 'epic',
+    label: 'Epic',
+    content: PIPELINE_EPIC_PREVIEW,
+  },
+  {
+    key: 'architecture',
+    label: 'Architecture',
+    content: PIPELINE_ARCHITECTURE_PREVIEW,
+  },
+  {
+    key: 'implementation-guide',
+    label: 'Implementation Guide',
+    content: PIPELINE_GUIDE_PREVIEW,
+  },
+];
