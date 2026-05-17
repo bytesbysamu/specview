@@ -1,7 +1,11 @@
 """Shared step definitions for Specview E2E tests (pytest-bdd + playwright)."""
 from __future__ import annotations
 
+import os
 import re
+import time
+
+import jwt as _jwt
 import requests
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import Page
@@ -12,6 +16,25 @@ from e2e.pages.app_page import AppPage
 # ── Fixtures shared via step injection ────────────────────────────────────────
 
 _DEFAULT_TEXT = "This is a braindump about my product idea."
+
+# JWT config (mirrors overview_preconditions.py)
+_JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
+_JWT_USER_ID = os.environ.get("E2E_USER_ID", "1")
+_JWT_EMAIL = os.environ.get("E2E_USER_EMAIL", "test@test.com")
+
+
+def _ensure_logged_in(page: Page, base_url: str) -> None:
+    """Inject a JWT and reload so the V3 app shows the authenticated workspace."""
+    token = _jwt.encode(
+        {"sub": _JWT_USER_ID, "email": _JWT_EMAIL,
+         "iat": int(time.time()), "exp": int(time.time()) + 72 * 3600},
+        _JWT_SECRET, algorithm="HS256",
+    )
+    page.goto(base_url)
+    page.wait_for_load_state("networkidle")
+    page.evaluate(f"() => localStorage.setItem('specview_jwt', {token!r})")
+    page.goto(base_url)
+    page.wait_for_load_state("networkidle")
 
 
 # ── Given ─────────────────────────────────────────────────────────────────────
@@ -109,7 +132,7 @@ def user_clicks(page: Page, selector: str, context):
 def user_submits_brainstorm(page: Page, angular_server, context):
     app = context.setdefault("app", AppPage(page, angular_server))
     if not context.get("_loaded"):
-        app.load()
+        _ensure_logged_in(page, angular_server)
         context["_loaded"] = True
     app.submit_brainstorm()
 
@@ -118,7 +141,7 @@ def user_submits_brainstorm(page: Page, angular_server, context):
 def user_triggers_pipeline(page: Page, angular_server, context):
     app = context.setdefault("app", AppPage(page, angular_server))
     if not context.get("_loaded"):
-        app.load()
+        _ensure_logged_in(page, angular_server)
         context["_loaded"] = True
     app.click("[data-test='pipeline-trigger']")
 
@@ -127,7 +150,7 @@ def user_triggers_pipeline(page: Page, angular_server, context):
 def user_triggers_epic_guide(page: Page, angular_server, context):
     app = context.setdefault("app", AppPage(page, angular_server))
     if not context.get("_loaded"):
-        app.load()
+        _ensure_logged_in(page, angular_server)
         context["_loaded"] = True
     app.click("[data-test='epic-guide-trigger']")
 
@@ -136,7 +159,7 @@ def user_triggers_epic_guide(page: Page, angular_server, context):
 def user_submits_any_action(page: Page, angular_server, context):
     app = context.setdefault("app", AppPage(page, angular_server))
     if not context.get("_loaded"):
-        app.load()
+        _ensure_logged_in(page, angular_server)
         context["_loaded"] = True
     app.submit_brainstorm()
 
