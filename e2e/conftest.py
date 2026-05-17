@@ -42,16 +42,26 @@ def _wait_for_port(host: str, port: int, timeout: float = 30.0) -> None:
 
 
 def _wait_for_http(url: str, timeout: float = 120.0) -> None:
-    """Wait until *url* returns an HTTP response (any status)."""
+    """Wait until *url* returns an HTTP response consistently.
+
+    The Angular dev server may briefly accept connections during initial
+    compilation and then restart. We require two successful responses 3 s
+    apart to confirm the server is stable.
+    """
     import urllib.request
     import urllib.error
 
     deadline = time.monotonic() + timeout
+    successes = 0
     while time.monotonic() < deadline:
         try:
             urllib.request.urlopen(url, timeout=5)
-            return
+            successes += 1
+            if successes >= 2:
+                return
+            time.sleep(3)
         except (urllib.error.URLError, OSError):
+            successes = 0
             time.sleep(2)
     raise RuntimeError(f"HTTP server at {url} not ready within {timeout}s")
 
