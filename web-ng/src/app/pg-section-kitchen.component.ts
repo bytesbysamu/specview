@@ -1,7 +1,7 @@
 /**
  * pg-section-kitchen.component.ts
  *
- * Playground V3 — Section 2 "Kitchen".
+ * Playground V4 — Section 2 "Kitchen".
  *
  * EXTRACTION STATUS: Non-extractable
  * ────────────────────────────────────
@@ -20,26 +20,22 @@
  * If the landing page requires pipeline stage content, create a purpose-built
  * landing component that presents the four-stage story in a static layout.
  */
-import { Component, ChangeDetectionStrategy, input } from '@angular/core';
-
-export interface PipelineStage {
-  key: string;
-  label: string;
-  title: string;
-  description: string;
-  snippet: string;
-}
+import { Component, ChangeDetectionStrategy, output } from '@angular/core';
+import { PgPipelineComponent } from './pg-pipeline.component';
 
 @Component({
   selector: 'app-pg-section-kitchen',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PgPipelineComponent],
   styles: [`
     .kitchen {
-      padding: 40px 0 40px;
+      padding: 40px 0 32px;
       height: 100%;
       box-sizing: border-box;
-      overflow-y: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .kitchen__overline {
@@ -70,7 +66,7 @@ export interface PipelineStage {
       line-height: 1.65;
       color: var(--ink-light);
       max-width: 480px;
-      margin-bottom: 64px;
+      margin-bottom: 24px;
     }
 
     /* Pipeline grid — horizontal 4-across on desktop */
@@ -209,23 +205,16 @@ export interface PipelineStage {
         narrowing from problem space to executable tasks.
       </p>
 
-      <div class="pipeline-grid">
-        @for (stage of stages(); track stage.key; let i = $index) {
-          <div class="pipeline-stage">
-            <div class="pipeline-stage__index">
-              <span class="pipeline-stage__index-num">0{{ i + 1 }}</span>
-              {{ stage.label }}
-            </div>
-            <h3 class="pipeline-stage__title">{{ stage.title }}</h3>
-            <p class="pipeline-stage__desc">{{ stage.description }}</p>
-            <span class="pipeline-stage__label">Preview</span>
-            <div class="pipeline-stage__thumbnail">{{ stage.snippet }}</div>
-          </div>
-        }
-      </div>
+      <!-- Interactive pipeline progression -->
+      <app-pg-pipeline (seeItLive)="onSeeItLive()" />
     </div>
   `,
 })
 export class PgSectionKitchenComponent {
-  readonly stages = input<PipelineStage[]>([]);
+  /** Bubbles the pipeline component's "See it live" event up to the scroll shell. */
+  readonly seeItLive = output<void>();
+
+  onSeeItLive(): void {
+    this.seeItLive.emit();
+  }
 }
