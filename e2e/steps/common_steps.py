@@ -29,7 +29,10 @@ def seed_project_with_braindump(flask_server):
     """Seed a minimal project via the API for pipeline tests."""
     resp = requests.post(
         f"{flask_server}/api/projects",
-        json={"name": "e2e-test-project", "braindump": _DEFAULT_TEXT},
+        json={
+            "name": "e2e-test-project",
+            "files": [{"filename": "braindump.md", "content": _DEFAULT_TEXT}],
+        },
         headers={"Authorization": "Bearer test-token"},
     )
     assert resp.status_code in (200, 201), f"Seed failed: {resp.text}"
@@ -40,18 +43,17 @@ def seed_project_with_braindump(flask_server):
 def seed_project_with_epic(flask_server):
     resp = requests.post(
         f"{flask_server}/api/projects",
-        json={"name": "e2e-epic-project", "braindump": "Epic project braindump"},
+        json={
+            "name": "e2e-epic-project",
+            "files": [
+                {"filename": "braindump.md", "content": "Epic project braindump"},
+                {"filename": "epic.md", "content": "# Epic\n\nTest epic content."},
+            ],
+        },
         headers={"Authorization": "Bearer test-token"},
     )
-    assert resp.status_code in (200, 201)
-    project = resp.json()
-    # Seed a minimal epic.md file
-    requests.post(
-        f"{flask_server}/api/projects/{project['id']}/files",
-        json={"filename": "epic.md", "content": "# Epic\n\nTest epic content."},
-        headers={"Authorization": "Bearer test-token"},
-    )
-    return project
+    assert resp.status_code in (200, 201), f"Seed failed: {resp.text}"
+    return resp.json()
 
 
 @given("a free-tier user has reached their daily limit")
