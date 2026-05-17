@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
+  imports: [RouterLink],
   template: `
     <div class="login-wrap">
       <div class="login-card">
@@ -20,6 +21,7 @@ import { AuthService } from '../../services/auth.service';
             {{ loading() ? 'Signing in…' : 'Sign in' }}
           </button>
         </form>
+        <div class="login-signup">Don't have an account? <a routerLink="/signup">Sign up</a></div>
       </div>
     </div>
   `,
@@ -84,6 +86,20 @@ import { AuthService } from '../../services/auth.service';
       margin-top: 4px;
     }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-signup {
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 13px;
+      color: var(--ink-muted);
+      text-align: center;
+      margin-top: 20px;
+    }
+    .login-signup a {
+      color: var(--ink);
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .login-signup a:hover { opacity: 0.7; }
   `]
 })
 export class LoginComponent {
