@@ -1,44 +1,27 @@
 /**
  * pg-scroll-shell.component.ts
  *
- * Playground V3 scroll shell — full implementation (Task 2).
+ * Playground V4 scroll shell — CSS-only section reveals (Task 4).
  *
- * Locks the five-section inventory and gating model agreed in Task 1.
- * Downstream tasks (3–5) import `SCROLL_SECTIONS` and `SectionState` from here.
+ * Replaces the V3 high-threshold gating observer with a single lightweight
+ * IntersectionObserver at threshold 0.1.  When a section's edge enters the
+ * viewport the observer adds the `revealed` CSS class to that element and
+ * immediately stops observing it — sections stay visible permanently.
  *
- * Section inventory (V3 → Phase 2 source mapping):
- *   1. Greeting     ← hero section
+ * All JavaScript content-gating logic (sectionStates signal, locked/revealing/
+ * unlocked state machine, MOBILE_BREAKPOINT override, setTimeout transitions)
+ * has been removed.  Visibility is now a pure CSS concern.
+ *
+ * Section inventory (five sections):
+ *   0. Greeting     ← hero
+ *   1. Before/After ← transformation moment (not gated in V3 inventory)
  *   2. Kitchen      ← pipeline + user journey
- *   3. Main Course  ← live app demo + screen gallery
- *   4. Presentation ← design language + patterns + dark-mode toggle
- *   5. Send-Off     ← new (no Phase 2 source)
+ *   3. Main Course  ← live app demo
+ *   4. Presentation ← design language + patterns
+ *   5. Send-Off     ← new section
  *
- * Cut from Phase 2:
- *   - Landing showcase → deferred to landing page epic
- *   - Before/after transformation → redundant with live demo
- *   - Screen annotations → replaced by the live app itself
- *   - Component-by-component catalog → replaced by composed vignettes
- *
- * Gating mechanism: IntersectionObserver-based scroll-reveal.
- *   - Sentinel divs at section boundaries.
- *   - Threshold: 0.6 on desktop, 0.4 on viewports < 768 px.
- *
- * Locked section behaviour:
- *   - Full-height container.
- *   - Content at opacity 0, pointer-events none.
- *   - Faint newspaper rule at boundary.
- *   - Single-line uppercase label teaser.
- *
- * Reveal transition (CSS-only):
- *   - Desktop: fade-in + 24 px upward shift over 400 ms.
- *   - Mobile: opacity-only (no translate).
- *
- * Dark-mode toggle: whole-page scope.
- *   Toggle in Section 3 applies [data-theme="dark"] on the .pg-shell wrapper,
- *   affecting all sections uniformly.
- *
- * Section nav: renders inside Section 3 as part of the embedded app demo.
- *   NOT used as scroll-level navigation.
+ * Downstream tasks import `SCROLL_SECTIONS` and `SectionState` from here.
+ * Both are kept for compatibility; `SectionState` is now unused at runtime.
  */
 
 import {
@@ -48,57 +31,56 @@ import {
   ElementRef,
   OnDestroy,
   QueryList,
+  ViewChild,
   ViewChildren,
-  computed,
   signal,
 } from '@angular/core';
 import { PgSectionGreetingComponent } from './pg-section-greeting.component';
 import { PgSectionKitchenComponent } from './pg-section-kitchen.component';
 import { PgSectionPatternsComponent } from './pg-section-patterns.component';
 import { PgSectionSendoffComponent } from './pg-section-sendoff.component';
-import { PgSectionLiveAppComponent } from './pg-section-live-app.component';
+import { PgSectionLiveAppComponent, LiveAppActivation } from './pg-section-live-app.component';
+import { PgSectionBeforeAfterComponent } from './pg-section-before-after.component';
 import { DEMO_MODE } from './tokens/demo-mode.token';
-import { PIPELINE_STAGES } from './playground-demo-data';
 
-// ── Section State ─────────────────────────────────────────────────────────────
+// ── Section State (kept for downstream compatibility) ─────────────────────────
 
-/** The lifecycle state of a scroll-gated section. */
+/** The lifecycle state of a scroll-gated section. No longer used at runtime. */
 export type SectionState = 'locked' | 'revealing' | 'unlocked';
 
 // ── Section Inventory ─────────────────────────────────────────────────────────
 
-/** A single entry in the V3 scroll shell section inventory. */
+/** A single entry in the V4 scroll shell section inventory. */
 export interface ScrollSection {
-  /** Stable machine identifier used for IntersectionObserver sentinels and CSS hooks. */
+  /** Stable machine identifier used for CSS hooks. */
   id: string;
 
-  /** Display title shown in the teaser label while the section is locked. */
+  /** Display title. */
   label: string;
 
   /**
-   * Phase 2 source sections this V3 section absorbs.
+   * Phase 2 source sections this V4 section absorbs.
    * Empty for sections with no Phase 2 counterpart.
    */
   phase2Sources: string[];
 
   /**
-   * Initial gate state.  All sections except Greeting start locked
-   * so the IntersectionObserver controls progressive reveal.
+   * Initial gate state — retained for interface compatibility.
+   * No longer drives any runtime behaviour; CSS handles reveal.
    */
   initialState: SectionState;
 
   /**
-   * IntersectionObserver threshold.
-   * The runtime replaces this with the responsive override (0.4 below 768 px).
+   * Observer threshold — retained for interface compatibility.
+   * Runtime always uses 0.1.
    */
   threshold: number;
 }
 
 /**
- * Ordered five-section inventory for the V3 playground scroll shell.
+ * Ordered section inventory for the V4 playground scroll shell.
  *
- * Import this constant in downstream task components to drive
- * the IntersectionObserver setup, sentinel placement, and locked-state UI.
+ * Import this constant in downstream task components.
  */
 export const SCROLL_SECTIONS: ScrollSection[] = [
   {
@@ -106,35 +88,35 @@ export const SCROLL_SECTIONS: ScrollSection[] = [
     label: 'Greeting',
     phase2Sources: ['hero'],
     initialState: 'unlocked',
-    threshold: 0.6,
+    threshold: 0.1,
   },
   {
     id: 'kitchen',
     label: 'Kitchen',
     phase2Sources: ['pipeline', 'journey'],
     initialState: 'locked',
-    threshold: 0.6,
+    threshold: 0.1,
   },
   {
     id: 'main-course',
     label: 'Main Course',
     phase2Sources: ['live-demo', 'screen-gallery'],
     initialState: 'locked',
-    threshold: 0.6,
+    threshold: 0.1,
   },
   {
     id: 'presentation',
     label: 'Presentation',
     phase2Sources: ['design-language', 'patterns', 'dark-mode'],
     initialState: 'locked',
-    threshold: 0.6,
+    threshold: 0.1,
   },
   {
     id: 'send-off',
     label: 'Send-Off',
     phase2Sources: [],
     initialState: 'locked',
-    threshold: 0.6,
+    threshold: 0.1,
   },
 ];
 
@@ -147,6 +129,7 @@ export const SCROLL_SECTIONS: ScrollSection[] = [
   templateUrl: './pg-scroll-shell.component.html',
   imports: [
     PgSectionGreetingComponent,
+    PgSectionBeforeAfterComponent,
     PgSectionKitchenComponent,
     PgSectionLiveAppComponent,
     PgSectionPatternsComponent,
@@ -166,45 +149,53 @@ export class PgScrollShellComponent implements AfterViewInit, OnDestroy {
     this.isDark.update(v => !v);
   }
 
-  // ── Demo data ──────────────────────────────────────────────────────────────
+  // ── Live-app activation (Task 3 — "See it live" handoff) ──────────────────
 
-  readonly pipelineStages = PIPELINE_STAGES;
+  /**
+   * Passed to the live-app section's `activation` input signal.
+   * Task 3 (the Kitchen section's "See it live" CTA) sets this to
+   * programmatically switch the Main Course section to detail view
+   * with a specific tab selected.
+   */
+  readonly liveAppActivation = signal<LiveAppActivation | null>(null);
 
-  // ── Section state machine ──────────────────────────────────────────────────
+  // ── "See it live" handler (Task 3) ────────────────────────────────────────
 
-  /** Current gating state for each section, indexed to match SCROLL_SECTIONS. */
-  readonly sectionStates = signal<SectionState[]>(
-    SCROLL_SECTIONS.map(s => s.initialState)
-  );
+  @ViewChild('mainCourseSection') private mainCourseSectionRef!: ElementRef<HTMLDivElement>;
 
-  /** Section 1 (index 0) is always unlocked on load. */
-  readonly section1InView = computed(() => this.sectionStates()[0] === 'unlocked');
+  /**
+   * Called when the Kitchen section's pipeline emits the "See it live" event.
+   * Scrolls the Main Course section into view and activates detail view with
+   * the architecture tab selected.
+   */
+  onKitchenSeeItLive(): void {
+    this.liveAppActivation.set({ view: 'detail', tab: 'architecture.md' });
 
-  /** Expose sections array to the template. */
-  readonly sections = SCROLL_SECTIONS;
+    if (this.mainCourseSectionRef?.nativeElement) {
+      this.mainCourseSectionRef.nativeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }
 
-  // ── IntersectionObserver ───────────────────────────────────────────────────
+  // ── IntersectionObserver — CSS-only reveal ────────────────────────────────
 
-  @ViewChildren('sentinel') private sentinelRefs!: QueryList<ElementRef<HTMLDivElement>>;
+  /**
+   * References to every section wrapper element.
+   * The observer adds `revealed` to each when it enters the viewport at 0.1.
+   */
+  @ViewChildren('sectionEl') private sectionEls!: QueryList<ElementRef<HTMLDivElement>>;
 
   private observer: IntersectionObserver | null = null;
 
-  /** Mobile breakpoint — matches styles.css @media (max-width: 768px). */
-  private readonly MOBILE_BREAKPOINT = 768;
-
-  /** Transition duration matches the CSS .pg-section--revealing class (400ms). */
-  private readonly REVEAL_DURATION_MS = 400;
-
   ngAfterViewInit(): void {
-    const isMobile = window.innerWidth < this.MOBILE_BREAKPOINT;
-    const threshold = isMobile ? 0.4 : 0.6;
-
     this.observer = new IntersectionObserver(
       (entries) => this.onIntersection(entries),
-      { threshold }
+      { threshold: 0.1 }
     );
 
-    this.sentinelRefs.forEach(ref => {
+    this.sectionEls.forEach(ref => {
       this.observer!.observe(ref.nativeElement);
     });
   }
@@ -219,55 +210,16 @@ export class PgScrollShellComponent implements AfterViewInit, OnDestroy {
   // ── Intersection callback ──────────────────────────────────────────────────
 
   /**
-   * When sentinel N becomes visible and section N is already unlocked,
-   * transition section N+1 from locked → revealing → unlocked.
-   *
-   * Each sentinel element carries a data-sentinel-index attribute
-   * indicating which BOUNDARY it sits after (0-based: sentinel 0 is between
-   * section 0 and section 1, etc.).
+   * When a section enters the viewport, add the `revealed` CSS class and
+   * stop observing it — sections are permanently revealed once triggered.
    */
   private onIntersection(entries: IntersectionObserverEntry[]): void {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
 
-      const boundaryIndex = Number(
-        (entry.target as HTMLElement).dataset['sentinelIndex']
-      );
-      if (isNaN(boundaryIndex)) return;
-
-      const nextSectionIndex = boundaryIndex + 1;
-      if (nextSectionIndex >= SCROLL_SECTIONS.length) return;
-
-      const states = this.sectionStates();
-
-      // Gating condition: current section (the one before this sentinel) must be unlocked.
-      const currentSectionIndex = boundaryIndex;
-      if (states[currentSectionIndex] !== 'unlocked') return;
-
-      // Next section must still be locked to trigger the reveal.
-      if (states[nextSectionIndex] !== 'locked') return;
-
-      // Transition: locked → revealing
-      this.updateSectionState(nextSectionIndex, 'revealing');
-
-      // Transition: revealing → unlocked after CSS animation completes.
-      setTimeout(() => {
-        this.updateSectionState(nextSectionIndex, 'unlocked');
-      }, this.REVEAL_DURATION_MS);
+      const el = entry.target as HTMLElement;
+      el.classList.add('revealed');
+      this.observer?.unobserve(el);
     });
-  }
-
-  private updateSectionState(index: number, state: SectionState): void {
-    const current = [...this.sectionStates()];
-    current[index] = state;
-    this.sectionStates.set(current);
-  }
-
-  // ── Template helpers ───────────────────────────────────────────────────────
-
-  /** Returns the CSS class for a section wrapper based on its current state. */
-  sectionClass(index: number): string {
-    const state = this.sectionStates()[index];
-    return `pg-section pg-section--${state}`;
   }
 }

@@ -18,7 +18,23 @@ export const DEMO_NAV_SECTIONS: NavSection[] = [
 
 // ── Demo Spec Content ────────────────────────────────────────────────────────
 
-const ANALYSIS_CONTENT = `# Analysis — Payment Gateway Redesign
+/**
+ * Raw braindump text for the Payment Gateway Redesign project.
+ * Used by the Before/After section to show unprocessed input.
+ */
+export const PAYMENT_GATEWAY_BRAINDUMP = `ok so our checkout is a total mess. weve got like 4 different frontend codebases because of the two acquisitions we did in 2022 and 2023 and they all render different things on mobile vs desktop which is killing our conversion
+
+the mobile checkout requires so many taps its ridiculous. i counted 11 steps on mobile to complete a payment. desktop is 6. industry standard is like 4-5 for both so were way off
+
+also when cards decline we just show "payment error" which is useless. our support team gets like 340 tickets a week just for payment failures and most of them could be fixed with a better error message
+
+pci compliance is a nightmare. currently 14 services are in scope because we handle card data in too many places. if we could get that down to 3 or so the audit cost alone would justify the rewrite
+
+idea is to move to a unified checkout shell, probably react, and use stripe elements for the actual card capture so we never touch raw card data. progressive disclosure flow - address first then payment - makes more sense with how users think anyway
+
+need to figure out the timeline. probably 6-7 weeks if we sequence it right. stripe integration first, then the shell, then address autocomplete and better error messages, then ab test and launch`;
+
+export const ANALYSIS_CONTENT = `# Analysis — Payment Gateway Redesign
 
 ## Executive Summary
 

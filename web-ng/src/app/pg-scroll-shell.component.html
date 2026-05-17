@@ -1,93 +1,102 @@
-<!-- ── Playground V3 Scroll Shell ──────────────────────────────────────────── -->
-<!-- Full-viewport container. Each section slot is gated by IntersectionObserver. -->
+<!-- ── Playground V4 Scroll Shell ──────────────────────────────────────────── -->
+<!-- All sections always render in the DOM.                                    -->
+<!-- A single IntersectionObserver (threshold 0.1) adds `revealed` to each   -->
+<!-- section wrapper as its top edge enters the viewport.                     -->
+<!-- CSS transitions handle the fade-in — no JavaScript content gating.       -->
 <div class="pg-shell" [attr.data-theme]="isDark() ? 'dark' : null">
   <div class="pg-shell__content">
 
-    <!-- ── Section 0: Greeting (always unlocked) ────────────────────────────── -->
-    <div [class]="sectionClass(0)" data-section-id="greeting" data-test="section-greeting">
+    <!-- ── Section 0: Greeting ────────────────────────────────────────────── -->
+    <div
+      class="pg-section pg-reveal-target"
+      data-section-id="greeting"
+      data-test="section-greeting"
+      #sectionEl
+    >
       <div class="pg-section__body">
         <app-pg-section-greeting />
       </div>
 
       <!-- Scroll-down affordance: subtle bottom border opacity shift -->
-      <div class="pg-shell__scroll-hint" [class.pg-shell__scroll-hint--visible]="section1InView()"></div>
+      <div class="pg-shell__scroll-hint pg-shell__scroll-hint--visible"></div>
     </div>
 
-    <!-- ── Sentinel 0: between Greeting and Kitchen ─────────────────────────── -->
+    <!-- ── Before/After Transformation Section ──────────────────────────────── -->
+    <!-- Not part of the five-section gating inventory.                          -->
+    <!-- The shell observer handles its reveal; right column uses pg-reveal-target. -->
     <div
-      class="pg-sentinel"
-      #sentinel
-      data-sentinel-index="0"
-      aria-hidden="true"
-    ></div>
+      class="pg-section pg-reveal-target"
+      data-section-id="before-after"
+      data-test="section-before-after"
+      #sectionEl
+    >
+      <div class="pg-section__body">
+        <app-pg-section-before-after />
+      </div>
+    </div>
 
     <!-- ── Section 1: Kitchen ───────────────────────────────────────────────── -->
-    <div [class]="sectionClass(1)" data-section-id="kitchen" data-test="section-kitchen">
-      @if (sectionStates()[1] === 'locked') {
-        <div class="pg-section__lock-teaser">
-          <span class="pg-section__teaser-label">{{ sections[1].label }}</span>
-        </div>
-      }
+    <div
+      class="pg-section pg-reveal-target"
+      data-section-id="kitchen"
+      data-test="section-kitchen"
+      #sectionEl
+    >
       <div class="pg-section__body">
-        <app-pg-section-kitchen [stages]="pipelineStages" />
+        <app-pg-section-kitchen
+          (seeItLive)="onKitchenSeeItLive()"
+        />
       </div>
     </div>
-
-    <!-- ── Sentinel 1: between Kitchen and Main Course ──────────────────────── -->
-    <div
-      class="pg-sentinel"
-      #sentinel
-      data-sentinel-index="1"
-      aria-hidden="true"
-    ></div>
 
     <!-- ── Section 2: Main Course ───────────────────────────────────────────── -->
-    <div [class]="sectionClass(2)" data-section-id="main-course" data-test="section-main-course">
-      @if (sectionStates()[2] === 'locked') {
-        <div class="pg-section__lock-teaser">
-          <span class="pg-section__teaser-label">{{ sections[2].label }}</span>
-        </div>
-      }
+    <div
+      class="pg-section pg-reveal-target"
+      data-section-id="main-course"
+      data-test="section-main-course"
+      #mainCourseSection
+      #sectionEl
+    >
       <div class="pg-section__body">
-        <app-pg-section-live-app [isDark]="isDark()" (themeToggled)="toggleTheme()" />
+        <app-pg-section-live-app
+          [isDark]="isDark()"
+          [activation]="liveAppActivation()"
+          (themeToggled)="toggleTheme()"
+        />
       </div>
     </div>
 
-    <!-- ── Sentinel 2: between Main Course and Presentation ─────────────────── -->
+    <!-- ── Section 3a: Presentation — Tokens & Borders ────────────────────── -->
     <div
-      class="pg-sentinel"
-      #sentinel
-      data-sentinel-index="2"
-      aria-hidden="true"
-    ></div>
-
-    <!-- ── Section 3: Presentation ──────────────────────────────────────────── -->
-    <div [class]="sectionClass(3)" data-section-id="presentation" data-test="section-presentation">
-      @if (sectionStates()[3] === 'locked') {
-        <div class="pg-section__lock-teaser">
-          <span class="pg-section__teaser-label">{{ sections[3].label }}</span>
-        </div>
-      }
+      class="pg-section pg-reveal-target"
+      data-section-id="presentation"
+      data-test="section-presentation"
+      #sectionEl
+    >
       <div class="pg-section__body">
-        <app-pg-section-patterns />
+        <app-pg-section-patterns [page]="1" />
       </div>
     </div>
 
-    <!-- ── Sentinel 3: between Presentation and Send-Off ────────────────────── -->
+    <!-- ── Section 3b: Presentation — Motion & Interactions ────────────────── -->
     <div
-      class="pg-sentinel"
-      #sentinel
-      data-sentinel-index="3"
-      aria-hidden="true"
-    ></div>
+      class="pg-section pg-reveal-target"
+      data-section-id="presentation-2"
+      data-test="section-presentation-2"
+      #sectionEl
+    >
+      <div class="pg-section__body">
+        <app-pg-section-patterns [page]="2" />
+      </div>
+    </div>
 
     <!-- ── Section 4: Send-Off ──────────────────────────────────────────────── -->
-    <div [class]="sectionClass(4)" data-section-id="send-off" data-test="section-send-off">
-      @if (sectionStates()[4] === 'locked') {
-        <div class="pg-section__lock-teaser">
-          <span class="pg-section__teaser-label">{{ sections[4].label }}</span>
-        </div>
-      }
+    <div
+      class="pg-section pg-reveal-target"
+      data-section-id="send-off"
+      data-test="section-send-off"
+      #sectionEl
+    >
       <div class="pg-section__body">
         <app-pg-section-sendoff />
       </div>

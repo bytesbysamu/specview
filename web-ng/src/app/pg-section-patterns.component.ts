@@ -1,7 +1,7 @@
 /**
  * pg-section-patterns.component.ts
  *
- * Playground V3 — Section 4 "Presentation".
+ * Playground V4 — Section 4 "Presentation".
  *
  * EXTRACTION API
  * ──────────────
@@ -29,7 +29,7 @@
  * Usage outside the scroll shell:
  *   <app-pg-section-patterns />
  */
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 import { PgTokensComponent } from './pg-tokens.component';
 import { PgBordersComponent } from './pg-borders.component';
 import { PgAnimationsComponent } from './pg-animations.component';
@@ -41,10 +41,12 @@ import { PgAnimationsComponent } from './pg-animations.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     .patterns {
-      padding: 40px 0 40px;
+      padding: 40px 0 32px;
       height: 100%;
       box-sizing: border-box;
-      overflow-y: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .patterns__overline {
@@ -75,7 +77,7 @@ import { PgAnimationsComponent } from './pg-animations.component';
       line-height: 1.65;
       color: var(--ink-light);
       max-width: 480px;
-      margin-bottom: 64px;
+      margin-bottom: 32px;
     }
 
     /* Three editorial vignettes: 2-col asymmetric on desktop */
@@ -84,7 +86,8 @@ import { PgAnimationsComponent } from './pg-animations.component';
       grid-template-columns: 2fr 1fr;
       gap: 0;
       border-top: 3px solid var(--ink);
-      margin-bottom: 48px;
+      margin-bottom: 24px;
+      overflow: hidden;
     }
 
     .vignette-spread--reversed {
@@ -158,47 +161,55 @@ import { PgAnimationsComponent } from './pg-animations.component';
   `],
   template: `
     <div class="patterns">
-      <span class="patterns__overline">Presentation</span>
+      @if (page() === 1) {
+        <span class="patterns__overline">Presentation</span>
 
-      <h2 class="patterns__headline">A design language built for reading.</h2>
+        <h2 class="patterns__headline">A design language built for reading.</h2>
 
-      <p class="patterns__subhead">
-        Ink on cream. Playfair headlines. Source Serif body copy. Every token
-        chosen to make long-form spec documents feel like considered documents,
-        not generated artifacts.
-      </p>
+        <p class="patterns__subhead">
+          Ink on cream. Playfair headlines. Source Serif body copy. Every token
+          chosen to make long-form spec documents feel like considered documents,
+          not generated artifacts.
+        </p>
 
-      <!-- Vignette 1: Tokens (wide left) -->
-      <div class="vignette-spread">
-        <div class="vignette-pane">
-          <span class="vignette-pane__label">Color &amp; Typography Tokens</span>
-          <app-pg-tokens />
-          <p class="vignette-pane__caption">
-            Every color is a CSS custom property — dark mode is a single
-            <code>[data-theme]</code> swap, no duplication.
-          </p>
+        <!-- Vignette 1: Tokens + Borders -->
+        <div class="vignette-spread">
+          <div class="vignette-pane">
+            <span class="vignette-pane__label">Color &amp; Typography Tokens</span>
+            <app-pg-tokens />
+            <p class="vignette-pane__caption">
+              Every color is a CSS custom property — dark mode is a single
+              <code>[data-theme]</code> swap, no duplication.
+            </p>
+          </div>
+          <div class="vignette-pane">
+            <span class="vignette-pane__label">Borders &amp; Rules</span>
+            <app-pg-borders />
+            <p class="vignette-pane__caption">
+              Borders carry semantic weight: 1px divides, 2px titles, 3px sections.
+            </p>
+          </div>
         </div>
-        <div class="vignette-pane">
-          <span class="vignette-pane__label">Borders &amp; Rules</span>
-          <app-pg-borders />
-          <p class="vignette-pane__caption">
-            Borders carry semantic weight: 1px divides, 2px titles, 3px sections.
-          </p>
-        </div>
-      </div>
+      }
 
-      <!-- Vignette 2: Animations (full width) -->
-      <div class="vignette-spread vignette-spread--full">
-        <div class="vignette-pane">
-          <span class="vignette-pane__label">Motion &amp; Interactions</span>
-          <app-pg-animations />
-          <p class="vignette-pane__caption">
-            Animations are purposeful — each maps to a specific product moment.
-            No decoration for its own sake.
-          </p>
+      @if (page() === 2) {
+        <span class="patterns__overline">Presentation — continued</span>
+
+        <!-- Vignette 2: Animations (full width, full viewport) -->
+        <div class="vignette-spread vignette-spread--full">
+          <div class="vignette-pane">
+            <span class="vignette-pane__label">Motion &amp; Interactions</span>
+            <app-pg-animations />
+            <p class="vignette-pane__caption">
+              Animations are purposeful — each maps to a specific product moment.
+              No decoration for its own sake.
+            </p>
+          </div>
         </div>
-      </div>
+      }
     </div>
   `,
 })
-export class PgSectionPatternsComponent {}
+export class PgSectionPatternsComponent {
+  readonly page = input(1);
+}

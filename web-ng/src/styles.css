@@ -1794,12 +1794,11 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* Section body — holds the real content, scrolls internally if needed */
+/* Section body — holds the real content, sized to fit the viewport */
 .pg-section__body {
   width: 100%;
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* ── Locked state ────────────────────────────────────────────────────────── */
@@ -2025,6 +2024,73 @@ body {
 
   .pg-vignette-spread__pane:last-child {
     border-bottom: none;
+  }
+}
+
+/* ── Section reveal animation (Task 4) ──────────────────────────────────────── */
+
+/*
+ * .pg-reveal-target — applied to every section wrapper in the scroll shell.
+ * Default state: invisible and raised 20 px.
+ * When the IntersectionObserver (threshold 0.1) sees the element enter the
+ * viewport it adds .revealed, triggering a GPU-composited CSS transition.
+ *
+ * Only `opacity` and `transform` are animated — no layout-triggering properties.
+ * Once revealed, sections remain visible permanently (observer stops watching).
+ */
+.pg-reveal-target {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.pg-reveal-target.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Mobile: suppress the translate — opacity only, consistent with shell convention */
+@media (max-width: 768px) {
+  .pg-reveal-target {
+    transform: none;
+  }
+
+  .pg-reveal-target.revealed {
+    transform: none;
+  }
+}
+
+/* ── Before/After right-column child reveal ──────────────────────────────────── */
+
+/*
+ * The right column of the before/after transformation section starts hidden
+ * and fades in with a 160 ms delay after its parent section is revealed.
+ * This creates a sequential left-then-right reveal effect.
+ *
+ * These rules live here (not in the component's scoped styles) so that the
+ * scroll shell's unified .revealed class on the section wrapper can cascade
+ * into the component's DOM without needing ::ng-deep.
+ */
+.before-after__right {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 480ms ease, transform 480ms ease;
+}
+
+.pg-section.revealed .before-after__right {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 160ms;
+}
+
+/* Mobile: opacity only */
+@media (max-width: 768px) {
+  .before-after__right {
+    transform: none;
+  }
+
+  .pg-section.revealed .before-after__right {
+    transform: none;
   }
 }
 
