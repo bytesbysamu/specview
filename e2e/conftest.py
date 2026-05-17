@@ -102,6 +102,10 @@ def flask_server():
         yield base
         return
 
+    # Resolve SPEC_DOC_DIR to the repo-root data/ directory so Flask reads
+    # projects from the same directory the seed helpers write to.
+    _data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+
     env = {
         **os.environ,
         "CHAIN_PROVIDER": "mock",
@@ -111,6 +115,7 @@ def flask_server():
         # with "Bearer test-token" without a real user in the database.
         "SKIP_AUTH": "1",
         "FLASK_ENV": "development",
+        "SPEC_DOC_DIR": _data_dir,
     }
     import sys
     proc = subprocess.Popen(

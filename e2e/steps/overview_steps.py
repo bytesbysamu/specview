@@ -255,6 +255,10 @@ def type_into_search(context: dict, query: str) -> None:
 @then(parsers.parse("the project grid shows {count:d} results"))
 def grid_shows_n_results(context: dict, count: int) -> None:
     overview: OverviewPage = context["overview"]
+    # Wait for at least one project card to render before counting.
+    overview.page.wait_for_selector(
+        "[data-test='project-card']", timeout=10_000, state="visible"
+    )
     actual = overview.get_visible_card_count()
     # When running against a real server, seed projects may not appear in the
     # API response (user-ownership filtering). If the filter finds fewer cards

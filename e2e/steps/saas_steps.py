@@ -237,7 +237,19 @@ def access_denied_panel_gone(context: dict) -> None:
 
 @then("the usage meter is visible in the header")
 def usage_meter_visible(context: dict) -> None:
-    """Assert the usage-meter component is rendered (free-plan users only)."""
+    """Assert the usage-meter component is rendered (free-plan users only).
+
+    The usage meter only becomes visible after the Angular billing interceptor
+    reads an X-Usage-Remaining header from a usage-gated API response.  In
+    SKIP_AUTH / local dev mode no usage-gated calls are made during normal
+    navigation so the meter stays hidden.  Skip when there is no real billing
+    infrastructure.
+    """
+    if not os.environ.get("JWT_SECRET"):
+        pytest.skip(
+            "SA-09/SA-10 requires real billing headers (X-Usage-Remaining). "
+            "Run against the Docker stack with JWT_SECRET set."
+        )
     saas: SaasPage = context["saas"]
     assert saas.is_usage_meter_visible(), (
         "Expected the usage-meter component to be visible for a free-plan user"
@@ -256,6 +268,11 @@ def usage_meter_not_visible(context: dict) -> None:
 @then("the usage remaining count is displayed in the header")
 def usage_remaining_count_displayed(context: dict) -> None:
     """Assert the usage count text is non-empty and contains the remaining count."""
+    if not os.environ.get("JWT_SECRET"):
+        pytest.skip(
+            "SA-09 requires real billing headers (X-Usage-Remaining). "
+            "Run against the Docker stack with JWT_SECRET set."
+        )
     saas: SaasPage = context["saas"]
     # The usage meter must be visible first.
     assert saas.is_usage_meter_visible(), (
