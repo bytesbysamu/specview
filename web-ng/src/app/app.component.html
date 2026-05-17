@@ -69,20 +69,28 @@
           <span class="thinking-dot gen-dot"></span>
           <span class="thinking-dot gen-dot"></span>
           <span class="thinking-dot gen-dot"></span>
-          <span class="gen-status-project">{{ specGenProjectName() }}</span>
-          @if (specGenStep()) {
+          @if (specGenLoading()) {
+            <span class="gen-status-project">{{ specGenProjectName() }}</span>
+            @if (specGenStep()) {
+              <span class="gen-status-sep">·</span>
+              <span class="gen-status-step">{{ specGenStep() }}</span>
+            }
+            <span class="gen-status-timer" data-test="gen-status-timer">{{ specGenElapsed() }}</span>
+            @if (specGenJobId()) {
+              <button
+                class="gen-status-cancel"
+                data-test="cancel-generation-global"
+                [disabled]="cancelling()"
+                (click)="onCancel()">
+                {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
+              </button>
+            }
+          } @else if (aiLoading()) {
+            <span class="gen-status-project">{{ activeFile() }}</span>
             <span class="gen-status-sep">·</span>
-            <span class="gen-status-step">{{ specGenStep() }}</span>
-          }
-          <span class="gen-status-timer" data-test="gen-status-timer">{{ specGenElapsed() }}</span>
-          @if (specGenJobId()) {
-            <button
-              class="gen-status-cancel"
-              data-test="cancel-generation-global"
-              [disabled]="cancelling()"
-              (click)="onCancel()">
-              {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
-            </button>
+            <span class="gen-status-step">{{ aiOpLabel() }}</span>
+          } @else {
+            <span class="gen-status-step">{{ activeStepLabel() }}</span>
           }
         </div>
       }
@@ -255,38 +263,6 @@
             }
           </nav>
 
-          <!-- Sidebar status row — immediately below file nav -->
-          <div class="sidebar-status"
-               data-test="sidebar-status"
-               [class.sidebar-status--active]="mode() === 'active'"
-               [class.sidebar-status--success]="mode() === 'success-flash'"
-               [class.sidebar-status--failure]="mode() === 'failure'">
-            @switch (mode()) {
-              @case ('active') {
-                <span class="sidebar-status-dot sidebar-status-dot--active"></span>
-                <span class="sidebar-status-text">
-                  @if (specGenLoading()) {
-                    {{ specGenStep() ?? 'starting…' }}
-                  } @else {
-                    {{ activeStepLabel() }}
-                  }
-                </span>
-              }
-              @case ('success-flash') {
-                <span class="sidebar-status-dot sidebar-status-dot--success"></span>
-                <span class="sidebar-status-text">done</span>
-              }
-              @case ('failure') {
-                <span class="sidebar-status-dot sidebar-status-dot--failure"></span>
-                <span class="sidebar-status-text">{{ statusFailureMsg() }}</span>
-                <button class="sidebar-status-retry" (click)="retryLastOp()">retry</button>
-              }
-              @default {
-                <span class="sidebar-status-dot"></span>
-                <span class="sidebar-status-text">connected</span>
-              }
-            }
-          </div>
 
           <!-- Share button -->
           <div class="sidebar-share">
@@ -409,14 +385,6 @@
             </div>
           }
 
-          @if (aiLoading()) {
-            <div class="text-ops-thinking" data-test="polling-spinner">
-              <span class="thinking-dot"></span>
-              <span class="thinking-dot"></span>
-              <span class="thinking-dot"></span>
-              Thinking…
-            </div>
-          }
 
           @if (billingError()) {
             <div data-test="billing-gate-message" class="text-ops-error text-ops-billing">
@@ -433,29 +401,6 @@
           }
         }
 
-        <!-- Inline generation status for this project -->
-        @if (specGenLoading() && activeProject()) {
-          <div class="gen-status-bar gen-status-bar--active">
-            <div class="gen-status-track"></div>
-            <div class="gen-status-content">
-              <span class="thinking-dot gen-dot"></span>
-              <span class="thinking-dot gen-dot"></span>
-              <span class="thinking-dot gen-dot"></span>
-              <span class="gen-status-project">{{ specGenProjectName() }}</span>
-              @if (specGenStep()) {
-                <span class="gen-status-sep">·</span>
-                <span class="gen-status-step">{{ specGenStep() }}</span>
-              }
-              <button
-                class="gen-status-cancel"
-                data-test="cancel-generation"
-                [disabled]="cancelling()"
-                (click)="onCancel()">
-                {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
-              </button>
-            </div>
-          </div>
-        }
 
         @if (specGenError() && activeProject()) {
           <div class="text-ops-error">

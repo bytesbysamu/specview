@@ -37,20 +37,29 @@ class OverviewPage(AppPage):
         return self.page.locator("[data-test='section-tab']").count()
 
     def is_tab_active(self, name: str) -> bool:
-        """Return True if the tab labelled *name* carries the active CSS class."""
-        loc = self.page.locator("[data-test='section-tab']", has_text=name)
-        classes = loc.get_attribute("class") or ""
-        return "active" in classes.split()
+        """Return True if the tab labelled *name* carries the active CSS class.
 
-    def get_section_count_badge(self, section_name: str) -> int:
+        Waits briefly for Angular change detection to propagate the active
+        class after a section tab click.
+        """
+        import re as _re
+        from playwright.sync_api import expect as _expect
+
+        loc = self.page.locator("[data-test='section-tab']", has_text=name)
+        try:
+            _expect(loc).to_have_class(_re.compile(r"\bactive\b"), timeout=5_000)
+            return True
+        except Exception:
+            return False
+
+    def get_section_count_badge(self, section_name: str, timeout_ms: int = 10_000) -> int:
         """Return the integer shown in the count badge for the named section tab."""
-        badge_text = (
+        badge = (
             self.page.locator("[data-test='section-tab']", has_text=section_name)
             .locator("[data-test='section-tab-count']")
-            .inner_text()
-            .strip()
         )
-        return int(badge_text)
+        badge.wait_for(state="visible", timeout=timeout_ms)
+        return int(badge.inner_text().strip())
 
     # ── Status bar ────────────────────────────────────────────────────────
 

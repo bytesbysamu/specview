@@ -4,7 +4,7 @@ Feature: Overview — Masthead Banner and Update Notification (OV-02, OV-06)
   Scenario: Authenticated user sees the full masthead on the overview page
     Given the user is logged in and on the overview page
     Then the masthead is visible
-    And the masthead displays the edition label "Spec Doc"
+    And the masthead displays the edition label "Specview"
     And the masthead displays the title "Specview"
     And the masthead displays the tagline "All the Specs Fit to Read"
     And the masthead displays today's date in long format

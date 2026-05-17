@@ -1,0 +1,1 @@
+I want to know more about prepper and how preppers or acting in the United States or England because I've just learned a lot of things about Swiss and German prepper I'm interested in the political aspects of US and English preppers

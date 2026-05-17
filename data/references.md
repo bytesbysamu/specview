@@ -84,3 +84,26 @@ Flask as a ~150 line AI service boundary:
 - All routes: validate → call AI adapter → return streaming or JSON
 - No business logic in routes
 - Supabase accessed only through Flask, never from frontend directly
+
+## Specview UX Lineage — Playground & Design System Projects
+
+Prior UX work that feeds into Playground V3. Each project built on the last.
+
+| Project | Focus |
+|---------|-------|
+| `ux-reader-textops-1778237000` | Reader view, text ops & navigation UX |
+| `ux-polish-newspaper-1778238000` | Newspaper aesthetic, typographic rhythm |
+| `ux-grid-polish-1778368175` | App grid layout & spacing system |
+| `ux-landing-grid-polish-1778450371` | Landing page grid alignment |
+| `landing-v2-playground-1778400000` | Landing V2 playground exploration |
+| `unified-page-v3-1778873042014` | Unified single-page app + landing |
+| `live-component-playground-1778879053` | Live component playground (design patterns demo) |
+| `app-v3-state-extraction-1778916148` | App V3 state extraction + playground shell |
+| `ux-audit-design-refs-1778945980` | Playground 2.0 — UX audit + design system refs |
+
+Key decisions from this lineage:
+- Newspaper-feel typography (large headlines, tight body, generous whitespace)
+- Grid system with 12-col desktop / 4-col mobile
+- Signal-based state, no heavy frameworks
+- One long scroll > multi-page nav for showcase/onboarding flows
+- Design patterns demonstrated in use, not documented in isolation
