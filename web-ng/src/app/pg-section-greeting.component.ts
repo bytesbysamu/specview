@@ -24,10 +24,12 @@
  * it carries no functional behaviour that requires the scroll shell.
  */
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-pg-section-greeting',
   standalone: true,
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     .greeting {
@@ -66,7 +68,49 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
       line-height: 1.7;
       color: var(--ink-light);
       max-width: 540px;
+      margin-bottom: 40px;
+    }
+
+    .greeting__cta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
       margin-bottom: 0;
+    }
+
+    .greeting__cta-btn {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: var(--bg);
+      border: 2px solid var(--accent);
+      padding: 14px 36px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .greeting__cta-btn:hover {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+
+    .greeting__cta-link {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .greeting__cta-link:hover {
+      opacity: 0.7;
     }
 
     .greeting__rule {
@@ -120,6 +164,11 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
         and the AI pipeline turns it into analysis, epic, architecture, and an
         implementation guide a developer can act on.
       </p>
+
+      <div class="greeting__cta">
+        <a routerLink="/signup" class="greeting__cta-btn">Try it free</a>
+        <a routerLink="/login" class="greeting__cta-link">Sign in</a>
+      </div>
 
       <div class="greeting__rule">
         <span class="greeting__scroll-line"></span>

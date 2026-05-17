@@ -10,7 +10,7 @@ import { StatusBarComponent } from './status-bar.component';
 import { ProjectGridComponent } from './project-grid.component';
 import { SidebarV2Component } from './sidebar-v2.component';
 import { ReaderPanelComponent } from './reader-panel.component';
-import { LandingPitchComponent } from './landing-pitch.component';
+import { PgScrollShellComponent } from './pg-scroll-shell.component';
 import { UsageMeterComponent } from './components/usage-meter/usage-meter.component';
 
 @Component({
@@ -22,7 +22,7 @@ import { UsageMeterComponent } from './components/usage-meter/usage-meter.compon
     ProjectGridComponent,
     SidebarV2Component,
     ReaderPanelComponent,
-    LandingPitchComponent,
+    PgScrollShellComponent,
     UsageMeterComponent,
   ],
   templateUrl: './app-v3.component.html',
