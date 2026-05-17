@@ -33,10 +33,12 @@
  * static values embedded in the template and are not configurable inputs.
  */
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-pg-section-sendoff',
   standalone: true,
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     .sendoff {
@@ -110,6 +112,17 @@ import { Component, ChangeDetectionStrategy, input, output } from '@angular/core
       font-size: 14px;
       color: var(--ink-muted);
       font-style: italic;
+    }
+
+    .sendoff__signin-link {
+      color: var(--ink);
+      text-decoration: underline;
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .sendoff__signin-link:hover {
+      opacity: 0.7;
     }
 
     .sendoff__footer {
@@ -198,7 +211,7 @@ import { Component, ChangeDetectionStrategy, input, output } from '@angular/core
         <button class="sendoff__cta-btn" (click)="ctaClick.emit()">
           {{ ctaLabel() }}
         </button>
-        <span class="sendoff__cta-sub">No account required to try the demo.</span>
+        <span class="sendoff__cta-sub">Already have an account? <a routerLink="/login" class="sendoff__signin-link">Sign in</a></span>
       </div>
 
       <footer class="sendoff__footer">

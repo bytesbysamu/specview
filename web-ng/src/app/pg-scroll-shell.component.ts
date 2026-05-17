@@ -33,8 +33,10 @@ import {
   QueryList,
   ViewChild,
   ViewChildren,
+  inject,
   signal,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { PgSectionGreetingComponent } from './pg-section-greeting.component';
 import { PgSectionKitchenComponent } from './pg-section-kitchen.component';
 import { PgSectionPatternsComponent } from './pg-section-patterns.component';
@@ -140,6 +142,14 @@ export const SCROLL_SECTIONS: ScrollSection[] = [
   ],
 })
 export class PgScrollShellComponent implements AfterViewInit, OnDestroy {
+
+  private router = inject(Router);
+
+  // ── CTA navigation ────────────────────────────────────────────────────────
+
+  onCtaClick(): void {
+    this.router.navigate(['/signup']);
+  }
 
   // ── Dark mode (whole-page) ─────────────────────────────────────────────────
 

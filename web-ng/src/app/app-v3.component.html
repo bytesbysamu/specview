@@ -1,5 +1,7 @@
-<!-- Landing pitch — always visible -->
-<app-landing-pitch />
+<!-- Playground — visible when NOT logged in -->
+@if (!auth.isLoggedIn()) {
+  <app-pg-scroll-shell />
+}
 
 <!-- App workspace — visible when logged in -->
 @if (auth.isLoggedIn()) {

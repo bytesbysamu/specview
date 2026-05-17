@@ -98,7 +98,9 @@
       #sectionEl
     >
       <div class="pg-section__body">
-        <app-pg-section-sendoff />
+        <app-pg-section-sendoff
+        [ctaLabel]="'Get started free'"
+        (ctaClick)="onCtaClick()" />
       </div>
     </div>
 
