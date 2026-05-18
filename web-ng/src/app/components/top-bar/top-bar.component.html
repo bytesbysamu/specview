@@ -2,11 +2,41 @@
   <a class="top-bar__logo" routerLink="/" data-test="top-bar-logo">Specview</a>
   @if (auth.isLoggedIn()) {
     <button class="top-bar__auth-btn" (click)="logout()" data-test="top-bar-logout">
-      Log out
+      Sign out
     </button>
   } @else {
-    <a class="top-bar__auth-btn top-bar__auth-btn--login" routerLink="/app" data-test="top-bar-login">
-      Log in
-    </a>
+    <button class="top-bar__auth-btn top-bar__auth-btn--login" (click)="toggleLogin()" data-test="top-bar-login">
+      Sign in
+    </button>
   }
 </header>
+
+@if (showLoginForm() && !auth.isLoggedIn()) {
+  <div class="login-dropdown" data-test="login-form">
+    <input
+      #emailEl
+      type="email"
+      placeholder="Email"
+      class="login-input"
+      (keydown.enter)="passwordEl.focus()" />
+    <input
+      #passwordEl
+      type="password"
+      placeholder="Password"
+      class="login-input"
+      (keydown.enter)="login(emailEl.value, passwordEl.value)" />
+    @if (loginError()) {
+      <span class="login-error">{{ loginError() }}</span>
+    }
+    <button
+      class="login-submit"
+      [disabled]="loginLoading()"
+      (click)="login(emailEl.value, passwordEl.value)">
+      @if (loginLoading()) {
+        Signing in…
+      } @else {
+        Sign in
+      }
+    </button>
+  </div>
+}

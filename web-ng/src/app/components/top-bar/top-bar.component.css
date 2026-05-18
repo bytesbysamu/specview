@@ -42,3 +42,53 @@
   border-color: var(--ink-muted);
   background: var(--surface-raised);
 }
+
+.login-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+}
+
+.login-input {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+}
+
+.login-input:focus {
+  border-color: var(--ink-muted);
+}
+
+.login-submit {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+}
+
+.login-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-error {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--red, #c33);
+}

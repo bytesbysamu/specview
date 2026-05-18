@@ -1463,6 +1463,50 @@ body {
 }
 .logout-btn:hover { background: var(--ink); color: var(--bg); }
 
+/* ── Login bar (inline sign-in form) ───────────── */
+.login-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--surface, var(--bg));
+  border-bottom: 1px solid var(--border);
+}
+.login-bar-input {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+}
+.login-bar-input:focus { border-color: var(--ink-muted); }
+.login-bar-btn {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+}
+.login-bar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-bar-close {
+  font-size: 16px;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.login-bar-error {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--red, #c33);
+}
+
 /* ── New project button (masthead) ───────────── */
 .new-project-btn {
   font-family: 'Source Sans 3', sans-serif;

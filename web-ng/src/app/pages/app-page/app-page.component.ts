@@ -12,7 +12,6 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { DemoAwareProjectsService } from '../../services/demo-aware-projects.service';
 import { Project, Spec } from '../../services/projects.service';
@@ -29,7 +28,7 @@ import { StatusBarComponent } from '../../status-bar.component';
 @Component({
   selector: 'app-app-page',
   standalone: true,
-  imports: [ProjectGridComponent, ReaderPanelComponent, StatusBarComponent, RouterLink],
+  imports: [ProjectGridComponent, ReaderPanelComponent, StatusBarComponent],
   templateUrl: './app-page.component.html',
   styleUrl: './app-page.component.css',
 })
