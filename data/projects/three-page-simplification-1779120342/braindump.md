@@ -31,3 +31,32 @@ The landing page IS the app. There is no separate marketing hero page. When you 
 - No `/app` route. No separate landing hero. No CTA to "open the app" — you're already in it.
 - Login button in the top bar. That's how you authenticate.
 - The old monolithic app.component.ts shell is dead. Everything goes through the new simplified AppPageComponent at root.
+
+---
+
+## Audit findings and fixes (2026-05-18)
+
+Deep cleanup audit after simplification landed. Key findings:
+
+### Dead code removed
+- 17 orphaned files deleted: app-v2/v3 shells, app-page component, live-playground, landing-pitch, unused top-bar
+- All were unreferenced by any route or import
+
+### Route references fixed
+- `/login` and `/signup` routes restored — these pages stay as-is
+- Login/signup components restored from pre-simplification
+- Playground CTA buttons correctly point to `/signup`
+- Token lifecycle auth failure correctly navigates to `/login`
+- Billing interceptor 429 handling fixed (no redirect to deleted `/upgrade`)
+
+### Masthead cleanup
+- Upgrade button, usage meter, and "New" button hidden for anonymous users — only visible when logged in
+- Sign-in link in masthead goes to `/login` page (not inline form)
+- Sign-out button visible only when authenticated
+
+### Final route table
+- `/` — the real app with demo data (anon) or real data (auth)
+- `/login` — login page (full-page, no app shell)
+- `/signup` — signup page (full-page, no app shell)
+- `/playground` — internal dev workbench
+- Everything else → redirects to `/`

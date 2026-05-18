@@ -1,9 +1,0 @@
-/* ── V2 Shell Layout ──────────────────────────────────────────────────────── */
-
-/* .v2-shell extends .page (max-width, margin, padding) from global styles.css.
-   Additional layout behaviour only. */
-.v2-shell {
-  min-height: 100dvh;
-  background: var(--bg);
-  color: var(--ink);
-}

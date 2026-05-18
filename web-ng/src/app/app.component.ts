@@ -4,7 +4,7 @@ import { trigger, transition, style, animate, query, group } from '@angular/anim
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
@@ -75,7 +75,7 @@ const GEN_POLL_INTERVAL = 10_000;
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, WordCountPipe, UsageMeterComponent],
+  imports: [RouterOutlet, RouterLink, WordCountPipe, UsageMeterComponent],
   templateUrl: './app.component.html',
   animations: [
     trigger('panelEnter', [
@@ -113,14 +113,14 @@ export class AppComponent implements OnInit, OnDestroy {
   subscription = inject(SubscriptionService);
   private router = inject(Router);
 
-  /** Whether the current route is a full-page route (only /playground). */
+  private static FULL_PAGE_ROUTES = ['/playground', '/login', '/signup'];
   isFullPageRoute = signal(false);
 
   private _routeSub = this.router.events.pipe(
     filter((e): e is NavigationEnd => e instanceof NavigationEnd)
   ).subscribe(e => {
     const path = e.urlAfterRedirects.split('?')[0];
-    this.isFullPageRoute.set(path.startsWith('/playground'));
+    this.isFullPageRoute.set(AppComponent.FULL_PAGE_ROUTES.some(r => path === r || path.startsWith(r + '/')));
   });
 
   readonly sections = NAV_SECTIONS;
@@ -360,7 +360,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor() {
     // Set initial full-page route state
     const initialPath = this.router.url.split('?')[0];
-    this.isFullPageRoute.set(initialPath.startsWith('/playground'));
+    this.isFullPageRoute.set(AppComponent.FULL_PAGE_ROUTES.some(r => initialPath === r || initialPath.startsWith(r + '/')));
 
     // Load projects on every auth state change (demo data when not logged in, real when logged in)
     effect(() => {
@@ -385,7 +385,7 @@ export class AppComponent implements OnInit, OnDestroy {
         setTimeout(() => this.pulsingSections.set(new Set()), 250);
       }
       this._prevSectionCounts = { ...counts };
-    }, { allowSignalWrites: true });
+    });
   }
 
   // ── Lifecycle ─────────────────────────────────────

@@ -1,20 +1,10 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { tap, catchError, throwError } from 'rxjs';
 import { SubscriptionService } from '../services/subscription.service';
 import { usageRemaining } from '../state/usage.state';
 
-interface LimitErrorBody {
-  error: string;
-  feature?: string;
-  limit?: number;
-  reset_at?: string;
-  upgrade_url?: string;
-}
-
 export const billingInterceptor: HttpInterceptorFn = (req, next) => {
-  const router = inject(Router);
   const subscription = inject(SubscriptionService);
 
   return next(req).pipe(
@@ -42,13 +32,6 @@ export const billingInterceptor: HttpInterceptorFn = (req, next) => {
           return throwError(() => err);
         }
 
-        const body = err.error as LimitErrorBody | null;
-        const feature = body?.feature ?? 'unknown';
-        const reason = plan === 'lapsed' ? 'payment_lapsed' : 'limit_reached';
-
-        router.navigate(['/upgrade'], {
-          queryParams: { reason, feature },
-        });
       }
 
       return throwError(() => err);
