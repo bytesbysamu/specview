@@ -77,6 +77,6 @@ export class LandingCtaBarComponent {
   private router = inject(Router);
 
   goToSignup(): void {
-    this.router.navigate(['/signup']);
+    this.router.navigate(['/']);
   }
 }
