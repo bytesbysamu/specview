@@ -411,8 +411,13 @@
 
           @if (aiError()) {
             <div class="text-ops-error">
-              <span class="overline">Error</span>
-              Could not reach AI — check connection.
+              @if (!auth.isLoggedIn()) {
+                <span class="overline">Sign in required</span>
+                <a routerLink="/login">Sign in</a> or <a routerLink="/signup">sign up</a> to use AI features.
+              } @else {
+                <span class="overline">Error</span>
+                Could not reach AI — check connection.
+              }
             </div>
           }
         }
