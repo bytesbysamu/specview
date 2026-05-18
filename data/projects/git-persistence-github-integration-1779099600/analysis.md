@@ -1,32 +1,31 @@
 # 🔍 Git Persistence — GitHub Integration — Analysis
 
 ## The Problem
-Specview's generated specs live on ephemeral container storage with no backup. A `docker compose up` on a fresh image wipes all project data — files, git history, SQLite. A complete local git layer exists (8 ops, pygit2, module-isolated) but nothing pushes off-box, so durability is zero.
+Specview's generated specs live in ephemeral container storage with no persistent volume in production. A single `docker compose up` wipes all user data. A complete local git layer exists (8 operations, pygit2-backed) but has zero off-box durability — it's version control that can't survive a restart.
 
 ## Hard Constraints
-- No Redis, no external queue — background push must be in-process (threading / module-level dict + Lock per builder profile)
-- pygit2 is abstracted behind `modules.data.git_store` — GitHub layer must not leak into feature modules
-- Neon Postgres is the DB — schema migrations must be additive (no destructive ALTER on live tables)
-- Single gunicorn + nginx deploy via Coolify — no sidecar worker process
-- GitHub API: 5000 req/hr per installation token; pipeline = ~6 files, so ceiling is ~830 runs/hr/user
+- No Redis, no external queue — background push must use in-process state (`threading.Lock` + module-level dict) or `threading.Thread`
+- GitHub API: 5000 req/hr per installation token — not a real bottleneck at current scale
+- pygit2 is already abstracted behind `modules.data.git_store` — GitHub adapter must slot in at that boundary, not below it
+- Neon Postgres is the DB — schema migrations must be Alembic-managed
+- Single gunicorn worker assumed — in-process queue dies on worker restart; unsynced writes must be recoverable from DB state alone
 
 ## Open Questions
-- **GitHub App vs OAuth App?** Brain dump chose App for fine-grained perms and installation tokens — but App requires JWT signing, webhook verification, and a registered callback. OAuth App is three env vars and a token. For < 100 users on a solo-founder SaaS, OAuth App likely ships a week faster. Decision needed before Phase 2.
-- **Push mechanism without a queue?** "Async push-on-write" is specified but the stack forbids Redis/Celery. Options: (a) `threading.Thread` fire-and-forget per commit, (b) in-process queue with `queue.Queue` + single daemon thread, (c) `BackgroundTasks` if migrating to Starlette. Pick one — it shapes retry logic and failure handling.
-- **Per-file (Contents API) vs per-commit (Git Data API)?** Pipeline writes 5-6 files sequentially. Contents API = 6 round-trips, trivial code. Git Data API = 1 commit, complex tree-building. Recommend: start Contents API, batch later only if latency matters.
-- **Force-push on conflict — acceptable?** Brain dump says "Specview wins, log a warning." This silently destroys any edit a user makes on GitHub. Either enforce read-only via branch protection or surface a visible warning. Silent data loss undermines the trust pitch.
+- **Push granularity**: Per-file (Contents API, simple, 6 calls/pipeline) vs per-commit (Git Data API, 1 call, complex tree-building)? → Start per-file; batch is premature optimization for a solo-user product
+- **Queue durability**: Brain dump says "async background worker" but constraints forbid external queues. What happens to in-flight pushes when gunicorn restarts? → `sync_status = pending` rows in Neon ARE the queue; a startup sweep retries them
+- **Conflict policy**: "Specview wins, force push" works today. But the moment a user edits on GitHub, you silently destroy their changes. → Decide now: block GitHub edits via branch protection, or detect and warn? Don't ship silent overwrite.
+- **One repo vs N repos**: Brain dump recommends one repo. Correct — but the directory scheme (`slug-timestamp/`) means project renames or slug collisions need a policy. What happens to the GitHub path when a project is renamed locally?
 
 ## Dependencies & Sequencing
-- Persistent volume (Phase 1) is **not a GitHub feature** — it's an infrastructure fix that blocks nothing and should ship independently, today
-- GitHub App/OAuth registration is a manual step that gates all integration code
-- Schema migration (`github_installation_id`, `sync_status` columns) must land before push logic
-- Push layer depends on token exchange service — build auth first, push second
-- Pull recovery (Phase 4) depends on a stable push format — cannot build restore before the repo structure is proven in production
+- **Persistent volume (Phase 1) is independent** — do it today, no code changes, pure `docker-compose.yml` fix
+- **GitHub App registration** blocks all API work — do it before writing any adapter code, because the permission scopes shape the implementation
+- **Token exchange service** blocks push and provisioning — and installation tokens expire hourly, so the refresh logic must exist before any GitHub write
+- **Schema migration** (`github_installation_id`, `sync_status`) blocks sync tracking but not the OAuth flow itself — can run in parallel with App setup
+- **Pull recovery (Phase 4) depends on push (Phase 3) being stable** — you can't test restore without real GitHub data to restore from
 
 ## Explicitly Out of Scope
-- **Pull-based recovery / restore endpoint** — this is a sync engine, not a push feature. Ship push, prove the format, then scope restore as its own epic. Re-scope trigger: first actual data loss incident post-GitHub-push.
-- **Import from existing GitHub repos** — different user flow, different conflict model, different UX. Re-scope trigger: user requests.
-- **Merge UI for external edits** — brain dump already deferred it; keep it deferred. Re-scope trigger: branch protection proves insufficient.
-- **Collaboration features (PRs, Issues, shared repos)** — marketing copy, not engineering scope. Re-scope trigger: multi-user demand.
-- **Phase 5 backfill migration job** — premature. No users have GitHub connected yet. Just push-on-connect for existing projects as part of Phase 3. Re-scope trigger: users exist who connected before push was live.
-- **Persistent volume fix (Phase 1)** — ship it now as a one-line infra PR, not as part of this epic.
+- **Import from external GitHub repos** — different data model, no `project.json` guarantee, unknowable directory structure. Revisit if users ask.
+- **Merge UI for conflicts** — requires diff3, UI work, and a policy nobody needs yet. Revisit when a second user edits on GitHub and complains.
+- **Collaboration features (PRs, Issues, shared repos)** — the brain dump lists these as benefits but they're GitHub-native; Specview builds nothing. Don't let them creep into the epic.
+- **Multi-repo-per-user** — one repo. If someone hits 100+ projects, that's a success problem to solve later.
+- **Backfill job (Phase 5)** as a separate phase — fold it into Phase 3. When a user connects GitHub, push everything they have. It's the same code path. A separate phase is artificial.
