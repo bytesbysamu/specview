@@ -166,7 +166,7 @@ import { RouterLink } from '@angular/router';
       </p>
 
       <div class="greeting__cta">
-        <a routerLink="/" class="greeting__cta-btn">Try it free</a>
+        <a routerLink="/signup" class="greeting__cta-btn">Try it free</a>
         <a routerLink="/login" class="greeting__cta-link">Sign in</a>
       </div>
 
