@@ -1,0 +1,12 @@
+<header class="top-bar">
+  <a class="top-bar__logo" routerLink="/" data-test="top-bar-logo">Specview</a>
+  @if (auth.isLoggedIn()) {
+    <button class="top-bar__auth-btn" (click)="logout()" data-test="top-bar-logout">
+      Log out
+    </button>
+  } @else {
+    <a class="top-bar__auth-btn top-bar__auth-btn--login" routerLink="/app" data-test="top-bar-login">
+      Log in
+    </a>
+  }
+</header>

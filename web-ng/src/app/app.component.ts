@@ -112,7 +112,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private router = inject(Router);
 
   /** Routes that render via router-outlet instead of the app shell. */
-  private static FULL_PAGE_ROUTES = ['/upgrade', '/signup', '/login', '/s', '/v2', '/v3', '/playground'];
+  private static FULL_PAGE_ROUTES = ['/app', '/playground'];
   /** Exact-match paths that render via router-outlet (prefix matching is unsafe for ''). */
   private static FULL_PAGE_EXACT = [''];
   isFullPageRoute = signal(false);
@@ -399,6 +399,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this._routeSub.unsubscribe();
     this.stopPolling();
     this._stopGenPoll();
     this._stopSyncElapsedTimer();
