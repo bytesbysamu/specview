@@ -1,0 +1,3 @@
+# Braindump
+
+Just an idea.

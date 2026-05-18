@@ -1,0 +1,15 @@
+Three hours after launching my post on r/SideProject — titled "I spent 5 months building a tool that turns messy braindumps into engineering specs in 45 seconds" — the early numbers were already telling a story.
+
+The post had climbed to #22 on the subreddit for the day and, more surprisingly, ranked as my #6 post of all time. In just those first few hours, it pulled in 618 views, gaining 152 in the most recent count. The view trajectory showed a quick ramp: 97 views in the first hour, 136 in the second, a spike to 221 in the third, then 152 in the fourth before the remaining hours of the 48-hour tracking window had yet to unfold.
+
+Geographically, the audience was split almost evenly across three regions — the United States and India each accounted for 12.8% of views, with Switzerland close behind at 12.6%. The remaining 61.8% was scattered across the rest of the world.
+
+Engagement was modest but encouraging: 4 upvotes with a perfect 100% upvote ratio, and 9 comments — with one more trickling in recently. No shares, crossposts, or awards yet, but the conversation in the comments was substantive.
+
+The top comment, from a user called addicted-coffee, offered sharp advice: "For dev tools, make the use case painfully specific. Devs ignore vague productivity claims but respond to 'this removes this annoying workflow.'" They even suggested it could work as a ShipBoost editorial spotlight — if the writeup leaned into the workflow pain rather than just listing features.
+
+I replied, trying to take that feedback to heart. The specific pain Specview removes, I explained, is that familiar first hour or two of a build session — the one you spend turning the chaos in your head into something structured enough to actually work from. Reorganizing notes, scoping the project, thinking through architecture. Specview collapses that step. You paste the mess, and you get it back structured. The analysis catches scope problems you'd have missed on your own, and the implementation guide produces file paths and test cases you can hand directly to an AI coding agent.
+
+Another commenter, Fun-Foot711, raised a question that clearly resonated — privacy. They wanted to know whether everything runs through my API key or if users need to bring their own, and admitted that sharing raw project ideas with a third-party tool felt like a real concern, especially when the tool's whole purpose is organizing early-stage thinking. Still, they acknowledged it sounded great for personal use and offered encouragement to keep going.
+
+Three hours in, the signal was clear: the idea resonated, but the messaging needed sharpening. People wanted specifics — not what the tool does, but what frustration it eliminates. And trust, especially around data privacy, would need to be addressed head-on if Specview was going to win over the developer audience it was built for.
