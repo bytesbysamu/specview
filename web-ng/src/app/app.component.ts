@@ -8,6 +8,7 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
+import { DemoAwareProjectsService } from './services/demo-aware-projects.service';
 import { AiService } from './services/ai.service';
 import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
 import { projectTeaser, countTasks } from './services/project-teaser';
@@ -106,27 +107,20 @@ const GEN_POLL_INTERVAL = 10_000;
 export class AppComponent implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private projectsSvc = inject(ProjectsService);
+  private demoSvc = inject(DemoAwareProjectsService);
   private aiSvc = inject(AiService);
   auth = inject(AuthService);
   subscription = inject(SubscriptionService);
   private router = inject(Router);
 
-  /** Routes that render via router-outlet instead of the app shell. */
-  private static FULL_PAGE_ROUTES = ['/app', '/playground'];
-  /** Exact-match paths that render via router-outlet (prefix matching is unsafe for ''). */
-  private static FULL_PAGE_EXACT = [''];
+  /** Whether the current route is a full-page route (only /playground). */
   isFullPageRoute = signal(false);
-
-  private static _isFullPage(path: string): boolean {
-    if (AppComponent.FULL_PAGE_EXACT.includes(path)) return true;
-    return AppComponent.FULL_PAGE_ROUTES.some(r => path === r || path.startsWith(r + '/'));
-  }
 
   private _routeSub = this.router.events.pipe(
     filter((e): e is NavigationEnd => e instanceof NavigationEnd)
   ).subscribe(e => {
     const path = e.urlAfterRedirects.split('?')[0];
-    this.isFullPageRoute.set(AppComponent._isFullPage(path));
+    this.isFullPageRoute.set(path.startsWith('/playground'));
   });
 
   readonly sections = NAV_SECTIONS;
@@ -177,6 +171,10 @@ export class AppComponent implements OnInit, OnDestroy {
   shareCopied = signal(false);
   shareLoading = signal(false);
 
+  // Login form
+  showLoginForm = signal(false);
+  loginLoading = signal(false);
+  loginError = signal<string | null>(null);
 
   toolbarFloating = computed(() => !!(this.activeProject() && this.currentSpec()));
   polling = signal(false);
@@ -360,22 +358,21 @@ export class AppComponent implements OnInit, OnDestroy {
   expandedProject = computed(() => this.contextContent() !== null ? 'Context' : (this.activeProject()?.name ?? ''));
 
   constructor() {
-    // Set initial full-page route state for direct navigation (e.g. /upgrade, /s/slug)
+    // Set initial full-page route state
     const initialPath = this.router.url.split('?')[0];
-    this.isFullPageRoute.set(AppComponent._isFullPage(initialPath));
+    this.isFullPageRoute.set(initialPath.startsWith('/playground'));
 
-    // Reload projects immediately whenever the user becomes logged in
+    // Load projects on every auth state change (demo data when not logged in, real when logged in)
     effect(() => {
-      if (this.auth.isLoggedIn()) {
-        this.loadProjects().then(() => {
-          if (!this.pollTimer) {
-            this.pollRetries = 0;
-            this.pollTimer = setInterval(() => this.checkForUpdates(), REFRESH_INTERVAL);
-          }
-        });
-      } else {
-        this.stopPolling();
-      }
+      const loggedIn = this.auth.isLoggedIn();
+      this.loadProjects().then(() => {
+        if (loggedIn && !this.pollTimer) {
+          this.pollRetries = 0;
+          this.pollTimer = setInterval(() => this.checkForUpdates(), REFRESH_INTERVAL);
+        } else if (!loggedIn) {
+          this.stopPolling();
+        }
+      });
     });
 
     // Pulse section count badges when their count changes
@@ -562,7 +559,7 @@ export class AppComponent implements OnInit, OnDestroy {
   // ── Projects ──────────────────────────────────────
   async loadProjects() {
     try {
-      const list = await this.projectsSvc.listProjects();
+      const list = await this.demoSvc.getProjects();
       this.projects.set(list);
       this.knownCount.set(list.length);
       this._markSyncNow();
@@ -1128,6 +1125,25 @@ export class AppComponent implements OnInit, OnDestroy {
 
   logout() {
     this.auth.signOut();
+  }
+
+  toggleLoginForm() {
+    this.showLoginForm.update(v => !v);
+    this.loginError.set(null);
+  }
+
+  async doLogin(email: string, password: string) {
+    if (!email || !password) return;
+    this.loginLoading.set(true);
+    this.loginError.set(null);
+    try {
+      await this.auth.login(email, password);
+      this.showLoginForm.set(false);
+    } catch (e: any) {
+      this.loginError.set(e?.error?.error ?? 'Login failed');
+    } finally {
+      this.loginLoading.set(false);
+    }
   }
 
   async shareProject() {
