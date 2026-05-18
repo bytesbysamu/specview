@@ -1,0 +1,9 @@
+- [User profile — Sam, full-stack engineer in Zurich finance](user_profile.md) — finance domain insider in Zurich; major unfair advantage for high-WTP B2B SaaS to small Swiss finance firms
+- [User goals and constraints](user_goals.md) — Sam wants side income; coding is easy, distribution is the bottleneck; favor low-hustle channels
+- [Swiss finance B2B SaaS landscape](swiss_finance_landscape.md) — incumbents, wedge opportunities, FINMA register, Parqet benchmark, DACH peer founders
+- [Distribution channels for Swiss finance](distribution_channels_swiss_finance.md) — FINMA register, Infinity.swiss, VAPA, TreuhandSuisse + Sam's DE/FR fluency advantage
+- [Marc Lou pre-sell playbook](marc_lou_presell_playbook.md) — 5-sentence cold email + pre-sell call pattern; the right outreach style for Sam's constraints
+- [2026 portfolio assessment (April 2026)](project_portfolio_assessment.md) — strategic state of the 11 projects: what's live, stalled, and should be killed
+- [Reuse Claude Code Max subscription, avoid new API costs](feedback_claude_code_subscription_reuse.md) — default to `claude -p` subprocess pattern (spec-doc style) over API keys for all AI tooling
+- [Claude Code Max has overage disabled — agent-wrapper constraint](project_openclaw_max_plan_constraint.md) — Sam's plan rejects overage (`org_level_disabled_until`); wrappers must keep per-turn tokens small
+- [OpenClaw install location and entry points](reference_openclaw_install.md) — repo, compose files, Control UI, SETUP-NOTES.md location

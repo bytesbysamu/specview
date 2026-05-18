@@ -1,0 +1,87 @@
+<div class="app-page">
+
+  <!-- Masthead -->
+  <header class="app-masthead">
+    <span class="app-brand">Specview</span>
+    <div class="app-masthead-actions">
+      @if (auth.isLoggedIn()) {
+        <button class="app-btn" (click)="auth.signOut()">Sign out</button>
+      }
+    </div>
+  </header>
+
+  <!-- Loading / error banner -->
+  @if (dataSvc.loading()) {
+    <div class="app-loading-banner" data-test="app-loading-banner">
+      Loading…
+    </div>
+  }
+
+  @if (loadError()) {
+    <div class="app-error-banner" data-test="app-load-error">
+      {{ loadError() }}
+    </div>
+  }
+
+  <!-- Status bar (generation state) -->
+  <app-status-bar [mode]="'idle'" />
+
+  <!-- Two-pane layout: project grid on the left, reader on the right -->
+  <div class="app-body">
+
+    <!-- Project grid panel -->
+    <div class="app-grid-panel">
+      @if (auth.isLoggedIn() && projects().length === 0 && !dataSvc.loading()) {
+        <!-- Empty state — only shown to authenticated users with no projects -->
+        <div class="app-empty-state" data-test="empty-state">
+          <p class="app-empty-heading">No projects yet</p>
+          <p class="app-empty-sub">Paste a braindump to generate your first spec set.</p>
+        </div>
+      } @else {
+        <app-project-grid
+          [activeSection]="activeSection()"
+          [filteredProjects]="filteredProjects()"
+          [projectsBySection]="projectsBySection()"
+          [columns]="columns()"
+          [contextFiles]="[]"
+          [sectionLabel]="sectionLabel()"
+          [teaserFn]="teaserFor.bind(this)"
+          [sectionFn]="sectionForProject.bind(this)"
+          (projectSelected)="selectProject($event)" />
+      }
+    </div>
+
+    <!-- Reader panel -->
+    <div class="app-reader-panel">
+      <app-reader-panel
+        [activeProject]="activeProject()"
+        [currentSpec]="currentSpec()"
+        [accessDenied]="false"
+        [expandedTitle]="expandedTitle()"
+        [expandedProject]="activeProject()?.name ?? ''"
+        [activeFileType]="currentSpec()?.label ?? null"
+        [parsedContent]="parsedContent()"
+        [parsedAiResult]="''"
+        [diffHtmlUnified]="''"
+        [aiResult]="null"
+        [aiLoading]="false"
+        [aiError]="false"
+        [aiLatencyMs]="null"
+        [activeOp]="null"
+        [isAdditiveOp]="false"
+        [billingError]="null"
+        [copied]="false"
+        [brainstormQuestion]="''"
+        [canGenerateSpecs]="false"
+        [specGenLoading]="false"
+        [specGenProjectName]="null"
+        [specGenStep]="null"
+        [specGenError]="null"
+        [specGenFailedStep]="null"
+        [cancelling]="false"
+        (closeExpanded)="closeReader()" />
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,21 @@
+- [Trendfy project context](project_trendfy.md) — wardrobai/trendfy.me monorepo, executor container, dev setup
+- [Neon DB setup](reference_neon.md) — Neon Postgres connection, shared with Springular
+- [User profile](user_sam.md) — Sam's role, projects, preferences
+- [Never push to master](feedback_no_push_master.md) — Always create PRs, never direct push
+- [Push means create PR + monitor CI](feedback_push_means_pr.md) — every push → open PR (if not already) + watch CI to completion
+- [PR target is master](feedback_pr_target.md) — PRs are feature branch → master; live is the deploy branch (separate step)
+- [6-month plan & strategy](project_6month_plan.md) — Apr-Oct 2026 super app + App Store factory, distribution-first
+- [Brain dumps: no tech decisions](feedback_braindump_no_tech.md) — what/why only; API shapes, schemas, module paths belong in architecture, not braindump
+- [UX revamp validated](feedback_ux_revamp_validation.md) — picks + pick-detail are the standout surfaces; reference bar for other worlds
+- [RevenueCat iOS fix](feedback_revenuecat_ios.md) — SubscriptionPeriod ambiguity: keep purchases-capacitor updated, iOS target >= 16.0
+- [Never restart executor](feedback_never_restart_executor.md) — Use docker exec, never docker compose down/restart
+- [spec-doc monorepo refactors](project_spec_doc_refactor.md) — lift docs/ to root, move projects/ into api/resources/
+- [spec-doc full spec docs](feedback_spec_doc_full_specs.md) — each epic needs analysis/epic/architecture/timeline, not just README
+- [Always run CI before pushing](feedback_run_ci_before_push.md) — run full pytest suite before merging or pushing to master in spec-doc
+- [exec-guide always creates summary file](feedback_exec_guide_summary.md) — write execution-report.md to project dir after every exec-guide run
+- [Follow all skill steps — no skipping](feedback_follow_skill_steps.md) — execute every step in a skill's Procedure, including post-steps (dev-test, dev-review, summary)
+- [Smoke test locally before pushing](feedback_smoke_test_before_push.md) — rebuild + verify in browser before git push, always
+- [Always use CHAIN_PROVIDER=cli](feedback_chain_provider_cli.md) — specview/spec-doc always uses cli provider + ~/.claude mount, never SDK with API key
+- [Revert speculative changes after config fix](feedback_revert_unnecessary_changes.md) — if root cause was config not code, revert all speculative changes before closing out
+- [Newspaper design system](reference_design_system.md) — canonical UI snapshot: tokens, components, patterns for ClawBoi + Specview landing
+- [Docker healthchecks: 127.0.0.1 not localhost](feedback_healthcheck_ipv6.md) — localhost → IPv6 ::1, services bind IPv4; CI compose-lint enforces this
