@@ -148,7 +148,7 @@ export class PgScrollShellComponent implements AfterViewInit, OnDestroy {
   // ── CTA navigation ────────────────────────────────────────────────────────
 
   onCtaClick(): void {
-    this.router.navigate(['/']);
+    this.router.navigate(['/signup']);
   }
 
   // ── Dark mode (whole-page) ─────────────────────────────────────────────────
