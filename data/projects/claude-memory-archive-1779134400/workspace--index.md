@@ -1,0 +1,12 @@
+- [WardrobAI Summary](project_wardrobai_summary.md) — Full pipeline summary: 3 notebooks, models tested, costs, findings
+- [User Profile](user_samu.md) — User context and preferences
+- [Scope: ai-models](feedback_scope_ai_models.md) — In /workspace/ai-models/, stay backend/model-pipeline only. Don't extend into app/frontend concerns unprompted.
+- [Bubls — no foreign URL links](feedback_bubls_no_external_links.md) — Event cards route to in-app details page, never open external URLs. Bubls owns the full event data.
+- [Memory autonomy](feedback_memory_autonomy.md) — Save memories proactively, don't ask permission
+- [Ionstarter migration](project_ionstarter.md) — New mobile base at /projects/ionstarter/, incremental feature migration from bubls
+- [Daily push + worktree cleanup](feedback_daily_push_cleanup.md) — Push to remote and prune stale worktrees at least once per day
+- [Use spec-doc pipeline](feedback_use_specdoc_pipeline.md) — Never hand-write spec docs; write braindump, user runs it through GUI/API
+- [Never manual](feedback_never_manual.md) — Always use spec-doc for guides, specs, task-exec. Never hand-write these artifacts.
+- [Spec-doc pipeline](reference_specdoc_pipeline.md) — Atomic workflow: generate-spec → parse files → write to projects/ → push to sidebar. Always all 4 steps.
+- [Task-exec workflow](feedback_task_exec_workflow.md) — "do task X" = assemble prompt from epic + architecture + context blocks mechanically. Never hand-write executor prompts.
+- [Guide format: TDD-only](feedback_guide_format_tdd.md) — Future guides contain test cases only, not implementation code. Executor figures out code from tests.

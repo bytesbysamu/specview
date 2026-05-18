@@ -1,0 +1,10 @@
+- [Always restart + integration-test after server changes](feedback_restart_and_integration_test.md) — don't trust compile-green as proof the running service has your changes
+- [Bubls: each page is its own maxed-out app](feedback_bubls_design_direction.md) — dark-only no toggle; reject design-system uniformity, each surface gets a distinct visual world
+- [Sam operates at the architect layer](user_operating_layer.md) — manage executor capacity in parallel; surface strategy-level decisions; don't drag him into per-line review
+- [Deviation count is the spec-quality verdict](feedback_deviation_budget.md) — 0–4 normal, 10+ = underspecified spec, fix the prompt before next batch
+- [Spec-doc essay — hours braindump→TestFlight](project_braindump_to_testflight_essay.md) — track wall-clock on Bubls UX run; lead with the feeling, not the internals
+- [Status updates always render as tables](feedback_always_tables.md) — dashboard shape for live progress, not prose
+- [Braindump input template](reference_braindump_template.md) — 3 sections (What / Why now / What's missing), no impl details; standard input form for generate-spec
+- [Everything through spec-doc](feedback_everything_through_specdoc.md) — NEVER fix directly, NEVER skip the pipeline; every change starts as a braindump → generate-spec → tasks → execute
+- [Chain epic gen with task gen](feedback_chain_epic_with_taskgen.md) — after generate-spec, IMMEDIATELY run regen-task --all --parallel 3; epic without task specs is a broken state
+- [Executors must use worktrees](feedback_executor_worktrees.md) — never write to live working dir; compile errors must be caught at INTEGRATE, not seen by user mid-flight
