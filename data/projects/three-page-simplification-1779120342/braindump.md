@@ -19,3 +19,15 @@ Keep the playground exactly as-is for our own design iteration. We use it to pro
 
 ## What gets removed
 Everything that isn't hero, app, or playground. Extra landing sections, feature pages, pricing pages, about pages, complex footer navigation — all of it goes. If it's not one of the three pages, it doesn't exist.
+
+---
+
+## Correction: actually TWO pages, not three
+
+The landing page IS the app. There is no separate marketing hero page. When you visit specview.dev you see the real app running with mock data. That's the pitch — the product sells itself by being visible immediately.
+
+- `/` = the app. Not logged in? Mock data. Logged in? Real data. Same component, same UI.
+- `/playground` = internal dev tool, stays as-is.
+- No `/app` route. No separate landing hero. No CTA to "open the app" — you're already in it.
+- Login button in the top bar. That's how you authenticate.
+- The old monolithic app.component.ts shell is dead. Everything goes through the new simplified AppPageComponent at root.

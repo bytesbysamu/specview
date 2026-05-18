@@ -1,15 +1,5 @@
 <div class="app-page">
 
-  <!-- Masthead -->
-  <header class="app-masthead">
-    <span class="app-brand">Specview</span>
-    <div class="app-masthead-actions">
-      @if (auth.isLoggedIn()) {
-        <button class="app-btn" (click)="auth.signOut()">Sign out</button>
-      }
-    </div>
-  </header>
-
   <!-- Loading / error banner -->
   @if (dataSvc.loading()) {
     <div class="app-loading-banner" data-test="app-loading-banner">
