@@ -28,25 +28,11 @@
         @if (auth.isLoggedIn()) {
           <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
         } @else {
-          <button class="logout-btn" (click)="toggleLoginForm()" title="Sign in">Sign in</button>
+          <a class="logout-btn" routerLink="/login" title="Sign in">Sign in</a>
         }
       </div>
     </div>
   </header>
-
-  @if (showLoginForm()) {
-    <div class="login-bar">
-      <input #loginEmail type="email" placeholder="Email" class="login-bar-input" (keydown.enter)="loginPasswordEl.focus()" />
-      <input #loginPasswordEl type="password" placeholder="Password" class="login-bar-input" (keydown.enter)="doLogin(loginEmail.value, loginPasswordEl.value)" />
-      @if (loginError()) {
-        <span class="login-bar-error">{{ loginError() }}</span>
-      }
-      <button class="login-bar-btn" [disabled]="loginLoading()" (click)="doLogin(loginEmail.value, loginPasswordEl.value)">
-        @if (loginLoading()) { Signing in… } @else { Sign in }
-      </button>
-      <button class="login-bar-close" (click)="toggleLoginForm()">×</button>
-    </div>
-  }
 
   <!-- Project Nav -->
   <nav class="section-nav">

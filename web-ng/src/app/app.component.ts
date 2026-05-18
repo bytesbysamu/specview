@@ -4,7 +4,7 @@ import { trigger, transition, style, animate, query, group } from '@angular/anim
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
@@ -75,7 +75,7 @@ const GEN_POLL_INTERVAL = 10_000;
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, WordCountPipe, UsageMeterComponent],
+  imports: [RouterOutlet, RouterLink, WordCountPipe, UsageMeterComponent],
   templateUrl: './app.component.html',
   animations: [
     trigger('panelEnter', [
