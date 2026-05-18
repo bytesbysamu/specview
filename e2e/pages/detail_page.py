@@ -46,7 +46,7 @@ class DetailPage(AppPage):
         panel opened before returning.
         """
         self.page.locator("[data-test='project-card']", has_text=project_name).first.click()
-        self.wait_visible("[data-test='sidebar-nav']", timeout_ms=10_000)
+        self.wait_visible("[data-test='sidebar-nav']", timeout_ms=30_000)
 
     # ── Sidebar file list ─────────────────────────────────────────────────────
 

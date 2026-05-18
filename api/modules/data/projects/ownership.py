@@ -41,11 +41,12 @@ def require_project_ownership(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         # Guard: SKIP_AUTH=1 in dev sets g.current_user to None.
-        # We cannot enforce ownership without a real user identity — return 401
-        # so that development sessions are aware they must pass a token or
-        # disable SKIP_AUTH before ownership-protected routes work.
+        # In dev mode we skip ownership enforcement entirely so that
+        # filesystem-seeded projects are accessible without a real user
+        # in the database.  Production always has a real user.
         if g.get("current_user") is None:
-            return jsonify({"error": "authentication required"}), 401
+            g.project = None
+            return fn(*args, **kwargs)
 
         if g.current_user.id is None:
             return jsonify({"error": "authentication required"}), 401

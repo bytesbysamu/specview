@@ -95,6 +95,16 @@ def billing_status():
       - current_period_end: ISO-8601 UTC datetime | None
       - manage_url: live Stripe Customer Portal URL | None
     """
+    # SKIP_AUTH mode sets g.current_user = None; return a default free plan.
+    if g.current_user is None:
+        body = BillingStatusResponse(
+            plan=Plan("free"),
+            status=None,
+            current_period_end=None,
+            manage_url=None,
+        )
+        return jsonify(body.model_dump(mode="json")), 200
+
     user = _get_or_create_user(g.current_user.auth_user_id, g.current_user.email)
 
     with get_session() as session:

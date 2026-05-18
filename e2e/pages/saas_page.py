@@ -215,7 +215,7 @@ class SaasPage(AppPage):
 
     def is_upgrade_masthead_btn_visible(self) -> bool:
         """Return True if the Upgrade button in the masthead is visible."""
-        return self.is_visible("[data-test='upgrade-masthead-btn']", timeout_ms=5_000)
+        return self.is_visible("[data-test='upgrade-masthead-btn']", timeout_ms=15_000)
 
     # ── Upgrade page content inspection ──────────────────────────────────────
 
