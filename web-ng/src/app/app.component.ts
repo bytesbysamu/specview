@@ -742,6 +742,10 @@ export class AppComponent implements OnInit, OnDestroy {
         this.billingError.set('You have reached your daily limit. Upgrade to Pro to continue.');
         this._setStatusFailure('Daily limit reached — upgrade to continue.');
         this._setFileFailure(targetFile);
+      } else if (!this.auth.isLoggedIn()) {
+        this.aiError.set(true);
+        this._setStatusFailure('Sign in to use AI features.');
+        this._setFileFailure(targetFile);
       } else {
         this.aiError.set(true);
         this._setStatusFailure('Could not reach AI — check connection.');
@@ -1046,6 +1050,11 @@ export class AppComponent implements OnInit, OnDestroy {
   async generateFromBraindump() {
     const proj = this.activeProject();
     if (!proj || this.specGenLoading()) return;
+    if (!this.auth.isLoggedIn()) {
+      this.specGenError.set('Sign in to generate specs.');
+      this._setStatusFailure('Sign in to use AI features.');
+      return;
+    }
     // Use braindump.md if present, otherwise active file, otherwise first spec
     const braindumpSpec =
       proj.specs.find(s => s.filename === 'braindump.md') ??
