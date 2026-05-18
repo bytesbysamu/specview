@@ -611,7 +611,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async selectProject(id: string) {
     this.accessDenied.set(false);
     try {
-      const proj = await this.projectsSvc.getProject(id);
+      const proj = await this.demoSvc.getProject(id);
       this.activeProject.set(proj);
       this.activeFile.set(proj.specs?.[0]?.filename ?? null);
       this.contextContent.set(null);
