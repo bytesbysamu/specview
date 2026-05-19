@@ -6,7 +6,6 @@ import {
   computed,
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute } from '@angular/router';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -185,8 +184,6 @@ function sortFiles(files: BootstrapFile[]): BootstrapFile[] {
 export class DemoResultComponent implements OnInit {
   private readonly handoffSvc = inject(LandingHandoffService);
   private readonly sanitizer = inject(DomSanitizer);
-  private readonly route = inject(ActivatedRoute);
-
   readonly files = signal<BootstrapFile[]>([]);
   readonly activeFilename = signal<string | null>(null);
   readonly errorMsg = signal<string | null>(null);

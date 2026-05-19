@@ -68,9 +68,9 @@ function buildRedirectUrl(isEdited, content, appOrigin) {
     window.location.origin;
 
   if (!isEdited) {
-    // Demo mode — pass the slug as a query parameter.
-    // Shape: <origin>/?demo=<slug>
-    return origin + '/?demo=' + encodeURIComponent(content);
+    // Demo mode — pass the slug as a query parameter on the /demo route.
+    // Shape: <origin>/demo?demo=<slug>
+    return origin + '/demo?demo=' + encodeURIComponent(content);
   } else {
     // Real mode — encode braindump content as a base64url fragment.
     // Shape: <origin>/analyze#<base64url>
