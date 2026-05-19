@@ -1,4 +1,4 @@
-import { LandingHandoffService, LandingHandoff, DemoResult, BootstrapJobStatus } from './landing-handoff.service';
+import { LandingHandoffService, LandingHandoff } from './landing-handoff.service';
 
 /**
  * Factory for a mock LandingHandoffService.

@@ -3,7 +3,6 @@ import threading
 import time
 import uuid
 from collections import defaultdict
-from datetime import date as date_type
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path

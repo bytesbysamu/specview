@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { LandingHandoffService, LandingHandoff } from './landing-handoff.service';
+import { LandingHandoffService } from './landing-handoff.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -13,8 +13,8 @@ import { LandingHandoffService, LandingHandoff } from './landing-handoff.service
 function encodeBase64Url(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
   }
   return btoa(binary)
     .replace(/\+/g, '-')
