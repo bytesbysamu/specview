@@ -386,13 +386,213 @@ GraphQL query complexity scoring.
 4. Customer portal dashboard — Week 5
 5. Utilisation webhook + email alerts — Week 6`;
 
+const IDP_ARCHITECTURE = `# Architecture — Internal Developer Platform
+
+## System Design
+
+The IDP is a Flask application with a React frontend and Celery worker pool for
+asynchronous provisioning jobs. All provisioning state is stored in PostgreSQL.
+The system orchestrates four external providers: GitHub (repository + Actions),
+AWS EKS (Kubernetes namespaces), Terraform Cloud (infrastructure modules), and
+Datadog (monitoring dashboards + alerts).
+
+## Key Decisions
+
+**Flask + Celery over Backstage.** Backstage was evaluated and rejected. It
+requires a Kubernetes operator, has a steep plugin authoring curve, and its
+catalog model does not map cleanly to the existing service catalog schema.
+Flask + Celery is operationally simpler: the platform team already runs both
+in production.
+
+**State machine per provisioning job.** Each job progresses through a defined
+sequence of states: \`pending → github → kubernetes → terraform → monitoring →
+complete\`. Each state transition is idempotent — a failed step can be retried
+without re-running prior steps. The state machine is stored as a JSON column
+on the \`provisioning_job\` table.
+
+**Template registry as code.** Service templates are YAML files in a Git
+repository. Each template declares a language runtime, default resource
+limits, required Terraform modules, and Datadog dashboard JSON. Template
+updates are versioned — existing services are not retroactively modified, but
+a drift report identifies services running on outdated templates.
+
+## Data Flow
+
+1. Engineer selects a template and fills the service form in the React UI
+2. Flask API validates the form and creates a \`provisioning_job\` row
+3. Celery picks up the job and runs steps sequentially
+4. Each step calls the relevant provider API and updates the job state
+5. The React UI polls the job status endpoint for live progress
+6. On completion, the service is registered in the service catalog`;
+
+const IDP_GUIDE = `# Implementation Guide — Internal Developer Platform
+
+## Task 1: Job Queue Infrastructure (Days 1–5)
+
+Set up the Celery worker pool with Redis as the broker. Define the
+\`ProvisioningJob\` SQLAlchemy model with columns for job ID, template slug,
+service name, team, current state, step results (JSON), and timestamps.
+
+Implement the state machine: each step is a Celery task that reads the
+current state, executes the provider call, writes the result, and advances
+to the next state. Failed steps set the state to \`{step}_failed\` and
+include the error in \`step_results\`.
+
+Write integration tests with mocked provider calls for the full happy path
+and each failure mode (GitHub 422, Kubernetes quota exceeded, Terraform
+plan error).
+
+## Task 2: GitHub + CI Provisioning (Days 6–10)
+
+Implement the GitHub provisioning step. Using the GitHub API: create a
+repository from the template's cookiecutter archive, configure branch
+protection rules, and commit the initial Actions workflow YAML.
+
+The Actions workflow is generated from the template — Python templates get
+pytest + ruff, Node templates get vitest + eslint, Go templates get
+go test + golangci-lint.
+
+## Task 3: Kubernetes + Terraform Provisioning (Days 11–16)
+
+Implement the Kubernetes step: create a namespace, apply resource quotas
+from the template, and create the service account. Use the Kubernetes
+Python client against the EKS cluster.
+
+Implement the Terraform step: trigger a Terraform Cloud run with the
+template's module, passing the service name and namespace as variables.
+Poll the run until it reaches \`applied\` or \`errored\` state.
+
+## Task 4: Monitoring + Catalog Registration (Days 17–20)
+
+Implement the Datadog step: create a dashboard from the template's JSON
+definition, substituting the service name and namespace. Create a monitor
+for the service's health endpoint with PagerDuty routing.
+
+Implement catalog registration: insert a row in the service catalog with
+the service name, team, template version, and links to the GitHub repo,
+dashboard, and PagerDuty service.
+
+## Task 5: Self-Service Portal UI (Days 21–28)
+
+Build the React frontend. Three views: template picker (card grid),
+service creation form (dynamic fields per template), and job status
+(polling progress bar with per-step status). The form validates service
+name uniqueness against the catalog before submission.`;
+
+const RATELIMIT_ARCHITECTURE = `# Architecture — API Rate Limiting Service
+
+## System Design
+
+The rate limiter is a FastAPI middleware that intercepts every request before
+it reaches the route handler. Rate limit state is stored in Redis using a
+sliding window counter. The middleware reads the API key from the request
+header, resolves the customer's tier from a local cache (refreshed every 60s
+from PostgreSQL), and evaluates the request against the tier's limits.
+
+## Key Decisions
+
+**Sliding window over fixed window.** Fixed windows create burst problems at
+window boundaries — a customer can send 2x their limit by timing requests
+across a boundary. The sliding window algorithm uses two Redis keys per API
+key (current and previous window) with a weighted average, eliminating the
+burst problem with minimal additional complexity.
+
+**Per-endpoint weight coefficients.** Each endpoint category (read, write,
+search, bulk) has a weight multiplier stored in a configuration table. A
+search request with weight 5 consumes 5 units of the customer's quota while
+a read request consumes 1. Weights are adjustable without code deploys.
+
+**Rate limit headers on every response.** Three headers are added to every
+response: \`X-RateLimit-Limit\` (tier maximum), \`X-RateLimit-Remaining\`
+(units left in the current window), and \`X-RateLimit-Reset\` (Unix timestamp
+when the window resets). This gives customers real-time visibility without
+polling a separate endpoint.
+
+## Data Flow
+
+1. Request arrives → middleware extracts API key from \`Authorization\` header
+2. Tier lookup: check local cache → miss: query PostgreSQL, populate cache
+3. Endpoint weight: resolve the route's category and multiply by its weight
+4. Redis EVAL: atomic sliding window check + increment
+5. If under limit: add headers, pass to route handler
+6. If over limit: return 429 with \`Retry-After\` header and unchanged body shape
+
+## Failure Modes
+
+**Redis unavailable:** Fail open — allow the request and log the error. Rate
+limiting is a protection mechanism, not a correctness requirement. Failing
+closed on Redis downtime would create a self-inflicted outage.
+
+**Tier cache stale:** A 60-second TTL means a customer who upgrades from free
+to pro may wait up to 60 seconds for the new limits to apply. This is
+acceptable — upgrades are rare events and 60 seconds is imperceptible.`;
+
+const RATELIMIT_GUIDE = `# Implementation Guide — Tiered Rate Limiting Service
+
+## Task 1: Redis Sliding Window Limiter (Days 1–5)
+
+Implement the sliding window algorithm as a Redis Lua script. The script
+takes three arguments: the API key, the window size in seconds, and the
+maximum allowed requests. It maintains two sorted sets (current window
+and previous window) and returns the remaining quota.
+
+Write the \`RateLimiter\` class in Python that wraps the Lua script. It
+should expose \`check_and_increment(api_key, weight) -> RateLimitResult\`
+where \`RateLimitResult\` contains \`allowed: bool\`, \`remaining: int\`,
+\`reset_at: int\`, and \`limit: int\`.
+
+Add tier configuration: create the \`rate_limit_tier\` table in PostgreSQL
+with columns for tier name, requests per minute, and burst allowance.
+Seed with three tiers: free (100/min), pro (1000/min), enterprise (custom).
+
+## Task 2: FastAPI Middleware + Endpoint Weights (Days 6–10)
+
+Implement the rate limit middleware as a Starlette middleware class.
+On each request: extract the API key, resolve the tier, look up the
+endpoint weight, call \`check_and_increment\`, and either pass through
+or return 429.
+
+Create the \`endpoint_weight\` configuration table with endpoint pattern
+and weight columns. Seed with defaults: read=1, write=2, search=5, bulk=10.
+The middleware resolves the weight by matching the request path against
+the pattern list.
+
+Add the three rate limit headers to every response, including 429 responses.
+The 429 response body must be identical to the current shape — add new fields
+but never remove or rename existing ones.
+
+## Task 3: Customer Portal Dashboard (Days 11–16)
+
+Add a \`/api/rate-limits/usage\` endpoint that returns the customer's current
+utilisation: requests made, quota remaining, reset timestamp, and a 24-hour
+histogram of usage by endpoint category.
+
+Build the dashboard component in the customer portal React app. Show a
+real-time gauge (current usage vs limit), a 24-hour usage chart broken
+down by endpoint category, and the current tier with an upgrade CTA for
+free-tier customers.
+
+## Task 4: Utilisation Alerts (Days 17–20)
+
+Implement a background Celery task that runs every 5 minutes. For each
+API key that has exceeded 80% of its limit in the current window, enqueue
+a webhook event to the customer's configured webhook URL.
+
+Send an email alert (via SendGrid) on the first 80% crossing per 24-hour
+period — do not spam on repeated crossings. Track the last alert timestamp
+per API key in Redis with a 24-hour TTL.
+
+Create an admin UI page for setting enterprise custom limits. The form
+takes an API key, a new requests-per-minute limit, and an optional burst
+override. Changes take effect on the next tier cache refresh (≤60s).`;
+
 // ── Exported Fixtures ────────────────────────────────────────────────────────
 
 export const DEMO_FIXTURE_PROJECTS: Project[] = [
   {
     id: 'fixture-incident-platform',
     name: 'Incident Response Platform',
-    createdAt: '2026-05-01T09:00:00Z',
+    createdAt: '2026-05-19T09:00:00Z',
     specs: [
       { filename: 'braindump.md',         label: 'Braindump',         content: INCIDENT_BRAINDUMP },
       { filename: 'analysis.md',          label: 'Analysis',          content: INCIDENT_ANALYSIS },
@@ -406,9 +606,11 @@ export const DEMO_FIXTURE_PROJECTS: Project[] = [
     name: 'Internal Developer Platform',
     createdAt: '2026-04-22T14:00:00Z',
     specs: [
-      { filename: 'braindump.md', label: 'Braindump', content: IDP_BRAINDUMP },
-      { filename: 'analysis.md',  label: 'Analysis',  content: IDP_ANALYSIS },
-      { filename: 'epic.md',      label: 'Epic',      content: IDP_EPIC },
+      { filename: 'braindump.md',            label: 'Braindump',            content: IDP_BRAINDUMP },
+      { filename: 'analysis.md',             label: 'Analysis',             content: IDP_ANALYSIS },
+      { filename: 'epic.md',                 label: 'Epic',                 content: IDP_EPIC },
+      { filename: 'architecture.md',         label: 'Architecture',         content: IDP_ARCHITECTURE },
+      { filename: 'implementation-guide.md', label: 'Implementation Guide', content: IDP_GUIDE },
     ],
   },
   {
@@ -416,9 +618,11 @@ export const DEMO_FIXTURE_PROJECTS: Project[] = [
     name: 'API Rate Limiting Service',
     createdAt: '2026-05-10T11:30:00Z',
     specs: [
-      { filename: 'braindump.md', label: 'Braindump', content: RATELIMIT_BRAINDUMP },
-      { filename: 'analysis.md',  label: 'Analysis',  content: RATELIMIT_ANALYSIS },
-      { filename: 'epic.md',      label: 'Epic',      content: RATELIMIT_EPIC },
+      { filename: 'braindump.md',            label: 'Braindump',            content: RATELIMIT_BRAINDUMP },
+      { filename: 'analysis.md',             label: 'Analysis',             content: RATELIMIT_ANALYSIS },
+      { filename: 'epic.md',                 label: 'Epic',                 content: RATELIMIT_EPIC },
+      { filename: 'architecture.md',         label: 'Architecture',         content: RATELIMIT_ARCHITECTURE },
+      { filename: 'implementation-guide.md', label: 'Implementation Guide', content: RATELIMIT_GUIDE },
     ],
   },
 ];

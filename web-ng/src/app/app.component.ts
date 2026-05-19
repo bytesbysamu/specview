@@ -120,7 +120,7 @@ export class AppComponent implements OnInit, OnDestroy {
     filter((e): e is NavigationEnd => e instanceof NavigationEnd)
   ).subscribe(e => {
     const path = e.urlAfterRedirects.split('?')[0];
-    this.isFullPageRoute.set(['/playground', '/login', '/signup', '/demo', '/analyze'].some(r => path === r || path.startsWith(r + '/')));
+    this.isFullPageRoute.set(['/playground', '/login', '/signup'].some(r => path === r || path.startsWith(r + '/')));
   });
 
   readonly sections = NAV_SECTIONS;
@@ -360,7 +360,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor() {
     // Set initial full-page route state
     const initialPath = this.router.url.split('?')[0];
-    this.isFullPageRoute.set(['/playground', '/login', '/signup', '/demo', '/analyze'].some(r => initialPath === r || initialPath.startsWith(r + '/')));
+    this.isFullPageRoute.set(['/playground', '/login', '/signup'].some(r => initialPath === r || initialPath.startsWith(r + '/')));
 
     // Load projects on every auth state change (demo data when not logged in, real when logged in)
     effect(() => {
