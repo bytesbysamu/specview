@@ -109,12 +109,12 @@ export class LandingHandoffService {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
-   * Fetch the pre-computed demo JSON for `slug` from `public/demo/{slug}.json`.
+   * Fetch the pre-computed demo JSON for `slug` from `public/demo-data/{slug}.json`.
    * Used by `DemoResultComponent` to render results without an API call.
    */
   fetchDemoResult(slug: string): Promise<DemoResult> {
     return firstValueFrom(
-      this.http.get<DemoResult>(`/demo/${slug}.json`)
+      this.http.get<DemoResult>(`/demo-data/${slug}.json`)
     );
   }
 
