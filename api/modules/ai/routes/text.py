@@ -2,6 +2,9 @@ import logging
 import threading
 import time
 import uuid
+from collections import defaultdict
+from datetime import datetime, timezone
+from functools import wraps
 from pathlib import Path
 
 from flask import Blueprint, current_app, request, jsonify
@@ -322,10 +325,8 @@ def _text_of(value) -> str:
     return value.text if hasattr(value, "text") else (value or "")
 
 
-@ai_bp.get("/bootstrap-project/status/<job_id>")
-@require_auth
-def bootstrap_status(job_id: str):
-    """Status snapshot for an async bootstrap job. Evicts on first terminal read."""
+def _bootstrap_status_impl(job_id: str):
+    """Shared status-snapshot logic used by both the auth-protected and anonymous routes."""
     execution = _BOOTSTRAP_JOBS.get(job_id)
     if execution is None:
         return jsonify({"error": "job not found"}), 404
@@ -382,6 +383,13 @@ def bootstrap_status(job_id: str):
             body["failed_step"] = execution.current_step_name
 
     return jsonify(body)
+
+
+@ai_bp.get("/bootstrap-project/status/<job_id>")
+@require_auth
+def bootstrap_status(job_id: str):
+    """Status snapshot for an async bootstrap job. Evicts on first terminal read."""
+    return _bootstrap_status_impl(job_id)
 
 
 # ---------------------------------------------------------------------------
@@ -501,3 +509,99 @@ def bootstrap_retry(job_id: str):
         daemon=True,
     ).start()
     return jsonify({"job_id": new_id}), 202
+
+
+# ---------------------------------------------------------------------------
+# Anonymous bootstrap — landing-page funnel (no auth, IP-based rate limiting)
+# ---------------------------------------------------------------------------
+
+# Daily limit per IP address for anonymous bootstrap calls.
+_ANON_BOOTSTRAP_DAILY_LIMIT = 3
+
+# In-memory IP counter: {ip: {date_str: count}}
+# Thread-safe for CPython's GIL; good enough for single-process gunicorn.
+_ANON_IP_COUNTS: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+
+
+def _get_client_ip() -> str:
+    """Return the best-effort client IP, respecting X-Forwarded-For from a trusted proxy."""
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def _anon_rate_limit(fn):
+    """Decorator: enforce _ANON_BOOTSTRAP_DAILY_LIMIT requests per IP per UTC day."""
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        ip = _get_client_ip()
+        today = datetime.now(timezone.utc).date().isoformat()
+        count = _ANON_IP_COUNTS[ip][today]
+        if count >= _ANON_BOOTSTRAP_DAILY_LIMIT:
+            return jsonify({
+                "error": "rate_limit_exceeded",
+                "message": "Anonymous bootstrap limit reached. Sign up for unlimited access.",
+                "limit": _ANON_BOOTSTRAP_DAILY_LIMIT,
+            }), 429
+        result = fn(*args, **kwargs)
+        # Increment only on success (2xx)
+        status = result[1] if isinstance(result, tuple) and len(result) >= 2 else 200
+        if isinstance(status, int) and status < 400:
+            _ANON_IP_COUNTS[ip][today] += 1
+        return result
+
+    return wrapper
+
+
+@ai_bp.post("/anonymous/bootstrap-project")
+@_anon_rate_limit
+def anonymous_bootstrap_project():
+    """Anonymous bootstrap: same chain as the authenticated path, IP-rate-limited.
+
+    Allows landing-page visitors to generate a spec without signing up.
+    Returns 202 + job_id; caller polls the anonymous status endpoint.
+    """
+    req = BootstrapProjectRequest.model_validate(
+        request.get_json(force=True, silent=False) or {}
+    )
+    project_name = req.project_name.strip()
+    braindump = req.braindump.strip()
+    if not project_name or not braindump:
+        return jsonify({"error": "project_name and braindump are required"}), 400
+
+    job_id = str(uuid.uuid4())
+    _projects_dir = Path(PROJECTS_DIR)
+    inputs = {
+        "braindump": braindump,
+        "braindump_path": str(_projects_dir / job_id / "braindump.md"),
+        "project_name": project_name,
+        "analysis_path": str(_projects_dir / job_id / "analysis.md"),
+        "epic_path": str(_projects_dir / job_id / "epic.md"),
+        "builder": req.builder or read_context("builder"),
+        "principles": req.principles or read_context("principles"),
+        "codebase": "",
+        "references": "",
+    }
+    execution = WorkflowExecution(workflow_ref="ai/bootstrap-project", inputs=inputs)
+    execution.start()
+    _BOOTSTRAP_JOBS[job_id] = execution
+    threading.Thread(
+        target=_run_bootstrap_thread,
+        args=(execution,),
+        name=f"anon-bootstrap[{job_id[:8]}]",
+        daemon=True,
+    ).start()
+    return jsonify({"job_id": job_id}), 202
+
+
+@ai_bp.get("/anonymous/bootstrap-project/status/<job_id>")
+def anonymous_bootstrap_status(job_id: str):
+    """Status snapshot for an anonymous bootstrap job.
+
+    Delegates to the same _BOOTSTRAP_JOBS registry as the authenticated path.
+    No auth required — the job_id is a 36-char UUID that serves as a bearer token
+    for this lightweight use case.
+    """
+    return _bootstrap_status_impl(job_id)

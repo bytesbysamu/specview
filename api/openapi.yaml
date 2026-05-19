@@ -759,6 +759,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/ai/text/anonymous/bootstrap-project:
+    post:
+      summary: >
+        Anonymous bootstrap for landing-page visitors — no auth required.
+        IP-rate-limited to 3 calls per day. Returns 202 + job_id; poll the
+        anonymous status endpoint for progress.
+      operationId: anonymousBootstrapProject
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BootstrapProjectRequest'
+      responses:
+        '202':
+          description: Job accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapStartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/UsageLimitReached'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/text/anonymous/bootstrap-project/status/{job_id}:
+    get:
+      summary: Poll the status of an anonymous bootstrap job.
+      operationId: getAnonymousBootstrapProjectStatus
+      tags: [ai]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current status of the anonymous bootstrap job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapJobStatus'
+        '404':
+          description: Job not found or already evicted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/projects/{project_id}/cancel:
     post:
       summary: Request cooperative cancellation of an in-flight task_gen job

@@ -1,0 +1,59 @@
+/* Specview design tokens — newspaper aesthetic
+ * Extracted from web-ng/src/styles.css for use by the static landing page.
+ * Contains only CSS custom property declarations and base typographic rules.
+ * No component-scoped styles. No Angular-specific selectors.
+ */
+
+:root {
+  /* Color primitives */
+  --bg: #FFFEF9;
+  --ink: #121212;
+  --ink-light: #5A5A5A;
+  --ink-muted: #999999;
+  --border: #DFDFDF;
+  --border-dark: #121212;
+  --accent: #567B95;
+  --red: #C41E3A;
+  --code-bg: #F5F5F5;
+
+  /* Font families */
+  --serif: 'Playfair Display', Georgia, serif;
+  --body: 'Source Serif 4', Georgia, serif;
+  --sans: 'Source Sans 3', system-ui, sans-serif;
+
+  /* Surface tokens */
+  --surface: #FAFAF7;
+  --surface-raised: #F5F5F0;
+}
+
+[data-theme="dark"] {
+  /* Color primitives — dark mode */
+  --bg: #141414;
+  --ink: #E8E6E0;
+  --ink-light: #A0A0A0;
+  --ink-muted: #606060;
+  --border: #2E2E2E;
+  --border-dark: #E8E6E0;
+  --accent: #7BAFC8;
+  --red: #E05A72;
+  --code-bg: #1E1E1E;
+
+  /* Surface tokens — dark mode */
+  --surface: #1A1A1A;
+  --surface-raised: #222222;
+}
+
+/* Base typographic rules — newspaper aesthetic */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  font-size: 16px;
+}

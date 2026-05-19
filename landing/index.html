@@ -14,28 +14,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
 
+  <link rel="stylesheet" href="tokens.css">
+
   <style>
-    :root {
-      --bg: #FFFEF9;
-      --ink: #121212;
-      --ink-light: #5A5A5A;
-      --red: #C41E3A;
-      --serif: 'Playfair Display', Georgia, serif;
-      --body: 'Source Serif 4', Georgia, serif;
-      --sans: 'Source Sans 3', system-ui, sans-serif;
-    }
-    [data-theme="dark"] {
-      --bg: #141414;
-      --ink: #E8E6E0;
-      --ink-light: #A0A0A0;
-      --red: #E05A72;
-    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: var(--bg);
       color: var(--ink);
       font-family: var(--body);
     }
+
+    /* ── Hero section — original minimal aesthetic ── */
     .hero {
       display: flex;
       flex-direction: column;
@@ -46,6 +35,7 @@
       max-width: 760px;
       margin: 0 auto;
     }
+
     .hero-overline {
       font-family: var(--sans);
       font-size: 11px;
@@ -55,6 +45,7 @@
       color: var(--red);
       margin-bottom: 16px;
     }
+
     .hero-headline {
       font-family: var(--serif);
       font-size: 56px;
@@ -64,6 +55,7 @@
       color: var(--ink);
       margin-bottom: 24px;
     }
+
     .hero-subline {
       font-family: var(--body);
       font-size: 18px;
@@ -72,41 +64,133 @@
       margin-bottom: 36px;
       max-width: 520px;
     }
+
+    /* ── Braindump textarea ── */
+    .braindump-textarea {
+      width: 100%;
+      height: 240px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--body);
+      font-size: 15px;
+      line-height: 1.65;
+      resize: none;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      border-radius: 0;
+      margin-bottom: 16px;
+    }
+
+    .braindump-textarea:focus {
+      border-color: var(--ink);
+    }
+
+    .braindump-textarea::placeholder {
+      color: var(--ink-muted);
+      font-style: italic;
+    }
+
+    /* ── CTA button — same style as original hero-cta ── */
     .hero-cta {
       display: inline-block;
       background: var(--ink);
       color: var(--bg);
       border: 1px solid var(--ink);
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      padding: 12px 28px;
-      text-decoration: none;
+      padding: 15px 36px;
       cursor: pointer;
       transition: opacity 0.15s;
+      -webkit-appearance: none;
+      border-radius: 0;
+      text-decoration: none;
+      min-height: 48px;
     }
-    .hero-cta:hover { opacity: 0.8; }
+
+    .hero-cta:hover,
+    .hero-cta:focus-visible {
+      opacity: 0.82;
+    }
+
+    .hero-cta:active {
+      opacity: 0.65;
+    }
+
+    /* ── Mobile adjustments ── */
     @media (max-width: 768px) {
-      .hero { padding: 48px 20px; min-height: 100svh; }
-      .hero-headline { font-size: 38px; }
-      .hero-subline { font-size: 16px; }
+      .hero {
+        padding: 60px 24px;
+      }
+      .hero-headline {
+        font-size: 36px;
+      }
+      .hero-subline {
+        font-size: 16px;
+      }
+      .braindump-textarea {
+        height: 200px;
+        font-size: 14px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <section class="hero">
-    <span class="hero-overline">Engineering Specs</span>
-    <h1 class="hero-headline">Write messy.<br>Ship clean.</h1>
-    <p class="hero-subline">Paste your braindump. Five engineering documents back in under a minute.</p>
-    <a class="hero-cta" href="https://app.specview.dev/">Open the app</a>
-  </section>
+  <!-- Apply saved theme immediately to avoid flash of wrong theme -->
+  <script>
+    (function() {
+      var saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
 
-<script>
-  var saved = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', saved);
-</script>
+  <div class="hero">
+    <span class="hero-overline">Specview</span>
+    <h1 class="hero-headline">Write messy.<br>Ship clean.</h1>
+    <p class="hero-subline">
+      Paste your braindump. Five engineering documents back in under a minute.
+    </p>
+
+    <textarea
+      id="braindump-textarea"
+      class="braindump-textarea"
+      placeholder="Paste your braindump here — messy is fine…"
+      aria-label="Braindump text. Type your idea or watch a demo."
+      spellcheck="false"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+    ></textarea>
+
+    <button id="cta-button" class="hero-cta" type="button">
+      Generate specs
+    </button>
+  </div>
+
+  <!-- Load scripts in dependency order, then initialize on DOMContentLoaded -->
+  <script src="demo-content.js"></script>
+  <script src="rotation.js"></script>
+  <script src="redirect.js"></script>
+  <script>
+    // In production (specview.dev), APP_ORIGIN should be set to https://app.specview.dev
+    // via the nginx config or an env-injected script. In local dev, fall back to
+    // localhost:4200 (Angular dev server) so the CTA redirect works locally.
+    window.APP_ORIGIN = window.APP_ORIGIN ||
+      (window.location.hostname === 'localhost'
+        ? 'http://localhost:4200'
+        : 'https://app.specview.dev');
+
+    document.addEventListener('DOMContentLoaded', function () {
+      window.initCtaButton();
+      window.startRotation();
+    });
+  </script>
+
 </body>
 </html>
