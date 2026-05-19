@@ -67,16 +67,10 @@ function buildRedirectUrl(isEdited, content, appOrigin) {
     (window.APP_ORIGIN || '') ||
     window.location.origin;
 
-  if (!isEdited) {
-    // Demo mode — pass the slug as a query parameter on the /demo route.
-    // Shape: <origin>/demo?demo=<slug>
-    return origin + '/demo?demo=' + encodeURIComponent(content);
-  } else {
-    // Real mode — encode braindump content as a base64url fragment.
-    // Shape: <origin>/analyze#<base64url>
-    var encoded = encodeBase64Url(content);
-    return origin + '/analyze#' + encoded;
-  }
+  // Always pass the braindump text to the app via /analyze#<base64url>,
+  // whether it's a demo braindump or visitor-edited content.
+  var encoded = encodeBase64Url(content);
+  return origin + '/analyze#' + encoded;
 }
 window.buildRedirectUrl = buildRedirectUrl;
 
@@ -97,20 +91,10 @@ window.initCtaButton = function () {
   }
 
   btn.addEventListener('click', function () {
-    var state = window.rotationState || { isEdited: false, currentSlug: '', currentContent: '' };
     var textarea = document.getElementById('braindump-textarea');
-    var textareaValue = textarea ? textarea.value : '';
+    var text = textarea ? textarea.value.trim() : '';
+    if (!text) return;
 
-    var url;
-    if (state.isEdited) {
-      // Real mode — the visitor typed their own content.
-      url = buildRedirectUrl(true, textareaValue);
-    } else {
-      // Demo mode — use the slug of the currently displayed demo.
-      var slug = state.currentSlug || (window.DEMO_SLUGS && window.DEMO_SLUGS[0]) || 'mobile-app';
-      url = buildRedirectUrl(false, slug);
-    }
-
-    window.location.href = url;
+    window.location.href = buildRedirectUrl(false, text);
   });
 };
