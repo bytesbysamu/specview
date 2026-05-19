@@ -67,10 +67,8 @@ function buildRedirectUrl(isEdited, content, appOrigin) {
     (window.APP_ORIGIN || '') ||
     window.location.origin;
 
-  // Always pass the braindump text to the app via /analyze#<base64url>,
-  // whether it's a demo braindump or visitor-edited content.
-  var encoded = encodeBase64Url(content);
-  return origin + '/analyze#' + encoded;
+  // Just open the app — it has demo data for unauthenticated users.
+  return origin + '/';
 }
 window.buildRedirectUrl = buildRedirectUrl;
 
