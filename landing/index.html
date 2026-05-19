@@ -178,7 +178,13 @@
   <script src="rotation.js"></script>
   <script src="redirect.js"></script>
   <script>
-    window.APP_ORIGIN = window.APP_ORIGIN || 'https://app.specview.dev';
+    // In production (specview.dev), APP_ORIGIN should be set to https://app.specview.dev
+    // via the nginx config or an env-injected script. In local dev, fall back to
+    // localhost:4200 (Angular dev server) so the CTA redirect works locally.
+    window.APP_ORIGIN = window.APP_ORIGIN ||
+      (window.location.hostname === 'localhost'
+        ? 'http://localhost:4200'
+        : 'https://app.specview.dev');
 
     document.addEventListener('DOMContentLoaded', function () {
       window.initCtaButton();
