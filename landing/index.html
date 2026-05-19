@@ -43,7 +43,6 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--red);
-      margin-bottom: 16px;
     }
 
     .hero-headline {
@@ -122,6 +121,35 @@
       opacity: 0.65;
     }
 
+    /* ── Top bar ── */
+    .hero-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--ink-light);
+      font-size: 18px;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s;
+      border-radius: 0;
+    }
+
+    .theme-toggle:hover {
+      opacity: 0.7;
+    }
+
     /* ── Mobile adjustments ── */
     @media (max-width: 768px) {
       .hero {
@@ -151,7 +179,12 @@
   </script>
 
   <div class="hero">
-    <span class="hero-overline">Specview</span>
+    <div class="hero-topbar">
+      <span class="hero-overline">Specview</span>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <span class="theme-toggle-icon" id="theme-toggle-icon">◑</span>
+      </button>
+    </div>
     <h1 class="hero-headline">Write messy.<br>Ship clean.</h1>
     <p class="hero-subline">
       Paste your braindump. Five engineering documents back in under a minute.
@@ -189,6 +222,22 @@
     document.addEventListener('DOMContentLoaded', function () {
       window.initCtaButton();
       window.startRotation();
+
+      // Dark mode toggle
+      var toggleBtn = document.getElementById('theme-toggle');
+      var toggleIcon = document.getElementById('theme-toggle-icon');
+      function updateIcon() {
+        var current = document.documentElement.getAttribute('data-theme');
+        toggleIcon.textContent = current === 'dark' ? '☀' : '◑';
+      }
+      updateIcon();
+      toggleBtn.addEventListener('click', function () {
+        var current = document.documentElement.getAttribute('data-theme');
+        var next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateIcon();
+      });
     });
   </script>
 
