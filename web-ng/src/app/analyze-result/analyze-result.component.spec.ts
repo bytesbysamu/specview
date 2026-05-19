@@ -163,24 +163,33 @@ describe('AnalyzeResultComponent', () => {
     setup('Build a todo app');
 
     mockSvc.startAnonymousBootstrap.and.resolveTo({ job_id: 'job-abc' });
-    // First two polls fail with a 503, third succeeds with done=true
-    mockSvc.pollAnonymousBootstrap.and.returnValues(
-      Promise.reject({ status: 503 }),
-      Promise.reject({ status: 503 }),
-      Promise.resolve(DONE_STATUS)
-    );
+
+    let callCount = 0;
+    mockSvc.pollAnonymousBootstrap.and.callFake(() => {
+      callCount++;
+      if (callCount <= 2) {
+        return Promise.reject({ status: 503 });
+      }
+      return Promise.resolve(DONE_STATUS);
+    });
 
     const clearIntervalSpy = spyOn(window, 'clearInterval').and.callThrough();
 
     fixture.detectChanges();
     tick();
 
-    // Three poll ticks
-    tick(POLL_INTERVAL_MS); tick();
-    tick(POLL_INTERVAL_MS); tick();
-    tick(POLL_INTERVAL_MS); tick();
+    // First poll — 503, swallowed by catch
+    tick(POLL_INTERVAL_MS);
+    tick();
 
-    // Interval cleared only after the successful done=true response
+    // Second poll — 503, swallowed by catch
+    tick(POLL_INTERVAL_MS);
+    tick();
+
+    // Third poll — done=true, should clear interval
+    tick(POLL_INTERVAL_MS);
+    tick();
+
     expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
     expect(component.isRunning()).toBeFalse();
   }));

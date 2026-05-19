@@ -1,15 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { DOCUMENT } from '@angular/common';
 import { LandingHandoffService } from './landing-handoff.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Encode a UTF-8 string as base64url using the same algorithm as
- * landing/redirect.js, so tests can construct valid fragment URLs without
- * importing Node-only utilities.
- */
 function encodeBase64Url(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
@@ -23,9 +20,8 @@ function encodeBase64Url(text: string): string {
 }
 
 /**
- * Construct a service instance with a custom URL. Because window.location
- * cannot be directly reassigned in Karma, we spy on the getters that the
- * service reads at construction time.
+ * Build a service instance with a mocked document.location.
+ * Uses Angular's DOCUMENT token so we don't need to mutate window.location.
  */
 function buildService(opts: {
   search?: string;
@@ -34,13 +30,17 @@ function buildService(opts: {
 }): LandingHandoffService {
   const { search = '', hash = '', pathname = '/' } = opts;
 
-  // Stub the URL-reading properties on window.location.
-  spyOnProperty(window, 'location').and.returnValue({
-    ...window.location,
-    search,
-    hash,
-    pathname,
-  } as Location);
+  TestBed.configureTestingModule({
+    imports: [HttpClientTestingModule],
+    providers: [
+      {
+        provide: DOCUMENT,
+        useValue: {
+          location: { search, hash, pathname },
+        },
+      },
+    ],
+  });
 
   return TestBed.inject(LandingHandoffService);
 }
@@ -50,10 +50,6 @@ function buildService(opts: {
 // ---------------------------------------------------------------------------
 
 describe('LandingHandoffService', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
-
   afterEach(() => {
     TestBed.resetTestingModule();
   });
@@ -150,7 +146,6 @@ describe('LandingHandoffService', () => {
   });
 
   it('returns mode=none when the hash on /analyze decodes to an empty string', () => {
-    // Encode an empty string — the service should treat this as no handoff.
     const encoded = encodeBase64Url('   ');
     const svc = buildService({ search: '', hash: `#${encoded}`, pathname: '/analyze' });
     expect(svc.handoff.mode).toBe('none');

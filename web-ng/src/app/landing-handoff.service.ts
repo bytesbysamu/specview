@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -99,6 +100,7 @@ export class LandingHandoffService {
   readonly handoff: LandingHandoff;
 
   private readonly http = inject(HttpClient);
+  private readonly doc = inject(DOCUMENT);
 
   constructor() {
     this.handoff = this._resolve();
@@ -144,26 +146,20 @@ export class LandingHandoffService {
   // ── Private ────────────────────────────────────────────────────────────────
 
   private _resolve(): LandingHandoff {
-    if (typeof window === 'undefined') {
-      // SSR safety: no window in server-side rendering contexts.
+    const loc = this.doc?.location;
+    if (!loc) {
       return { mode: 'none' };
     }
 
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(loc.search);
     const demoSlug = params.get('demo');
 
     if (demoSlug !== null && demoSlug.trim().length > 0) {
-      // Demo mode: the ?demo=<slug> query parameter is present.
       return { mode: 'demo', slug: demoSlug.trim() };
     }
 
-    // Real mode: /analyze path with a base64url fragment.
-    const hash = window.location.hash;
-    if (
-      window.location.pathname === '/analyze' &&
-      hash.length > 1
-    ) {
-      // Strip the leading '#' character.
+    const hash = loc.hash;
+    if (loc.pathname === '/analyze' && hash.length > 1) {
       const encoded = hash.slice(1);
       const decoded = decodeBase64Url(encoded);
       if (decoded !== null && decoded.trim().length > 0) {
