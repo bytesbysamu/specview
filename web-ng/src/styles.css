@@ -2152,3 +2152,60 @@ body {
   transition: opacity 0.15s ease;
 }
 .upgrade-btn:hover { opacity: 0.85; }
+
+/* ── Anonymous share: locked files ─────── */
+.sidebar-file--locked { opacity: 0.55; }
+.sidebar-file--locked::after { content: ' \2297'; font-size: 9px; }
+
+/* ── Anonymous share: blur overlay ─────── */
+.locked-content-wrapper { position: relative; min-height: 400px; }
+.locked-content-blur { filter: blur(5px); user-select: none; pointer-events: none; }
+.locked-content-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.5);
+}
+[data-theme="dark"] .locked-content-overlay { background: rgba(0,0,0,0.5); }
+.locked-content-card {
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 32px 40px; text-align: center; max-width: 400px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+.locked-content-title {
+  font-family: var(--serif); font-size: 20px; font-weight: 700;
+  margin: 0 0 8px; color: var(--ink);
+}
+.locked-content-desc {
+  font-size: 13px; color: var(--ink-light); line-height: 1.5; margin: 0 0 20px;
+}
+.locked-content-cta {
+  display: inline-block; padding: 10px 24px;
+  background: var(--ink); color: var(--bg);
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  text-decoration: none; transition: opacity 0.15s;
+}
+.locked-content-cta:hover { opacity: 0.85; }
+
+/* ── Sidebar CTA ─────── */
+.sidebar-cta {
+  margin: 16px 12px; padding: 14px 12px;
+  border: 1px dashed var(--border); text-align: center;
+}
+.sidebar-cta-text {
+  font-size: 11px; color: var(--ink-light); margin: 0 0 10px; line-height: 1.4;
+}
+.sidebar-cta-btn {
+  display: inline-block; padding: 6px 16px;
+  background: var(--ink); color: var(--bg);
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  text-decoration: none; transition: opacity 0.15s;
+}
+.sidebar-cta-btn:hover { opacity: 0.85; }
+
+/* ── Share analysis loading ─────── */
+.share-analysis-loading {
+  display: flex; align-items: center; gap: 6px;
+  padding: 24px 0; font-size: 13px; color: var(--ink-light);
+}

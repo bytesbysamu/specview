@@ -69,6 +69,209 @@ const CONTEXT_FILES = [
 const REFRESH_INTERVAL = 30_000;
 const GEN_POLL_INTERVAL = 10_000;
 
+const CANONICAL_FILE_ORDER = [
+  'braindump.md',
+  'analysis.md',
+  'epic.md',
+  'architecture.md',
+  'timeline.md',
+  'implementation-guide.md',
+];
+
+const LOCKED_FILE_PLACEHOLDERS: Record<string, { label: string; content: string }> = {
+  'epic.md': {
+    label: 'Epic',
+    content: `# Epic
+
+## Vision
+
+A clear, outcome-focused statement of what success looks like for this project and the people it serves.
+
+## Problem Statement
+
+The core friction or inefficiency this project resolves, grounded in real user behaviour patterns observed in the analysis.
+
+## Goals
+
+- Establish a working product foundation users can adopt within a single session
+- Reduce manual coordination overhead by automating the most repetitive decision points
+- Deliver measurable value within the first two weeks of deployment
+
+## Non-Goals
+
+- Full enterprise feature parity on day one
+- Migration tooling for legacy data formats
+
+## User Stories
+
+### Primary Actor
+
+| Story | Acceptance Criteria |
+|-------|-------------------|
+| As a user, I want to onboard quickly | Setup completes in under 5 minutes |
+| As a user, I want reliable output | Results are consistent across runs |
+| As a user, I want clear error states | Failures surface actionable messages |
+
+## Success Metrics
+
+- Time-to-value under 10 minutes from first visit
+- Error rate below 2 % in steady-state operation
+- User retention above 60 % at 30 days
+`,
+  },
+  'architecture.md': {
+    label: 'Architecture',
+    content: `# Architecture
+
+## System Overview
+
+A layered service architecture separating concerns across presentation, business logic, and data persistence. Each layer communicates through well-defined interfaces enabling independent scaling and replacement.
+
+## Component Diagram
+
+\`\`\`
+┌─────────────────────────────────────────┐
+│              Client (SPA)               │
+├─────────────────────────────────────────┤
+│           API Gateway / BFF             │
+├──────────────┬──────────────────────────┤
+│  Auth Service│   Core Business Service  │
+├──────────────┴──────────────────────────┤
+│             Data Layer (DB + Cache)     │
+└─────────────────────────────────────────┘
+\`\`\`
+
+## Technology Choices
+
+| Layer | Choice | Rationale |
+|-------|--------|-----------|
+| Frontend | Angular 17 | Signals-based reactivity, strong typing |
+| API | Flask / Python | Lightweight, excellent AI library ecosystem |
+| Database | PostgreSQL | Relational integrity, JSON column support |
+| Cache | Redis | Session state, rate-limit counters |
+
+## Data Flow
+
+1. Client sends authenticated request to API gateway
+2. Gateway validates JWT and forwards to service layer
+3. Service executes business logic against the database
+4. Response serialised to JSON and returned to client
+
+## Security Considerations
+
+- All endpoints require valid JWT except public share routes
+- Rate limiting applied per-user per-day at the gateway level
+- Secrets stored in environment variables, never in source control
+`,
+  },
+  'timeline.md': {
+    label: 'Timeline',
+    content: `# Timeline
+
+## Phase Overview
+
+| Phase | Duration | Outcome |
+|-------|----------|---------|
+| Foundation | Week 1–2 | Core data models, auth, basic API |
+| Core Features | Week 3–5 | Primary user flows end-to-end |
+| Polish & QA | Week 6–7 | Edge cases, performance, accessibility |
+| Launch Prep | Week 8 | Staging deploy, final review, go-live |
+
+## Week-by-Week Breakdown
+
+### Week 1 — Project Bootstrap
+
+- Repository setup, CI pipeline, Docker Compose local stack
+- Database schema v1 migrations
+- JWT authentication flow
+
+### Week 2 — API Foundation
+
+- Core REST endpoints for primary entities
+- Input validation and error handling
+- Unit test coverage for service layer
+
+### Week 3–4 — Feature Development
+
+- Primary user flow implementation
+- Integration with external services
+- Frontend components and state management
+
+### Week 5 — Integration
+
+- End-to-end feature validation
+- Performance profiling and optimisation
+- Cross-browser compatibility pass
+
+### Week 6–7 — QA and Polish
+
+- Edge case coverage
+- Accessibility review
+- User acceptance testing with stakeholders
+
+### Week 8 — Launch
+
+- Production deployment
+- Monitoring and alerting setup
+- Post-launch support window
+`,
+  },
+  'implementation-guide.md': {
+    label: 'Implementation Guide',
+    content: `# Implementation Guide
+
+## Overview
+
+This guide breaks the epic into discrete, independently deliverable tasks ordered by dependency. Each task includes context, acceptance criteria, and the key decisions a developer needs to make.
+
+## Task 1 — Data Model & Migrations
+
+Set up the database schema for all primary entities. Define relationships, indices, and constraints before any application code is written.
+
+**Acceptance criteria:**
+- All tables created with correct column types and constraints
+- Foreign key relationships enforced at the database level
+- Migration scripts are idempotent and reversible
+
+## Task 2 — Authentication Layer
+
+Implement JWT-based authentication including signup, login, token refresh, and protected route middleware.
+
+**Acceptance criteria:**
+- Users can register and receive a valid JWT
+- Protected routes return 401 for missing or expired tokens
+- Refresh token rotation prevents token reuse
+
+## Task 3 — Core API Endpoints
+
+Build the primary CRUD endpoints for the application's main domain objects.
+
+**Acceptance criteria:**
+- All endpoints return correct HTTP status codes
+- Input validation rejects malformed payloads with clear error messages
+- Integration tests cover happy path and common error cases
+
+## Task 4 — Frontend Shell
+
+Create the Angular SPA shell with routing, global state, and the primary layout components.
+
+**Acceptance criteria:**
+- App loads without errors in both light and dark mode
+- Navigation between views works without full page reloads
+- Loading and error states are handled gracefully
+
+## Task 5 — Integration & Launch
+
+Wire all layers together, run end-to-end tests, and deploy to production.
+
+**Acceptance criteria:**
+- All E2E scenarios pass against staging environment
+- Performance meets defined thresholds
+- Monitoring and alerting are configured and verified
+`,
+  },
+};
+
 
 
 
@@ -162,6 +365,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Access denied (403) state
   accessDenied = signal(false);
+
+  // Anonymous share view state
+  isShareView = signal(false);
+  isAnonShareView = computed(() => !this.auth.isLoggedIn() && this.isShareView());
+  shareAnalysisLoading = signal(false);
 
   // Epic guide generation
   epicGuideLoading = signal(false);
@@ -418,24 +626,54 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private _shareInterval: ReturnType<typeof setInterval> | null = null;
 
+  private _augmentWithLockedFiles(proj: Project): Project {
+    if (this.auth.isLoggedIn()) return proj;
+    const existing = new Set(proj.specs.map(s => s.filename));
+    const lockedSpecs = CANONICAL_FILE_ORDER
+      .filter(fn => !existing.has(fn) && LOCKED_FILE_PLACEHOLDERS[fn])
+      .map(fn => ({
+        filename: fn,
+        label: LOCKED_FILE_PLACEHOLDERS[fn].label,
+        content: LOCKED_FILE_PLACEHOLDERS[fn].content,
+        locked: true,
+      }));
+    const augmented = [...proj.specs, ...lockedSpecs];
+    augmented.sort((a, b) => {
+      const idxA = CANONICAL_FILE_ORDER.indexOf(a.filename);
+      const idxB = CANONICAL_FILE_ORDER.indexOf(b.filename);
+      const rankA = idxA === -1 ? CANONICAL_FILE_ORDER.length : idxA;
+      const rankB = idxB === -1 ? CANONICAL_FILE_ORDER.length : idxB;
+      if (rankA !== rankB) return rankA - rankB;
+      return a.filename.localeCompare(b.filename);
+    });
+    return { ...proj, specs: augmented };
+  }
+
   private _loadSharedProject(slug: string) {
+    this.isShareView.set(true);
     // Load immediately — show braindump even if analysis is still generating
     this.projectsSvc.getPublicSharedProject(slug).then(proj => {
-      this.activeProject.set(proj);
-      const firstFile = proj.specs?.[0]?.filename ?? null;
+      const augmented = this._augmentWithLockedFiles(proj);
+      this.activeProject.set(augmented);
+      const firstFile = augmented.specs?.[0]?.filename ?? null;
       this.activeFile.set(firstFile);
 
-      // If analysis.md is missing, poll until it appears
+      // If analysis.md is missing, show loading indicator and poll until it appears
       const hasAnalysis = proj.specs.some(s => s.filename === 'analysis.md' && s.content && s.content.length > 0);
       if (!hasAnalysis) {
+        this.shareAnalysisLoading.set(true);
         this._shareInterval = setInterval(() => {
           this.projectsSvc.getPublicSharedProject(slug).then(updated => {
+            const augmentedUpdated = this._augmentWithLockedFiles(updated);
             const analysis = updated.specs.find(s => s.filename === 'analysis.md');
             if (analysis && analysis.content && analysis.content.length > 0) {
-              this.activeProject.set(updated);
+              this.activeProject.set(augmentedUpdated);
+              this.shareAnalysisLoading.set(false);
               // Switch to analysis.md when it arrives
               this.activeFile.set('analysis.md');
               if (this._shareInterval) { clearInterval(this._shareInterval); this._shareInterval = null; }
+            } else {
+              this.activeProject.set(augmentedUpdated);
             }
           }).catch(() => {});
         }, 3000);

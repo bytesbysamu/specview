@@ -19,6 +19,7 @@ export interface Spec {
   label: string;
   content?: string;
   teaser?: string;
+  locked?: boolean;
 }
 
 export interface Project {

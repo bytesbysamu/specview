@@ -13,11 +13,13 @@
         <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
       </div>
       <div class="masthead-actions">
-        <app-usage-meter />
-        @if (!subscription.isPro()) {
-          <button class="upgrade-btn" (click)="navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
+        @if (!isAnonShareView()) {
+          <app-usage-meter />
+          @if (!subscription.isPro()) {
+            <button class="upgrade-btn" (click)="navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
+          }
+          <button class="new-project-btn" data-test="create-button" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
         }
-        <button class="new-project-btn" data-test="create-button" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
         <button class="theme-toggle" data-test="dark-mode-toggle" (click)="toggleTheme()" title="Toggle dark mode">
           @if (isDark()) {
             <span class="btn-icon">☀</span>
@@ -27,6 +29,8 @@
         </button>
         @if (auth.isLoggedIn()) {
           <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
+        } @else if (isAnonShareView()) {
+          <a class="logout-btn" routerLink="/signup" title="Sign up free">Sign up free</a>
         } @else {
           <a class="logout-btn" routerLink="/login" title="Sign in">Sign in</a>
         }
@@ -35,6 +39,7 @@
   </header>
 
   <!-- Project Nav -->
+  @if (!isAnonShareView()) {
   <nav class="section-nav">
     @for (s of sections; track s.id) {
       <button
@@ -122,6 +127,7 @@
       }
     }
   </div>
+  }
 
   <!-- Update banner -->
   @if (updateBanner()) {
@@ -241,7 +247,11 @@
       <!-- Sticky sidebar -->
       <aside class="expanded-sidebar">
         <div class="sidebar-header">
-          <button class="sidebar-back" (click)="closeExpanded()"><span class="btn-icon">←</span> All</button>
+          @if (isAnonShareView()) {
+            <a class="sidebar-back" href="https://specview.dev"><span class="btn-icon">←</span> Home</a>
+          } @else {
+            <button class="sidebar-back" (click)="closeExpanded()"><span class="btn-icon">←</span> All</button>
+          }
         </div>
         <div class="sidebar-project">{{ expandedProject() }}</div>
 
@@ -252,6 +262,7 @@
                 class="sidebar-file"
                 data-test="sidebar-file"
                 [class.active]="activeFile() === s.filename"
+                [class.sidebar-file--locked]="s.locked"
                 (click)="selectFile(s.filename)">
                 {{ s.label }}
                 @if (fileOpState()[s.filename]) {
@@ -265,8 +276,15 @@
             }
           </nav>
 
+          @if (isAnonShareView()) {
+            <div class="sidebar-cta">
+              <p class="sidebar-cta-text">Sign up to unlock the full spec suite</p>
+              <a class="sidebar-cta-btn" routerLink="/signup">Sign up free</a>
+            </div>
+          }
 
           <!-- Share button -->
+          @if (!isAnonShareView()) {
           <div class="sidebar-share">
             <button
               class="sidebar-share-btn"
@@ -322,8 +340,10 @@
             </button>
           }
 
-          <!-- Op chips in sidebar (only when a spec file is open) -->
-          @if (currentSpec()) {
+          }
+
+          <!-- Op chips in sidebar (only when a spec file is open and not anon share view) -->
+          @if (currentSpec() && !isAnonShareView()) {
             <div class="sidebar-ops">
               <span class="text-ops-label">AI</span>
               @if (isBraindump()) {
@@ -370,7 +390,7 @@
         }
 
         <!-- Result toolbar (project files only) — only renders when a result is active -->
-        @if (activeProject() && currentSpec()) {
+        @if (activeProject() && currentSpec() && !isAnonShareView()) {
           @if (aiResult()) {
             <div class="editor-toolbar editor-toolbar--floating"
                  [style.bottom]="specGenLoading() || aiLoading() ? '42px' : null">
@@ -436,6 +456,15 @@
         }
         <h2 class="expanded-title" data-test="reader-title">{{ expandedTitle() }}</h2>
 
+        @if (shareAnalysisLoading()) {
+          <div class="share-analysis-loading">
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span>Generating your analysis...</span>
+          </div>
+        }
+
         <!-- AI result / diff view -->
         @if (activeProject() && aiResult()) {
           @if (isAdditiveOp()) {
@@ -466,7 +495,22 @@
             <div class="diff-unified markdown-content" [innerHTML]="diffHtmlUnified()"></div>
           }
         } @else {
-          <div class="expanded-body markdown-content" data-test="reader-content" [innerHTML]="parsedContent()"></div>
+          @if (currentSpec()?.locked) {
+            <div class="locked-content-wrapper">
+              <div class="locked-content-blur markdown-content" [innerHTML]="parsedContent()"></div>
+              <div class="locked-content-overlay">
+                <div class="locked-content-card">
+                  <h3 class="locked-content-title">Sign up to unlock</h3>
+                  <p class="locked-content-desc">
+                    Epic, Architecture, Timeline &amp; Implementation Guide are generated from your braindump. Create a free account to access the full spec suite.
+                  </p>
+                  <a class="locked-content-cta" routerLink="/signup">Sign up free</a>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="expanded-body markdown-content" data-test="reader-content" [innerHTML]="parsedContent()"></div>
+          }
         }
 
       </div>
