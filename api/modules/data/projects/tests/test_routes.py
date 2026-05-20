@@ -249,6 +249,78 @@ class TestRevertFile:
 
 
 # ---------------------------------------------------------------------------
+# POST /<id>/claim
+# ---------------------------------------------------------------------------
+class TestClaimProject:
+    """POST /<id>/claim — claim an anonymous project."""
+
+    @staticmethod
+    def makestub():
+        """Minimal claimed project stub."""
+        p = MagicMock()
+        p.slug = "anon-project"
+        p.user_id = 1
+        p.anonymous = False
+        return p
+    """Tests for POST /api/projects/<id>/claim."""
+
+    @pytest.fixture()
+    def claim_repo_stub(self, app):
+        """Attach a MagicMock project_repository to the app."""
+        stub = MagicMock()
+        app.project_repository = stub
+        return stub
+
+    def test_claim_anonymous_project_succeeds(self, client, claim_repo_stub):
+        claim_repo_stub.claim.return_value = self.makestub()
+
+        r = client.post("/api/projects/anon-project/claim")
+
+        assert r.status_code == 200, r.data
+        body = json.loads(r.data)
+        assert body["id"] == "anon-project"
+        assert body["claimed"] is True
+
+    def test_claim_calls_repo_with_correct_args(self, client, claim_repo_stub):
+        claim_repo_stub.claim.return_value = self.makestub()
+
+        client.post("/api/projects/anon-project/claim")
+
+        # conftest sets _FAKE_USER_ID = 1 via the auth bypass
+        claim_repo_stub.claim.assert_called_once_with("anon-project", 1)
+
+    def test_claim_already_owned_returns_403(self, client, claim_repo_stub):
+        claim_repo_stub.claim.return_value = None
+
+        r = client.post("/api/projects/owned-project/claim")
+
+        assert r.status_code == 403, r.data
+        body = json.loads(r.data)
+        assert "error" in body
+
+    def test_claim_nonexistent_returns_403(self, client, claim_repo_stub):
+        claim_repo_stub.claim.return_value = None
+
+        r = client.post("/api/projects/no-such-slug/claim")
+
+        assert r.status_code == 403, r.data
+
+    def test_claim_path_traversal_returns_404(self, client, claim_repo_stub):
+        r = client.post("/api/projects/../etc/claim")
+        # Flask won't route ".." cleanly, but guard it if it does reach handler
+        assert r.status_code in (400, 404)
+
+    def test_claim_no_repo_configured_returns_404(self, client):
+        # Remove the repository attribute entirely
+        app_under_test = client.application
+        app_under_test.project_repository = None
+
+        r = client.post("/api/projects/anon-project/claim")
+
+        assert r.status_code == 404, r.data
+
+
+# ---------------------------------------------------------------------------
 # Structural: route module imports git_store via the public package only
 # ---------------------------------------------------------------------------
 class TestGitStoreAdapterBoundary:

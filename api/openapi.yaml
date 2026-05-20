@@ -1322,6 +1322,42 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/projects/{id}/claim:
+    post:
+      summary: >
+        Claim ownership of an anonymous project after sign-up.
+        Requires authentication. Must NOT have project ownership yet —
+        intentionally omits the ownership check so new users can claim
+        anonymous projects they created before registering.
+      operationId: claimProject
+      tags: [projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Project slug (filesystem directory name).
+      responses:
+        '200':
+          description: Project successfully claimed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimProjectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Project not found or already claimed by another user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/public/analyze:
     post:
       summary: >
@@ -1455,6 +1491,17 @@ components:
           type: string
           nullable: true
           description: Public share slug for the created project. Use with GET /api/public/share/{slug}.
+
+    ClaimProjectResponse:
+      type: object
+      required: [id, claimed]
+      properties:
+        id:
+          type: string
+          description: Project slug (filesystem directory name).
+        claimed:
+          type: boolean
+          description: Always true on a successful claim.
 
     ShareProjectResponse:
       type: object

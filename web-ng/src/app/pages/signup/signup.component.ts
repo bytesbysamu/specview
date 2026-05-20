@@ -1,5 +1,5 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
+import { Component, signal, inject } from '@angular/core';
+import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -13,10 +13,9 @@ export class SignupComponent {
   loading = signal(false);
   error = signal('');
 
-  constructor(
-    private auth: AuthService,
-    private router: Router,
-  ) {}
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   async submit(e: Event) {
     e.preventDefault();
@@ -38,7 +37,12 @@ export class SignupComponent {
     this.error.set('');
     try {
       await this.auth.register(email, password);
-      await this.router.navigate(['/']);
+      const shareParam = this.route.snapshot.queryParamMap.get('share');
+      if (shareParam) {
+        await this.router.navigate(['/'], { queryParams: { share: shareParam } });
+      } else {
+        await this.router.navigate(['/']);
+      }
     } catch (err: any) {
       const status = err?.status;
       if (status === 409) {
