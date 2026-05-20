@@ -11,7 +11,7 @@ import { createProjectsServiceMock } from './services/projects.service.mock';
 import { createAiServiceMock } from './services/ai.service.mock';
 
 const MOCK_ACTIVATED_ROUTE = {
-  snapshot: { queryParamMap: { get: (_key: string) => null } },
+  snapshot: { queryParamMap: { get: () => null } },
 };
 
 describe('AppComponent', () => {
