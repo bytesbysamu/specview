@@ -188,3 +188,29 @@ class SqlProjectRepository:
                 return
             session.delete(project)
             session.commit()
+
+    def claim(self, slug: str, user_id: int) -> Optional[Project]:
+        """Claim an anonymous project by setting its user_id.
+
+        Matches only rows where user_id IS NULL and anonymous = True so
+        that already-owned projects are never re-assigned. Returns the
+        updated Project on success, or None if no claimable project was
+        found for the given slug.
+        """
+        with self._session() as session:
+            stmt = (
+                select(Project)
+                .where(Project.slug == slug)
+                .where(Project.user_id == None)  # noqa: E711
+                .where(Project.anonymous == True)  # noqa: E712
+            )
+            project = session.exec(stmt).first()
+            if project is None:
+                return None
+            project.user_id = user_id
+            project.anonymous = False
+            project.updated_at = datetime.utcnow()
+            session.add(project)
+            session.commit()
+            session.refresh(project)
+            return project

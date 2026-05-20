@@ -278,7 +278,7 @@ Wire all layers together, run end-to-end tests, and deploy to production.
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, WordCountPipe, UsageMeterComponent],
+  imports: [RouterOutlet, RouterLink, WordCountPipe],
   templateUrl: './app.component.html',
   animations: [
     trigger('panelEnter', [
@@ -353,8 +353,17 @@ export class AppComponent implements OnInit, OnDestroy {
   contextContent = signal<string | null>(null);
   contextTitle = signal('');
 
+  // Share slug preserved through auth
+  shareSlug = signal<string | null>(null);
+
+  // Inline braindump card
+  inlineBraindump = signal('');
+  inlineBraindumpLoading = signal(false);
+
+  // AI chips expanded state
+  aiChipsExpanded = signal(false);
+
   // New project / spec-gen
-  showCreateModal = signal(false);
   specGenLoading = signal(false);
   specGenError = signal<string | null>(null);
   specGenStep = signal<string | null>(null);
@@ -656,8 +665,27 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private _loadSharedProject(slug: string) {
+    this.shareSlug.set(slug);
     this.isShareView.set(true);
-    // Load immediately — show braindump even if analysis is still generating
+
+    // If authenticated, claim the project and load via authenticated API
+    if (this.auth.isLoggedIn()) {
+      this.projectsSvc.getPublicSharedProject(slug).then(async (proj) => {
+        try {
+          await this.projectsSvc.claimProject(proj.id);
+          await this.loadProjects();
+          await this.selectProject(proj.id);
+          this.isShareView.set(false);
+        } catch {
+          // Claim failed (already owned or not found) — show read-only via public API
+          this.activeProject.set(proj);
+          this.activeFile.set(proj.specs?.[0]?.filename ?? null);
+        }
+      }).catch(() => {});
+      return;
+    }
+
+    // Anonymous: load from public API with locked placeholders
     this.projectsSvc.getPublicSharedProject(slug).then(proj => {
       const augmented = this._augmentWithLockedFiles(proj);
       this.activeProject.set(augmented);
@@ -678,7 +706,6 @@ export class AppComponent implements OnInit, OnDestroy {
               this.activeProject.set(augmentedUpdated);
               this.shareAnalysisLoading.set(false);
               this.shareAnalysisDone.set(true);
-              // Switch to analysis.md when it arrives
               this.activeFile.set('analysis.md');
               if (this._shareInterval) { clearInterval(this._shareInterval); this._shareInterval = null; }
             } else {
@@ -1261,14 +1288,60 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  openCreateModal() {
-    this.showCreateModal.set(true);
-    this.specGenError.set(null);
-  }
+  async createFromInlineBraindump() {
+    const braindump = this.inlineBraindump().trim();
+    if (!braindump || this.specGenLoading()) return;
 
-  closeCreateModal() {
-    this.showCreateModal.set(false);
+    // Derive a project name from the first non-empty line of the braindump (truncated)
+    const firstLine = braindump.split('\n').find(l => l.trim()) ?? 'New project';
+    const name = firstLine.trim().slice(0, 60);
+
+    this.inlineBraindumpLoading.set(true);
+    this.specGenLoading.set(true);
     this.specGenError.set(null);
+    this.specGenStep.set(null);
+    this.specGenProjectName.set(name);
+    this.specGenJobId.set(null);
+    this.specGenFailedStep.set(null);
+    this.cancelling.set(false);
+    this._setStatusActive();
+    this._startGenPoll();
+
+    try {
+      const project = await this.projectsSvc.createProject(name, [
+        { filename: 'braindump.md', content: braindump },
+      ]);
+      this.inlineBraindump.set('');
+      await this.loadProjects();
+      await this.selectProject(project.id);
+
+      const remainingFiles = await this._runBootstrap(name, braindump, async (file) => {
+        await this.projectsSvc.saveFile(project.id, file.filename, file.content);
+        const refreshed = await this.projectsSvc.getProject(project.id);
+        this.activeProject.set(refreshed);
+      });
+
+      for (const file of remainingFiles) {
+        await this.projectsSvc.saveFile(project.id, file.filename, file.content);
+      }
+
+      const final = await this.projectsSvc.getProject(project.id);
+      this.activeProject.set(final);
+      this.activeFile.set(final.specs.find(s => s.filename === 'analysis.md')?.filename ?? final.specs[0]?.filename ?? null);
+      this._setStatusSuccess();
+    } catch (err: any) {
+      const msg = err?.message || 'Generation failed — check connection and try again.';
+      this.specGenError.set(msg);
+      this._setStatusFailure(msg);
+    } finally {
+      this.inlineBraindumpLoading.set(false);
+      this.specGenLoading.set(false);
+      this.specGenStep.set(null);
+      this.specGenProjectName.set(null);
+      this.specGenJobId.set(null);
+      this.cancelling.set(false);
+      this._stopGenPoll();
+    }
   }
 
   async createProject(nameEl: HTMLInputElement, braindumpEl: HTMLTextAreaElement) {
@@ -1276,8 +1349,6 @@ export class AppComponent implements OnInit, OnDestroy {
     const braindump = braindumpEl.value.trim();
     if (!name || !braindump || this.specGenLoading()) return;
 
-    // Close modal immediately — show fixed status bar
-    this.showCreateModal.set(false);
     this.specGenLoading.set(true);
     this.specGenError.set(null);
     this.specGenStep.set(null);

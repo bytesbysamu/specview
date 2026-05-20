@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -108,6 +108,7 @@ export class LoginComponent {
 
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   async submit(e: Event) {
     e.preventDefault();
@@ -119,7 +120,12 @@ export class LoginComponent {
     this.error.set('');
     try {
       await this.auth.login(email, password);
-      this.router.navigate(['/']);
+      const shareParam = this.route.snapshot.queryParamMap.get('share');
+      if (shareParam) {
+        this.router.navigate(['/'], { queryParams: { share: shareParam } });
+      } else {
+        this.router.navigate(['/']);
+      }
     } catch {
       this.error.set('Invalid email or password.');
     } finally {

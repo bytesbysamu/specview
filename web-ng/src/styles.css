@@ -2209,3 +2209,71 @@ body {
   display: flex; align-items: center; gap: 6px;
   padding: 24px 0; font-size: 13px; color: var(--ink-light);
 }
+
+/* ── Inline braindump card in grid ─────── */
+.braindump-card {
+  grid-column: span 2;
+  border: 1px dashed var(--border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.braindump-card-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.braindump-card-textarea:focus { border-color: var(--ink); }
+.braindump-card-textarea::placeholder { color: var(--ink-muted); font-style: italic; }
+.braindump-card-btn {
+  align-self: flex-start;
+  padding: 8px 20px;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.braindump-card-btn:hover:not(:disabled) { opacity: 0.85; }
+.braindump-card-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── AI chips toggle ─────── */
+.sidebar-ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 8px 16px 0;
+  width: calc(100% - 32px);
+  transition: border-color 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sidebar-ai-toggle:hover { border-color: var(--ink); }
+.sidebar-ai-arrow { margin-left: auto; font-size: 10px; }

@@ -89,8 +89,13 @@ def test_project_slug_routes_have_ownership_decorator():
     # because they do not accept a per-project slug parameter:
     #   list_projects_route — lists all projects for the current user
     #   create_project_route — creates a new project (no slug yet)
+    # Routes that intentionally skip ownership because ownership has not been
+    # established yet:
+    #   claim_project_route — transfers an anonymous project to the caller;
+    #                         the project has no owner at call time so the
+    #                         ownership check would always 403.
     # Internal helpers (leading underscore) are also excluded.
-    excluded = {"list_projects_route", "create_project_route"}
+    excluded = {"list_projects_route", "create_project_route", "claim_project_route"}
 
     slug_param_names = {"id", "project_id"}
 

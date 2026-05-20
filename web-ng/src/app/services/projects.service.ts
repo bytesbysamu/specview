@@ -190,4 +190,10 @@ export class ProjectsService {
       specs: sortSpecs(res.docs.map(d => ({ filename: d.filename, label: d.label, content: d.content }))),
     }));
   }
+
+  claimProject(projectId: string): Promise<{ id: string; claimed: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ id: string; claimed: boolean }>(`/api/projects/${projectId}/claim`, {})
+    );
+  }
 }

@@ -275,3 +275,149 @@ def test_repository_satisfies_protocol_shape():
         assert hasattr(SqlProjectRepository, method), (
             f"SqlProjectRepository is missing protocol method: {method}"
         )
+
+
+# ---------------------------------------------------------------------------
+# create_anonymous()
+# ---------------------------------------------------------------------------
+
+
+def test_create_anonymous_sets_null_user_id(sqlite_engine, git_repos_dir):
+    """create_anonymous() must store user_id=None on the Project row."""
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    project = repo.create_anonymous(name="Anon Project", slug="anon-null-user")
+    assert project.id is not None, "create_anonymous() must return a row with id assigned"
+    assert project.user_id is None, (
+        "create_anonymous() must set user_id=None; got %r" % project.user_id
+    )
+
+
+def test_create_anonymous_sets_anonymous_flag(sqlite_engine, git_repos_dir):
+    """create_anonymous() must set anonymous=True on the Project row."""
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    project = repo.create_anonymous(name="Anon Flag Test", slug="anon-flag-test")
+    assert project.anonymous is True, (
+        "create_anonymous() must set anonymous=True; got %r" % project.anonymous
+    )
+
+
+# ---------------------------------------------------------------------------
+# list_anonymous_older_than()
+# ---------------------------------------------------------------------------
+
+
+def test_list_anonymous_older_than_returns_expired(sqlite_engine, git_repos_dir):
+    """list_anonymous_older_than() returns anonymous projects whose created_at
+    is before the cutoff datetime."""
+    from datetime import datetime, timedelta
+
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    project = repo.create_anonymous(name="Old Anon", slug="old-anon-project")
+
+    # Back-date the row's created_at so it appears expired.
+    from sqlmodel import Session
+    with Session(sqlite_engine) as session:
+        row = session.get(Project, project.id)
+        row.created_at = datetime.utcnow() - timedelta(hours=72)
+        session.add(row)
+        session.commit()
+
+    cutoff = datetime.utcnow() - timedelta(hours=48)
+    results = repo.list_anonymous_older_than(cutoff)
+    slugs = {p.slug for p in results}
+    assert "old-anon-project" in slugs, (
+        "list_anonymous_older_than() must return projects older than the cutoff"
+    )
+
+
+def test_list_anonymous_older_than_excludes_recent(sqlite_engine, git_repos_dir):
+    """list_anonymous_older_than() must NOT return anonymous projects whose
+    created_at is after the cutoff."""
+    from datetime import datetime, timedelta
+
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    repo.create_anonymous(name="Recent Anon", slug="recent-anon-project")
+
+    # cutoff is 48 hours ago; the freshly-created row should be excluded.
+    cutoff = datetime.utcnow() - timedelta(hours=48)
+    results = repo.list_anonymous_older_than(cutoff)
+    slugs = {p.slug for p in results}
+    assert "recent-anon-project" not in slugs, (
+        "list_anonymous_older_than() must not return projects newer than the cutoff"
+    )
+
+
+# ---------------------------------------------------------------------------
+# claim()
+# ---------------------------------------------------------------------------
+
+
+def test_claim_anonymous_project_succeeds(sqlite_engine, git_repos_dir):
+    """claim() sets user_id and clears the anonymous flag on a matching row."""
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    repo.create_anonymous(name="Claimable", slug="claim-me")
+
+    result = repo.claim("claim-me", user_id=7)
+
+    assert result is not None, "claim() must return the Project on success"
+    assert result.user_id == 7, (
+        f"claim() must set user_id; got {result.user_id!r}"
+    )
+    assert result.anonymous is False, (
+        "claim() must clear the anonymous flag"
+    )
+
+
+def test_claim_persists_ownership_in_db(sqlite_engine, git_repos_dir):
+    """A subsequent get_by_slug must reflect the claimed user_id."""
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    repo.create_anonymous(name="Persist Test", slug="claim-persist")
+
+    repo.claim("claim-persist", user_id=5)
+
+    refreshed = repo.get_by_slug("claim-persist")
+    assert refreshed is not None
+    assert refreshed.user_id == 5, (
+        "claim() must commit the user_id change to the database"
+    )
+    assert refreshed.anonymous is False
+
+
+def test_claim_already_owned_returns_none(sqlite_engine, git_repos_dir):
+    """claim() returns None when the project already has an owner."""
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    repo.create(
+        user_id=1,
+        name="Already Owned",
+        slug="already-owned",
+        git_repo_path=str((git_repos_dir / "ao")),
+    )
+
+    result = repo.claim("already-owned", user_id=2)
+
+    assert result is None, (
+        "claim() must return None for a project that already has user_id set"
+    )
+
+
+def test_claim_nonexistent_slug_returns_none(sqlite_engine, git_repos_dir):
+    """claim() returns None when no project matches the given slug."""
+    repo = SqlProjectRepository(engine=sqlite_engine)
+
+    result = repo.claim("does-not-exist", user_id=1)
+
+    assert result is None, (
+        "claim() must return None when no project exists for the slug"
+    )
+
+
+def test_claim_idempotent_second_claim_returns_none(sqlite_engine, git_repos_dir):
+    """Calling claim() twice on the same slug returns None the second time."""
+    repo = SqlProjectRepository(engine=sqlite_engine)
+    repo.create_anonymous(name="Idempotent", slug="claim-twice")
+
+    first = repo.claim("claim-twice", user_id=3)
+    second = repo.claim("claim-twice", user_id=4)
+
+    assert first is not None, "first claim must succeed"
+    assert second is None, "second claim must return None (already owned)"

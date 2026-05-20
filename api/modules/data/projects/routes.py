@@ -212,6 +212,45 @@ def coherence_route(id: str):
 
 
 # ---------------------------------------------------------------------------
+# Claim endpoint
+# ---------------------------------------------------------------------------
+
+@projects_bp.post("/<id>/claim")
+@require_auth
+def claim_project_route(id: str):
+    """POST /api/projects/<id>/claim — transfer ownership of an anonymous project.
+
+    Intended for the sign-up flow: an anonymous user views a shared project,
+    creates an account, and then claims ownership.  This endpoint deliberately
+    omits @require_project_ownership because the project has no owner yet.
+    """
+    if ".." in id or "/" in id:
+        return jsonify({"error": "Project not found"}), 404
+
+    if g.current_user is None:
+        return jsonify({"error": "authentication required"}), 401
+
+    repo = getattr(current_app, "project_repository", None)
+    if repo is None:
+        logger.error("claim_project_route: project_repository not configured")
+        return jsonify({"error": "Project not found"}), 404
+
+    project = repo.claim(id, g.current_user.id)
+    if project is None:
+        logger.warning(
+            "claim_project_route not_claimable slug=%s user_id=%s",
+            id, g.current_user.id,
+        )
+        return jsonify({"error": "Project not found or already claimed"}), 403
+
+    logger.info(
+        "claim_project_route success slug=%s user_id=%s",
+        id, g.current_user.id,
+    )
+    return jsonify({"id": project.slug, "claimed": True})
+
+
+# ---------------------------------------------------------------------------
 # Share endpoint
 # ---------------------------------------------------------------------------
 

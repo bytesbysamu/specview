@@ -13,13 +13,6 @@
         <div class="masthead-tagline"><em>All the Specs Fit to Read</em></div>
       </div>
       <div class="masthead-actions">
-        @if (!isAnonShareView()) {
-          <app-usage-meter />
-          @if (!subscription.isPro()) {
-            <button class="upgrade-btn" (click)="navigateToUpgrade()" title="Upgrade to Pro">Upgrade</button>
-          }
-          <button class="new-project-btn" data-test="create-button" (click)="openCreateModal()" title="New project"><span class="btn-icon">+</span> New</button>
-        }
         <button class="theme-toggle" data-test="dark-mode-toggle" (click)="toggleTheme()" title="Toggle dark mode">
           @if (isDark()) {
             <span class="btn-icon">☀</span>
@@ -30,9 +23,9 @@
         @if (auth.isLoggedIn()) {
           <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
         } @else if (isAnonShareView()) {
-          <a class="logout-btn" routerLink="/signup" title="Sign up free">Sign up free</a>
+          <a class="logout-btn" [routerLink]="['/signup']" [queryParams]="{share: shareSlug()}" title="Sign up free">Sign up free</a>
         } @else {
-          <a class="logout-btn" routerLink="/login" title="Sign in">Sign in</a>
+          <a class="logout-btn" [routerLink]="['/login']" [queryParams]="{share: shareSlug()}" title="Sign in">Sign in</a>
         }
       </div>
     </div>
@@ -200,6 +193,27 @@
   <!-- File grid -->
   @if (showGrid()) {
     <section class="file-grid">
+      <!-- Inline braindump card — always first in grid (non-context sections) -->
+      @if (!isAnonShareView() && activeSection() !== 'context') {
+        <div class="project-card braindump-card">
+          <textarea
+            class="braindump-card-textarea"
+            placeholder="Paste your braindump here..."
+            [value]="inlineBraindump()"
+            (input)="inlineBraindump.set($any($event.target).value)"
+            rows="5"></textarea>
+          <button
+            class="braindump-card-btn"
+            [disabled]="!inlineBraindump().trim() || inlineBraindumpLoading()"
+            (click)="createFromInlineBraindump()">
+            @if (inlineBraindumpLoading()) {
+              <span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>
+            } @else {
+              Generate Specs
+            }
+          </button>
+        </div>
+      }
       @if (activeSection() === 'context') {
         <!-- Context cards -->
         <div class="context-grid">
@@ -310,7 +324,7 @@
           @if (isAnonShareView()) {
             <div class="sidebar-cta">
               <p class="sidebar-cta-text">Sign up to unlock the full spec suite</p>
-              <a class="sidebar-cta-btn" routerLink="/signup">Sign up free</a>
+              <a class="sidebar-cta-btn" [routerLink]="['/signup']" [queryParams]="{share: shareSlug()}">Sign up free</a>
             </div>
           }
 
@@ -375,33 +389,38 @@
 
           <!-- Op chips in sidebar (only when a spec file is open and not anon share view) -->
           @if (currentSpec() && !isAnonShareView()) {
-            <div class="sidebar-ops">
-              <span class="text-ops-label">AI</span>
-              @if (isBraindump()) {
-                <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')"><span class="btn-icon">✦</span> Brainstorm</button>
-              }
-              <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')"><span class="btn-icon">↕</span> Expand</button>
-              <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')"><span class="btn-icon">⊡</span> Compress</button>
-              <button class="op-chip" [class.active]="activeOp() === 'clarify'"   (click)="toggleOp('clarify')"><span class="btn-icon">?</span> Clarify</button>
-              <button class="op-chip" [class.active]="activeOp() === 'simplify'"  (click)="toggleOp('simplify')"><span class="btn-icon">◁</span> Simplify</button>
-              <button class="op-chip" [class.active]="activeOp() === 'tldr'"      (click)="toggleOp('tldr')"><span class="btn-icon">≡</span> TL;DR</button>
-              <button class="op-chip" [class.active]="activeOp() === 'bullets'"   (click)="toggleOp('bullets')"><span class="btn-icon">≔</span> Bullets</button>
-              <button class="op-chip" [class.active]="activeOp() === 'style'"     (click)="toggleOp('style')"><span class="btn-icon">◈</span> Style…</button>
-              @if (canRevert()) {
-                <button class="op-chip editor-hist-btn" (click)="undoVersion()"><span class="btn-icon">↩</span> Undo</button>
-              }
-              @if (canRedo()) {
-                <button class="op-chip editor-hist-btn" (click)="redoVersion()"><span class="btn-icon">↻</span> Redo</button>
-              }
-            </div>
-            <!-- Style preset chips — shown in sidebar below chip row when Style is active -->
-            @if (activeOp() === 'style' && !aiLoading() && !aiResult()) {
-              <div class="style-presets sidebar-style-presets">
-                <span class="style-presets-label">Style as</span>
-                @for (s of STYLE_PRESETS; track s) {
-                  <button class="style-chip" (click)="runStyle(s)">{{ s }}</button>
+            <button class="sidebar-ai-toggle" (click)="aiChipsExpanded.set(!aiChipsExpanded())">
+              <span class="btn-icon">✦</span> AI
+              <span class="sidebar-ai-arrow">{{ aiChipsExpanded() ? '▾' : '▸' }}</span>
+            </button>
+            @if (aiChipsExpanded()) {
+              <div class="sidebar-ops">
+                @if (isBraindump()) {
+                  <button class="op-chip op-chip--accent" data-test="brainstorm-button" [class.active]="activeOp() === 'brainstorm'" (click)="toggleOp('brainstorm')"><span class="btn-icon">✦</span> Brainstorm</button>
+                }
+                <button class="op-chip" [class.active]="activeOp() === 'expand'"    (click)="toggleOp('expand')"><span class="btn-icon">↕</span> Expand</button>
+                <button class="op-chip" [class.active]="activeOp() === 'compress'"  (click)="toggleOp('compress')"><span class="btn-icon">⊡</span> Compress</button>
+                <button class="op-chip" [class.active]="activeOp() === 'clarify'"   (click)="toggleOp('clarify')"><span class="btn-icon">?</span> Clarify</button>
+                <button class="op-chip" [class.active]="activeOp() === 'simplify'"  (click)="toggleOp('simplify')"><span class="btn-icon">◁</span> Simplify</button>
+                <button class="op-chip" [class.active]="activeOp() === 'tldr'"      (click)="toggleOp('tldr')"><span class="btn-icon">≡</span> TL;DR</button>
+                <button class="op-chip" [class.active]="activeOp() === 'bullets'"   (click)="toggleOp('bullets')"><span class="btn-icon">≔</span> Bullets</button>
+                <button class="op-chip" [class.active]="activeOp() === 'style'"     (click)="toggleOp('style')"><span class="btn-icon">◈</span> Style…</button>
+                @if (canRevert()) {
+                  <button class="op-chip editor-hist-btn" (click)="undoVersion()"><span class="btn-icon">↩</span> Undo</button>
+                }
+                @if (canRedo()) {
+                  <button class="op-chip editor-hist-btn" (click)="redoVersion()"><span class="btn-icon">↻</span> Redo</button>
                 }
               </div>
+              <!-- Style preset chips — shown in sidebar below chip row when Style is active -->
+              @if (activeOp() === 'style' && !aiLoading() && !aiResult()) {
+                <div class="style-presets sidebar-style-presets">
+                  <span class="style-presets-label">Style as</span>
+                  @for (s of STYLE_PRESETS; track s) {
+                    <button class="style-chip" (click)="runStyle(s)">{{ s }}</button>
+                  }
+                </div>
+              }
             }
           }
         }
@@ -526,7 +545,7 @@
                   <p class="locked-content-desc">
                     Epic, Architecture, Timeline &amp; Implementation Guide are generated from your braindump. Create a free account to access the full spec suite.
                   </p>
-                  <a class="locked-content-cta" routerLink="/signup">Sign up free</a>
+                  <a class="locked-content-cta" [routerLink]="['/signup']" [queryParams]="{share: shareSlug()}">Sign up free</a>
                 </div>
               </div>
             </div>
@@ -548,59 +567,4 @@
 </div>
 
 
-<!-- New Project Modal -->
-@if (showCreateModal()) {
-  <div class="modal-backdrop" (click)="closeCreateModal()">
-    <div class="modal" data-test="create-modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title">New Project</h2>
-        <button class="modal-close" (click)="closeCreateModal()"><span class="btn-icon">×</span></button>
-      </div>
-
-      <div class="modal-body">
-        <label class="modal-label" for="projectName">Project name</label>
-        <input
-          #projectNameEl
-          id="projectName"
-          class="modal-input"
-          type="text"
-          placeholder="e.g. Flask / Angular Plugin"
-          (keydown.enter)="projectNameEl.value && braindumpEl.value && createProject(projectNameEl, braindumpEl)" />
-
-        <label class="modal-label" for="braindump">Brain dump</label>
-        <textarea
-          #braindumpEl
-          id="braindump"
-          data-test="braindump-input"
-          class="modal-textarea"
-          placeholder="Paste your brain dump here — everything you know about this project, unfiltered. The AI will generate analysis, epic, and architecture docs from it."
-          rows="14"></textarea>
-
-        @if (specGenError()) {
-          <div class="text-ops-error">
-            <span class="overline">Error</span>
-            {{ specGenError() }}
-          </div>
-        }
-      </div>
-
-      <div class="modal-footer">
-        <button class="modal-cancel" (click)="closeCreateModal()">Cancel</button>
-        <button
-          class="modal-generate"
-          [disabled]="specGenLoading()"
-          (click)="createProject(projectNameEl, braindumpEl)">
-          @if (specGenLoading()) {
-            <span class="thinking-dot"></span>
-            <span class="thinking-dot"></span>
-            <span class="thinking-dot"></span>
-            Generating…
-          } @else {
-            <span class="btn-icon">✦</span> Generate Specs
-          }
-        </button>
-      </div>
-    </div>
-  </div>
-}
 }
