@@ -4,7 +4,7 @@ import { trigger, transition, style, animate, query, group } from '@angular/anim
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
@@ -112,7 +112,7 @@ export class AppComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   subscription = inject(SubscriptionService);
   private router = inject(Router);
-  private route = inject(ActivatedRoute);
+
 
   /** Whether the current route is a full-page route (only /playground). */
   isFullPageRoute = signal(false);
@@ -395,7 +395,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.isDark.set(saved === 'dark');
     if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 
-    const shareSlug = this.route.snapshot.queryParamMap.get('share');
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareSlug = urlParams.get('share');
     if (shareSlug) {
       this._loadSharedProject(shareSlug);
     }
