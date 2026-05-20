@@ -77,9 +77,9 @@ window.buildRedirectUrl = buildRedirectUrl;
 /**
  * Wire the CTA button click handler.
  *
- * Reads window.rotationState (set by rotation.js) to determine whether the
- * visitor edited the textarea (real mode) or left the demo text (demo mode).
- * Builds the redirect URL and assigns it to window.location.href.
+ * Calls window.submitAnalysis() from analyze.js to POST the braindump to the
+ * backend and render the result inline. The redirect behavior is preserved via
+ * buildRedirectUrl / encodeBase64Url but is not triggered on click.
  *
  * Call this function after the DOM is ready.
  */
@@ -91,10 +91,10 @@ window.initCtaButton = function () {
   }
 
   btn.addEventListener('click', function () {
-    var textarea = document.getElementById('braindump-textarea');
-    var text = textarea ? textarea.value.trim() : '';
-    if (!text) return;
-
-    window.location.href = buildRedirectUrl(false, text);
+    if (typeof window.submitAnalysis === 'function') {
+      window.submitAnalysis();
+    } else {
+      console.warn('redirect.js: window.submitAnalysis not found — analyze.js may not be loaded');
+    }
   });
 };

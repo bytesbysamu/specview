@@ -33,6 +33,7 @@ ENABLED_MODULES = [
     ('modules.ai.routes.generic_skill_route', 'skill_bp'),  # Thin API Phase 2 — generic skill route
     ('modules.ai.routes.actions', 'actions_bp'),            # Thin API Phase 3 — action routes
     ('modules.data.public.routes', 'public_bp'),            # Task 1 — public shareable spec URLs
+    ('modules.ai.routes.public_analyze', 'public_analyze_bp'),  # Anonymous analysis endpoint
 ]
 
 

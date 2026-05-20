@@ -1322,6 +1322,64 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/public/analyze:
+    post:
+      summary: >
+        Submit a braindump for anonymous analysis. No authentication required.
+        Rate limited to 3 requests per IP per 24 hours.
+      operationId: startPublicAnalysis
+      tags: [public]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicAnalyzeRequest'
+      responses:
+        '202':
+          description: Analysis job accepted and running in the background.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [job_id]
+                properties:
+                  job_id:
+                    type: string
+                    description: Opaque job identifier. Pass to GET /api/public/analyze/{job_id} to poll for completion.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Rate limit exceeded — more than 3 requests from this IP in the last 24 hours.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/public/analyze/{job_id}:
+    get:
+      summary: >
+        Poll for the result of a previously submitted anonymous analysis job.
+        No authentication required.
+      operationId: getPublicAnalysisStatus
+      tags: [public]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job identifier returned by POST /api/public/analyze.
+      responses:
+        '200':
+          description: Current job status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicAnalyzeJobStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/public/share/{slug}:
     get:
       summary: >
@@ -1349,6 +1407,35 @@ paths:
 components:
 
   schemas:
+
+    PublicAnalyzeRequest:
+      type: object
+      required: [braindump]
+      properties:
+        braindump:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Raw braindump text to be analysed.
+
+    PublicAnalyzeJobStatus:
+      type: object
+      required: [running, done]
+      properties:
+        running:
+          type: boolean
+          description: True while the background analysis is in progress.
+        done:
+          type: boolean
+          description: True once the job has terminated (successfully or not).
+        analysis:
+          type: string
+          nullable: true
+          description: Generated analysis markdown. Present only on success.
+        error:
+          type: string
+          nullable: true
+          description: Error message from the background job. Present only on failure.
 
     ShareProjectResponse:
       type: object
