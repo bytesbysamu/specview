@@ -1196,7 +1196,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.shareLoading.set(true);
     try {
       const result = await this.projectsSvc.shareProject(proj.id);
-      const fullUrl = `${window.location.origin}${result.url}`;
+      const fullUrl = `${window.location.origin}/?share=${result.shareSlug}`;
       this.shareUrl.set(fullUrl);
       await navigator.clipboard.writeText(fullUrl);
       this.shareCopied.set(true);
