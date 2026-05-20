@@ -6,4 +6,4 @@ flake8
 pytest-httpserver>=1.1.5
 jsonschema>=4.26.0
 pyyaml>=6.0.3
-syrupy>=5.1.0
+syrupy>=5.2.0
