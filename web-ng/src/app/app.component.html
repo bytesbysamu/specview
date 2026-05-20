@@ -40,7 +40,7 @@
 
   <!-- Project Nav -->
   @if (!isAnonShareView()) {
-  <nav class="section-nav">
+  <nav class="section-nav" data-test="section-nav">
     @for (s of sections; track s.id) {
       <button
         class="section-link"
@@ -61,73 +61,104 @@
       </button>
     }
   </nav>
+  }
 
-  <!-- Generation status bar — always visible, positioned between nav and search -->
+  <!-- Generation status bar — visible for all users -->
   <div class="gen-status-bar"
        data-test="status-bar"
-       [class.gen-status-bar--idle]="mode() === 'idle'"
-       [class.gen-status-bar--active]="mode() === 'active'"
-       [class.gen-status-bar--success]="mode() === 'success-flash'"
+       [class.gen-status-bar--idle]="shareStatusMode() === 'idle'"
+       [class.gen-status-bar--active]="shareStatusMode() === 'active'"
+       [class.gen-status-bar--success]="shareStatusMode() === 'success'"
        [class.gen-status-bar--failure]="mode() === 'failure'">
-    @switch (mode()) {
-      @case ('active') {
-        <div class="gen-status-track"></div>
-        <div class="gen-status-content">
-          <span class="thinking-dot gen-dot"></span>
-          <span class="thinking-dot gen-dot"></span>
-          <span class="thinking-dot gen-dot"></span>
-          @if (specGenLoading()) {
-            <span class="gen-status-project">{{ specGenProjectName() }}</span>
-            @if (specGenStep()) {
-              <span class="gen-status-sep">·</span>
-              <span class="gen-status-step">{{ specGenStep() }}</span>
-            }
-            <span class="gen-status-timer" data-test="gen-status-timer">{{ specGenElapsed() }}</span>
-            @if (specGenJobId()) {
-              <button
-                class="gen-status-cancel"
-                data-test="cancel-generation-global"
-                [disabled]="cancelling()"
-                (click)="onCancel()">
-                {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
-              </button>
-            }
-          } @else if (aiLoading()) {
-            <span class="gen-status-project">{{ activeFile() }}</span>
+    @if (isAnonShareView()) {
+      @switch (shareStatusMode()) {
+        @case ('active') {
+          <div class="gen-status-track"></div>
+          <div class="gen-status-content">
+            <span class="thinking-dot gen-dot"></span>
+            <span class="thinking-dot gen-dot"></span>
+            <span class="thinking-dot gen-dot"></span>
+            <span class="gen-status-project">{{ activeProject()?.name ?? 'analysis' }}</span>
             <span class="gen-status-sep">·</span>
-            <span class="gen-status-step">{{ aiOpLabel() }}</span>
-          } @else {
-            <span class="gen-status-step">{{ activeStepLabel() }}</span>
-          }
-        </div>
+            <span class="gen-status-step">analysing</span>
+          </div>
+        }
+        @case ('success') {
+          <div class="gen-status-content">
+            <span class="gen-status-project">{{ activeProject()?.name ?? 'analysis' }}</span>
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">done</span>
+          </div>
+        }
+        @default {
+          <div class="gen-status-content gen-status-idle">
+            <span class="gen-dot"></span>
+            <span class="gen-status-project">specview</span>
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">idle — ready</span>
+          </div>
+        }
       }
-      @case ('success-flash') {
-        <div class="gen-status-content">
-          <span class="gen-status-project">{{ specGenProjectName() ?? 'done' }}</span>
-          <span class="gen-status-sep">·</span>
-          <span class="gen-status-step">done</span>
-          <span class="gen-status-timer" data-test="gen-status-timer-done">{{ specGenElapsed() }}</span>
-        </div>
-      }
-      @case ('failure') {
-        <div class="gen-status-content">
-          <span class="gen-status-project">error</span>
-          <span class="gen-status-sep">·</span>
-          <span class="gen-status-step">{{ statusFailureMsg() }}</span>
-          <button class="gen-status-retry" (click)="retryLastOp()">retry</button>
-        </div>
-      }
-      @default {
-        <div class="gen-status-content gen-status-idle">
-          <span class="gen-dot"></span>
-          <span class="gen-status-project">specview</span>
-          <span class="gen-status-sep">·</span>
-          <span class="gen-status-step">idle — ready</span>
-        </div>
+    } @else {
+      @switch (mode()) {
+        @case ('active') {
+          <div class="gen-status-track"></div>
+          <div class="gen-status-content">
+            <span class="thinking-dot gen-dot"></span>
+            <span class="thinking-dot gen-dot"></span>
+            <span class="thinking-dot gen-dot"></span>
+            @if (specGenLoading()) {
+              <span class="gen-status-project">{{ specGenProjectName() }}</span>
+              @if (specGenStep()) {
+                <span class="gen-status-sep">·</span>
+                <span class="gen-status-step">{{ specGenStep() }}</span>
+              }
+              <span class="gen-status-timer" data-test="gen-status-timer">{{ specGenElapsed() }}</span>
+              @if (specGenJobId()) {
+                <button
+                  class="gen-status-cancel"
+                  data-test="cancel-generation-global"
+                  [disabled]="cancelling()"
+                  (click)="onCancel()">
+                  {{ cancelling() ? 'Cancelling…' : 'Cancel' }}
+                </button>
+              }
+            } @else if (aiLoading()) {
+              <span class="gen-status-project">{{ activeFile() }}</span>
+              <span class="gen-status-sep">·</span>
+              <span class="gen-status-step">{{ aiOpLabel() }}</span>
+            } @else {
+              <span class="gen-status-step">{{ activeStepLabel() }}</span>
+            }
+          </div>
+        }
+        @case ('success-flash') {
+          <div class="gen-status-content">
+            <span class="gen-status-project">{{ specGenProjectName() ?? 'done' }}</span>
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">done</span>
+            <span class="gen-status-timer" data-test="gen-status-timer-done">{{ specGenElapsed() }}</span>
+          </div>
+        }
+        @case ('failure') {
+          <div class="gen-status-content">
+            <span class="gen-status-project">error</span>
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">{{ statusFailureMsg() }}</span>
+            <button class="gen-status-retry" (click)="retryLastOp()">retry</button>
+          </div>
+        }
+        @default {
+          <div class="gen-status-content gen-status-idle">
+            <span class="gen-dot"></span>
+            <span class="gen-status-project">specview</span>
+            <span class="gen-status-sep">·</span>
+            <span class="gen-status-step">idle — ready</span>
+          </div>
+        }
       }
     }
   </div>
-  }
 
   <!-- Update banner -->
   @if (updateBanner()) {
@@ -455,15 +486,6 @@
           </div>
         }
         <h2 class="expanded-title" data-test="reader-title">{{ expandedTitle() }}</h2>
-
-        @if (shareAnalysisLoading()) {
-          <div class="share-analysis-loading">
-            <span class="thinking-dot"></span>
-            <span class="thinking-dot"></span>
-            <span class="thinking-dot"></span>
-            <span>Generating your analysis...</span>
-          </div>
-        }
 
         <!-- AI result / diff view -->
         @if (activeProject() && aiResult()) {

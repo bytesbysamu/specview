@@ -370,6 +370,12 @@ export class AppComponent implements OnInit, OnDestroy {
   isShareView = signal(false);
   isAnonShareView = computed(() => !this.auth.isLoggedIn() && this.isShareView());
   shareAnalysisLoading = signal(false);
+  shareAnalysisDone = signal(false);
+  shareStatusMode = computed((): 'idle' | 'active' | 'success' => {
+    if (this.shareAnalysisLoading()) return 'active';
+    if (this.shareAnalysisDone()) return 'success';
+    return 'idle';
+  });
 
   // Epic guide generation
   epicGuideLoading = signal(false);
@@ -660,7 +666,9 @@ export class AppComponent implements OnInit, OnDestroy {
 
       // If analysis.md is missing, show loading indicator and poll until it appears
       const hasAnalysis = proj.specs.some(s => s.filename === 'analysis.md' && s.content && s.content.length > 0);
-      if (!hasAnalysis) {
+      if (hasAnalysis) {
+        this.shareAnalysisDone.set(true);
+      } else {
         this.shareAnalysisLoading.set(true);
         this._shareInterval = setInterval(() => {
           this.projectsSvc.getPublicSharedProject(slug).then(updated => {
@@ -669,6 +677,7 @@ export class AppComponent implements OnInit, OnDestroy {
             if (analysis && analysis.content && analysis.content.length > 0) {
               this.activeProject.set(augmentedUpdated);
               this.shareAnalysisLoading.set(false);
+              this.shareAnalysisDone.set(true);
               // Switch to analysis.md when it arrives
               this.activeFile.set('analysis.md');
               if (this._shareInterval) { clearInterval(this._shareInterval); this._shareInterval = null; }
