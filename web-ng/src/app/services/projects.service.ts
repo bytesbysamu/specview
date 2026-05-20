@@ -176,4 +176,17 @@ export class ProjectsService {
       this.http.get<PublicAnalyzeJobStatus>('/api/public/analyze/' + jobId)
     );
   }
+
+  getPublicSharedProject(slug: string): Promise<Project> {
+    return firstValueFrom(
+      this.http.get<{ name: string; id: string; docs: { filename: string; label: string; content: string }[] }>(
+        '/api/public/share/' + slug
+      )
+    ).then(res => ({
+      id: res.id,
+      name: res.name,
+      createdAt: '',
+      specs: sortSpecs(res.docs.map(d => ({ filename: d.filename, label: d.label, content: d.content }))),
+    }));
+  }
 }

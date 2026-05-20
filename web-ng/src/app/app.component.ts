@@ -4,7 +4,7 @@ import { trigger, transition, style, animate, query, group } from '@angular/anim
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ProjectsService, Project, Spec, GeneratedFile, AccessDeniedError } from './services/projects.service';
@@ -112,6 +112,7 @@ export class AppComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   subscription = inject(SubscriptionService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   /** Whether the current route is a full-page route (only /playground). */
   isFullPageRoute = signal(false);
@@ -393,6 +394,16 @@ export class AppComponent implements OnInit, OnDestroy {
     const saved = localStorage.getItem('theme') || 'light';
     this.isDark.set(saved === 'dark');
     if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
+    const shareSlug = this.route.snapshot.queryParamMap.get('share');
+    if (shareSlug) {
+      this.projectsSvc.getPublicSharedProject(shareSlug).then(proj => {
+        this.activeProject.set(proj);
+        this.activeFile.set(proj.specs?.[0]?.filename ?? null);
+      }).catch(() => {
+        // Ignore — project not found or network error; fall through to normal view
+      });
+    }
   }
 
   ngOnDestroy() {

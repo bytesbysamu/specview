@@ -159,10 +159,10 @@
       })
       .then(function (data) {
         if (!data) return; // handled above (e.g. 429)
-        if (!data.job_id) {
-          throw new Error('No job_id returned from server.');
+        if (!data.share_slug && !data.job_id) {
+          throw new Error('No share_slug returned from server.');
         }
-        window.location.href = APP_ORIGIN + '/analyze?job=' + encodeURIComponent(data.job_id);
+        window.location.href = APP_ORIGIN + '/?share=' + encodeURIComponent(data.share_slug || data.job_id);
       })
       .catch(function (err) {
         hideLoading();

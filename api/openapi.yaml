@@ -1350,6 +1350,10 @@ paths:
                   project_id:
                     type: string
                     description: Project slug created for this anonymous analysis. Identical to job_id.
+                  share_slug:
+                    type: string
+                    nullable: true
+                    description: Public share slug for the created project. Pass as ?share=<slug> to the app to load the project.
         '400':
           $ref: '#/components/responses/BadRequest'
         '429':
@@ -1447,6 +1451,10 @@ components:
           type: string
           nullable: true
           description: Original braindump text submitted by the caller.
+        share_slug:
+          type: string
+          nullable: true
+          description: Public share slug for the created project. Use with GET /api/public/share/{slug}.
 
     ShareProjectResponse:
       type: object
