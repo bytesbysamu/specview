@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { DEMO_MODE } from '../tokens/demo-mode.token';
 import { DEMO_PROJECTS } from '../playground-demo-data';
+import { PublicAnalyzeJobStatus } from '../api/models/public-analyze-job-status';
 
 export class AccessDeniedError extends Error {
   readonly status = 403;
@@ -167,6 +168,12 @@ export class ProjectsService {
   pollEpicGuide(projectId: string): Promise<PollResultResponse> {
     return firstValueFrom(
       this.http.get<PollResultResponse>(`/api/projects/${projectId}/generate-epic-guide/status`)
+    );
+  }
+
+  pollPublicAnalysis(jobId: string): Promise<PublicAnalyzeJobStatus> {
+    return firstValueFrom(
+      this.http.get<PublicAnalyzeJobStatus>('/api/public/analyze/' + jobId)
     );
   }
 }

@@ -187,110 +187,6 @@
       line-height: 1.5;
     }
 
-    /* ── Result section ── */
-    .analyze-result {
-      margin-top: 40px;
-      padding-top: 32px;
-      border-top: 2px solid var(--border-dark);
-      width: 100%;
-    }
-
-    .analyze-result h1,
-    .analyze-result h2,
-    .analyze-result h3 {
-      font-family: var(--serif);
-      color: var(--ink);
-      margin-top: 28px;
-      margin-bottom: 10px;
-      line-height: 1.2;
-    }
-
-    .analyze-result h1 { font-size: 26px; font-weight: 700; }
-    .analyze-result h2 { font-size: 20px; font-weight: 700; }
-    .analyze-result h3 { font-size: 17px; font-weight: 700; }
-
-    .analyze-result p {
-      font-family: var(--body);
-      font-size: 15px;
-      line-height: 1.75;
-      color: var(--ink);
-      margin-bottom: 14px;
-    }
-
-    .analyze-result ul,
-    .analyze-result ol {
-      font-family: var(--body);
-      font-size: 15px;
-      line-height: 1.75;
-      color: var(--ink);
-      margin-bottom: 14px;
-      padding-left: 22px;
-    }
-
-    .analyze-result li {
-      margin-bottom: 6px;
-    }
-
-    .analyze-result strong {
-      font-weight: 600;
-      color: var(--ink);
-    }
-
-    .analyze-result em {
-      font-style: italic;
-    }
-
-    .analyze-result code {
-      font-family: monospace;
-      font-size: 13px;
-      background: var(--code-bg);
-      padding: 2px 5px;
-    }
-
-    .analyze-result pre {
-      background: var(--code-bg);
-      padding: 14px 16px;
-      overflow-x: auto;
-      margin-bottom: 14px;
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    .analyze-result blockquote {
-      border-left: 3px solid var(--border-dark);
-      padding-left: 16px;
-      margin: 14px 0;
-      color: var(--ink-light);
-      font-style: italic;
-    }
-
-    .analyze-result > :first-child {
-      margin-top: 0;
-    }
-
-    /* ── Conversion CTA ── */
-    #conversion-cta {
-      margin-top: 32px;
-      padding: 28px 32px;
-      background: var(--bg-alt, var(--bg));
-      border: 1px solid var(--border);
-      width: 100%;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-
-    #conversion-cta.fade-in {
-      opacity: 1;
-    }
-
-    #conversion-cta .cta-copy {
-      font-family: var(--body);
-      font-size: 16px;
-      line-height: 1.65;
-      color: var(--ink);
-      margin-bottom: 20px;
-    }
-
     /* ── Mobile adjustments ── */
     @media (max-width: 768px) {
       .hero {
@@ -346,30 +242,17 @@
       Generate specs
     </button>
 
-    <!-- Loading indicator (hidden until analysis starts) -->
+    <!-- Loading indicator (hidden until POST is in flight) -->
     <div id="analyze-loading" class="analyze-loading" hidden>
       <div class="analyze-loading-spinner" aria-hidden="true"></div>
-      <span>Analysing… <span id="analyze-timer">0s</span></span>
+      <span>Starting analysis…</span>
     </div>
 
     <!-- Error message (hidden until an error occurs) -->
     <div id="analyze-error" class="analyze-error" role="alert" hidden></div>
-
-    <!-- Analysis result (hidden until analysis completes) -->
-    <div id="analyze-result" class="analyze-result" hidden></div>
-
-    <!-- Conversion CTA (hidden until analysis completes successfully) -->
-    <div id="conversion-cta" style="display:none">
-      <p class="cta-copy">Want the full spec? Epic, architecture, timeline, implementation guide — sign up free.</p>
-      <a id="conversion-cta-link" href="/signup" class="hero-cta" onclick="this.href=(window.APP_ORIGIN||'')+'/signup';return true;">
-        Get started free
-      </a>
-    </div>
   </div>
 
   <!-- Load scripts in dependency order, then initialize on DOMContentLoaded -->
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="demo-content.js"></script>
   <script src="rotation.js"></script>
   <script src="redirect.js"></script>

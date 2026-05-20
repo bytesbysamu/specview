@@ -9,6 +9,7 @@ This is an unauthenticated public endpoint (security-boundary convention).
 from __future__ import annotations
 
 import logging
+import re
 
 from flask import Blueprint, jsonify, request
 
@@ -16,6 +17,8 @@ from modules.auth.rate_limit import ip_rate_limit
 from modules.ai.services.public_analyze import get_job, start_analysis
 
 logger = logging.getLogger(__name__)
+
+_VALID_JOB_ID = re.compile(r'^[a-z0-9-]+$')
 
 public_analyze_bp = Blueprint("public_analyze", __name__, url_prefix="/api/public")
 
@@ -39,12 +42,14 @@ def submit_analysis():
         return jsonify({"error": "braindump exceeds maximum length of 10000 characters"}), 400
 
     job_id = start_analysis(braindump)
-    return jsonify({"job_id": job_id}), 202
+    return jsonify({"job_id": job_id, "project_id": job_id}), 202
 
 
 @public_analyze_bp.get("/analyze/<job_id>")
 def get_analysis_status(job_id: str):
     """Return the current status of an analysis job."""
+    if not job_id or len(job_id) > 100 or not _VALID_JOB_ID.match(job_id):
+        return jsonify({"error": "invalid job_id"}), 400
     job = get_job(job_id)
     if job is None:
         return jsonify({"error": "job not found"}), 404
@@ -54,4 +59,6 @@ def get_analysis_status(job_id: str):
         "done": job["done"],
         "analysis": job.get("analysis"),
         "error": job.get("error"),
+        "project_id": job.get("project_id"),
+        "braindump": job.get("braindump"),
     }), 200

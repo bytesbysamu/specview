@@ -47,6 +47,8 @@ export type { RevertFile$Params as RevertFile$Params } from './fn/projects/rever
 export { revertFile as revertFile } from './fn/projects/revert-file';
 export type { RepairProject$Params as RepairProject$Params } from './fn/projects/repair-project';
 export { repairProject as repairProject } from './fn/projects/repair-project';
+export type { ShareProject$Params as ShareProject$Params } from './fn/projects/share-project';
+export { shareProject as shareProject } from './fn/projects/share-project';
 export type { StartGenerateTask$Params as StartGenerateTask$Params } from './fn/task-gen/start-generate-task';
 export { startGenerateTask as startGenerateTask } from './fn/task-gen/start-generate-task';
 export type { GetGenerateTaskStatus$Params as GetGenerateTaskStatus$Params } from './fn/task-gen/get-generate-task-status';
@@ -63,6 +65,10 @@ export type { CancelBootstrap$Params as CancelBootstrap$Params } from './fn/ai/c
 export { cancelBootstrap as cancelBootstrap } from './fn/ai/cancel-bootstrap';
 export type { RetryBootstrap$Params as RetryBootstrap$Params } from './fn/ai/retry-bootstrap';
 export { retryBootstrap as retryBootstrap } from './fn/ai/retry-bootstrap';
+export type { AnonymousBootstrapProject$Params as AnonymousBootstrapProject$Params } from './fn/ai/anonymous-bootstrap-project';
+export { anonymousBootstrapProject as anonymousBootstrapProject } from './fn/ai/anonymous-bootstrap-project';
+export type { GetAnonymousBootstrapProjectStatus$Params as GetAnonymousBootstrapProjectStatus$Params } from './fn/ai/get-anonymous-bootstrap-project-status';
+export { getAnonymousBootstrapProjectStatus as getAnonymousBootstrapProjectStatus } from './fn/ai/get-anonymous-bootstrap-project-status';
 export type { GetAiStats$Params as GetAiStats$Params } from './fn/ai/get-ai-stats';
 export { getAiStats as getAiStats } from './fn/ai/get-ai-stats';
 export type { SpecGenGenerate$Params as SpecGenGenerate$Params } from './fn/spec-gen/spec-gen-generate';
@@ -97,3 +103,9 @@ export type { RegisterUser$Params as RegisterUser$Params } from './fn/auth/regis
 export { registerUser as registerUser } from './fn/auth/register-user';
 export type { RefreshToken$Params as RefreshToken$Params } from './fn/auth/refresh-token';
 export { refreshToken as refreshToken } from './fn/auth/refresh-token';
+export type { StartPublicAnalysis$Params as StartPublicAnalysis$Params } from './fn/public/start-public-analysis';
+export { startPublicAnalysis as startPublicAnalysis } from './fn/public/start-public-analysis';
+export type { GetPublicAnalysisStatus$Params as GetPublicAnalysisStatus$Params } from './fn/public/get-public-analysis-status';
+export { getPublicAnalysisStatus as getPublicAnalysisStatus } from './fn/public/get-public-analysis-status';
+export type { GetPublicSpec$Params as GetPublicSpec$Params } from './fn/public/get-public-spec';
+export { getPublicSpec as getPublicSpec } from './fn/public/get-public-spec';

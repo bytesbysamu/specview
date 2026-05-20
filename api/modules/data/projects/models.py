@@ -13,12 +13,13 @@ class Project(SQLModel, table=True):
     __tablename__ = "project"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id")
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     name: str
     slug: str = Field(unique=True, index=True)
     git_repo_path: str
     latest_commit_sha: Optional[str] = Field(default=None)
     file_count: int = Field(default=0)
+    anonymous: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
