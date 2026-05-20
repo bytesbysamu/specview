@@ -3,28 +3,16 @@
  *
  * Handles:
  *   - Form submission: POSTs braindump to /api/public/analyze
- *   - Polling loop: GETs /api/public/analyze/{job_id} every 2.5 seconds
- *   - Elapsed timer: counts seconds while analysis is in progress
- *   - Markdown rendering: uses marked.js to convert analysis to HTML
+ *   - On 202 success: redirects browser to the Angular app with ?job=<id>
  *   - Error handling: 429 rate-limit messages, server errors, validation
- *
- * Depends on: marked.js (loaded from CDN in index.html)
  *
  * Exported: window.submitAnalysis() — called by redirect.js click handler
  */
 
 (function () {
-  var POLL_INTERVAL_MS = 2500;
+  var APP_ORIGIN = window.APP_ORIGIN || (window.location.hostname === 'localhost' ? 'http://localhost:8095' : 'https://app.specview.dev');
+
   var MAX_CHARS = 10000;
-
-  /** Active polling interval handle. */
-  var pollHandle = null;
-
-  /** Active elapsed timer interval handle. */
-  var timerHandle = null;
-
-  /** Seconds elapsed since analysis started. */
-  var elapsedSeconds = 0;
 
   // ── DOM helpers ──────────────────────────────────────────────────────────────
 
@@ -38,14 +26,6 @@
 
   function getLoadingEl() {
     return document.getElementById('analyze-loading');
-  }
-
-  function getTimerEl() {
-    return document.getElementById('analyze-timer');
-  }
-
-  function getResultEl() {
-    return document.getElementById('analyze-result');
   }
 
   function getErrorEl() {
@@ -84,15 +64,6 @@
     if (el) el.hidden = true;
   }
 
-  function showResult(html) {
-    var el = getResultEl();
-    if (!el) return;
-    el.innerHTML = html;
-    el.hidden = false;
-    // Scroll the result into view smoothly.
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
   function showError(message) {
     var el = getErrorEl();
     if (!el) return;
@@ -108,128 +79,7 @@
     }
   }
 
-  function hideResult() {
-    var el = getResultEl();
-    if (el) {
-      el.innerHTML = '';
-      el.hidden = true;
-    }
-  }
-
-  function getConversionCta() {
-    return document.getElementById('conversion-cta');
-  }
-
-  function showConversionCta() {
-    var el = getConversionCta();
-    if (!el) return;
-    el.style.display = 'block';
-    // Trigger reflow so the transition fires from opacity 0.
-    void el.offsetWidth;
-    el.classList.add('fade-in');
-  }
-
-  function hideConversionCta() {
-    var el = getConversionCta();
-    if (!el) return;
-    el.classList.remove('fade-in');
-    el.style.display = 'none';
-  }
-
-  // ── Timer ────────────────────────────────────────────────────────────────────
-
-  function startTimer() {
-    elapsedSeconds = 0;
-    var timerEl = getTimerEl();
-    if (timerEl) timerEl.textContent = '0s';
-    timerHandle = setInterval(function () {
-      elapsedSeconds += 1;
-      var timerEl2 = getTimerEl();
-      if (timerEl2) timerEl2.textContent = elapsedSeconds + 's';
-    }, 1000);
-  }
-
-  function stopTimer() {
-    if (timerHandle !== null) {
-      clearInterval(timerHandle);
-      timerHandle = null;
-    }
-  }
-
-  // ── Polling ──────────────────────────────────────────────────────────────────
-
-  function stopPolling() {
-    if (pollHandle !== null) {
-      clearInterval(pollHandle);
-      pollHandle = null;
-    }
-  }
-
-  /**
-   * Poll GET /api/public/analyze/{jobId} every POLL_INTERVAL_MS.
-   * Stops on done or error.
-   */
-  function pollAnalysis(jobId) {
-    pollHandle = setInterval(function () {
-      fetch('/api/public/analyze/' + jobId)
-        .then(function (resp) {
-          if (!resp.ok) {
-            return resp.json().catch(function () {
-              return { error: 'Server error (' + resp.status + ')' };
-            }).then(function (body) {
-              throw new Error(body.error || 'Server error (' + resp.status + ')');
-            });
-          }
-          return resp.json();
-        })
-        .then(function (data) {
-          if (data.error) {
-            stopPolling();
-            stopTimer();
-            hideLoading();
-            showError('Analysis failed: ' + data.error);
-            enableForm();
-            return;
-          }
-          if (data.done) {
-            stopPolling();
-            stopTimer();
-            hideLoading();
-            // Render markdown to HTML using marked.js.
-            var html = '';
-            if (typeof window.marked !== 'undefined' && data.analysis) {
-              html = DOMPurify.sanitize(window.marked.parse(data.analysis));
-            } else if (data.analysis) {
-              // Fallback: wrap raw text in a preformatted block.
-              html = '<pre>' + escapeHtml(data.analysis) + '</pre>';
-            } else {
-              html = '<p>Analysis complete.</p>';
-            }
-            showResult(html);
-            showConversionCta();
-            enableForm();
-          }
-          // If not done yet, continue polling.
-        })
-        .catch(function (err) {
-          stopPolling();
-          stopTimer();
-          hideLoading();
-          showError(err.message || 'An error occurred while polling.');
-          enableForm();
-        });
-    }, POLL_INTERVAL_MS);
-  }
-
   // ── Helpers ──────────────────────────────────────────────────────────────────
-
-  function escapeHtml(text) {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
 
   /**
    * Parse a Retry-After header value (seconds or HTTP-date) and return hours
@@ -258,8 +108,6 @@
    */
   window.submitAnalysis = function () {
     clearError();
-    hideResult();
-    hideConversionCta();
 
     var textarea = getTextarea();
     var text = textarea ? textarea.value.trim() : '';
@@ -279,7 +127,6 @@
 
     disableForm();
     showLoading();
-    startTimer();
 
     fetch('/api/public/analyze', {
       method: 'POST',
@@ -296,7 +143,6 @@
           } else {
             msg += ' Please try again later.';
           }
-          stopTimer();
           hideLoading();
           showError(msg);
           enableForm();
@@ -316,10 +162,9 @@
         if (!data.job_id) {
           throw new Error('No job_id returned from server.');
         }
-        pollAnalysis(data.job_id);
+        window.location.href = APP_ORIGIN + '/analyze?job=' + encodeURIComponent(data.job_id);
       })
       .catch(function (err) {
-        stopTimer();
         hideLoading();
         showError(err.message || 'Failed to start analysis. Please try again.');
         enableForm();

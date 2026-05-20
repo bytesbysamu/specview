@@ -154,6 +154,11 @@ def create_app(config=None):
 
     _run_startup_migration(app)
 
+    if not app.config.get("TESTING"):
+        from modules.ai.services.anonymous_cleanup import start_cleanup_thread
+        _anon_ttl = int(os.environ.get("ANON_PROJECT_TTL_HOURS", "48"))
+        start_cleanup_thread(ttl_hours=_anon_ttl, interval_hours=6)
+
     return app
 
 

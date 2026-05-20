@@ -1,22 +1,29 @@
 """Service module for anonymous public analysis jobs.
 
 Spawns a background thread that calls the chain adapter with the analysis
-prompt and stores the result in the in-process job store.
+prompt and stores the result in the in-process job store. Each job is also
+persisted to the filesystem so results survive beyond the in-process TTL.
 """
 from __future__ import annotations
 
+import json
 import logging
+import re
 import threading
 import time
-import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 
+from config import PROJECTS_DIR
+from modules.data.projects.service import _make_id
 from modules.runtime.chain import adapter
 from modules.runtime.chain.errors import ProviderError
 
 logger = logging.getLogger(__name__)
 
 # ── in-process job store ────────────────────────────────────────────────────
-# Keyed by UUID job_id.  Status dict mirrors PublicAnalyzeJobStatus fields.
+# Keyed by project_id / job_id (same value).  Status dict mirrors
+# PublicAnalyzeJobStatus fields.
 
 _LOCK = threading.Lock()
 _JOBS: dict[str, dict] = {}
@@ -57,6 +64,8 @@ INPUT:
 
 _TTL_SECONDS = 900  # 15 minutes
 
+_VALID_JOB_ID = re.compile(r'^[a-z0-9-]+$')
+
 
 def _prune_expired_jobs() -> None:
     """Remove job entries older than _TTL_SECONDS. Must be called under _LOCK."""
@@ -72,11 +81,60 @@ def _prune_expired_jobs() -> None:
 
 
 def get_job(job_id: str) -> dict | None:
+    """Return the job dict for job_id.
+
+    Checks the in-process store first; if the job has been evicted, falls
+    back to reading completed results from the filesystem.
+    """
+    if not job_id or len(job_id) > 100 or not _VALID_JOB_ID.match(job_id):
+        return None
+
     with _LOCK:
-        return _JOBS.get(job_id)
+        job = _JOBS.get(job_id)
+        if job is not None:
+            return job
+
+    # Disk fallback — job may have been pruned but files remain on disk.
+    project_dir = Path(PROJECTS_DIR) / job_id
+    analysis_path = project_dir / "analysis.md"
+    if not analysis_path.exists():
+        return None
+
+    braindump: str | None = None
+    braindump_path = project_dir / "braindump.md"
+    if braindump_path.exists():
+        try:
+            braindump = braindump_path.read_text(encoding="utf-8")
+        except OSError:
+            logger.warning("public_analyze: could not read braindump.md for job=%s", job_id)
+
+    try:
+        analysis = analysis_path.read_text(encoding="utf-8")
+    except OSError:
+        logger.warning("public_analyze: could not read analysis.md for job=%s", job_id)
+        return None
+
+    return {
+        "running": False,
+        "done": True,
+        "analysis": analysis,
+        "error": None,
+        "project_id": job_id,
+        "braindump": braindump,
+        "started_at": 0,
+    }
 
 
 def _complete_job(job_id: str, analysis: str) -> None:
+    # Write to disk first, then update in-memory state.
+    project_dir = Path(PROJECTS_DIR) / job_id
+    try:
+        project_dir.mkdir(parents=True, exist_ok=True)
+        (project_dir / "analysis.md").write_text(analysis, encoding="utf-8")
+        logger.debug("public_analyze: wrote analysis.md for job=%s", job_id)
+    except OSError:
+        logger.exception("public_analyze: failed to write analysis.md for job=%s", job_id)
+
     with _LOCK:
         job = _JOBS.get(job_id)
         if job:
@@ -115,27 +173,69 @@ def run_analysis(job_id: str, braindump: str) -> None:
 
 
 def start_analysis(braindump: str) -> str:
-    """Create a job, spawn a daemon thread, and return the job_id.
+    """Create a project directory, spawn a daemon thread, and return the job_id.
 
-    Prunes expired anonymous job entries (older than 15 minutes) on each call
-    to prevent unbounded memory growth.
+    The job_id equals the project slug so no mapping table is required.
+    Prunes expired anonymous job entries (older than 15 minutes) on each
+    call to prevent unbounded memory growth.
     """
-    job_id = str(uuid.uuid4())
+    # Generate a slug-based job_id from the first 40 chars of the braindump.
+    project_id = _make_id(braindump[:40])
+
+    # Create project directory and write initial files.
+    project_dir = Path(PROJECTS_DIR) / project_id
+    try:
+        project_dir.mkdir(parents=True, exist_ok=True)
+        (project_dir / "braindump.md").write_text(braindump, encoding="utf-8")
+
+        created_at = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
+        meta = {
+            "name": braindump[:40].strip(),
+            "createdAt": created_at,
+            "anonymous": True,
+        }
+        (project_dir / "project.json").write_text(
+            json.dumps(meta, indent=2), encoding="utf-8"
+        )
+        logger.debug("public_analyze: initialised project directory for job=%s", project_id)
+    except OSError:
+        logger.exception(
+            "public_analyze: failed to initialise project directory for job=%s", project_id
+        )
+
+    # Attempt DB write; log and continue on failure.
+    try:
+        from modules.data.projects.repository import SqlProjectRepository
+        repo = SqlProjectRepository()
+        repo.create_anonymous(name=braindump[:40].strip(), slug=project_id)
+        logger.debug("public_analyze: DB row created for job=%s", project_id)
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "public_analyze: DB write skipped for job=%s (non-fatal)", project_id
+        )
+
     with _LOCK:
         _prune_expired_jobs()
-        _JOBS[job_id] = {
+        _JOBS[project_id] = {
             "running": True,
             "done": False,
             "analysis": None,
             "error": None,
+            "project_id": project_id,
+            "braindump": braindump,
             "started_at": time.time(),
         }
+
     thread = threading.Thread(
         target=run_analysis,
-        args=(job_id, braindump),
+        args=(project_id, braindump),
         daemon=True,
-        name=f"public-analyze-{job_id[:8]}",
+        name=f"public-analyze-{project_id[:8]}",
     )
     thread.start()
-    logger.info("public_analyze: started job=%s", job_id)
-    return job_id
+    logger.info("public_analyze: started job=%s", project_id)
+    return project_id

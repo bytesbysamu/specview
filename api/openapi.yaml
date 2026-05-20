@@ -1342,11 +1342,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [job_id]
+                required: [job_id, project_id]
                 properties:
                   job_id:
                     type: string
                     description: Opaque job identifier. Pass to GET /api/public/analyze/{job_id} to poll for completion.
+                  project_id:
+                    type: string
+                    description: Project slug created for this anonymous analysis. Identical to job_id.
         '400':
           $ref: '#/components/responses/BadRequest'
         '429':
@@ -1436,6 +1439,14 @@ components:
           type: string
           nullable: true
           description: Error message from the background job. Present only on failure.
+        project_id:
+          type: string
+          nullable: true
+          description: Project slug created for this anonymous analysis. Identical to the job_id.
+        braindump:
+          type: string
+          nullable: true
+          description: Original braindump text submitted by the caller.
 
     ShareProjectResponse:
       type: object

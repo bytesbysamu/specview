@@ -63,6 +63,10 @@ def ip_rate_limit(
             # Prune timestamps outside the window
             _ip_timestamps[ip] = [t for t in _ip_timestamps[ip] if t > cutoff]
 
+            # Evict entire dict if it exceeds 10 000 IPs to prevent OOM.
+            if len(_ip_timestamps) > 10000:
+                _ip_timestamps.clear()
+
             if len(_ip_timestamps[ip]) >= max_requests:
                 oldest = _ip_timestamps[ip][0]
                 retry_after = int(window_seconds - (now - oldest)) + 1

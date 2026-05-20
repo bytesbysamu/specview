@@ -127,12 +127,60 @@ class SqlProjectRepository:
             session.add(project)
             session.commit()
 
+    def create_anonymous(self, name: str, slug: str) -> Project:
+        """Insert an anonymous (no user) Project row.
+
+        Does not initialise a git repo — the filesystem directory is the
+        source of truth for anonymous projects. Logs and suppresses any DB
+        error so callers can continue without the row.
+        """
+        now = datetime.utcnow()
+        project = Project(
+            user_id=None,
+            name=name,
+            slug=slug,
+            git_repo_path="",
+            latest_commit_sha=None,
+            file_count=0,
+            anonymous=True,
+            created_at=now,
+            updated_at=now,
+        )
+        with self._session() as session:
+            session.add(project)
+            session.commit()
+            session.refresh(project)
+            return project
+
     def delete(self, project_id: int) -> None:
         """Hard-delete the DB row.
 
         Note: git_store.delete_repo does not yet exist (Task-2 follow-up);
         the on-disk repo is intentionally orphaned here rather than
         invented. The route layer logs a TODO when this is exposed.
+        """
+        with self._session() as session:
+            project = session.get(Project, project_id)
+            if project is None:
+                return
+            session.delete(project)
+            session.commit()
+
+    def list_anonymous_older_than(self, cutoff: datetime) -> List[Project]:
+        """Return all anonymous projects whose created_at is before cutoff."""
+        with self._session() as session:
+            stmt = (
+                select(Project)
+                .where(Project.anonymous == True)  # noqa: E712
+                .where(Project.created_at < cutoff)
+            )
+            return list(session.exec(stmt).all())
+
+    def delete_by_id(self, project_id: int) -> None:
+        """Hard-delete the DB row by primary key.
+
+        Silently does nothing if the row is not found — safe to call when
+        the row may have already been removed.
         """
         with self._session() as session:
             project = session.get(Project, project_id)
