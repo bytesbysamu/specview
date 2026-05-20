@@ -251,16 +251,17 @@ class TestRevertFile:
 # ---------------------------------------------------------------------------
 # POST /<id>/claim
 # ---------------------------------------------------------------------------
-def _make_claimed_stub():
-    """Minimal claimed project stub used by TestClaimProject."""
-    p = MagicMock()
-    p.slug = "anon-project"
-    p.user_id = 1
-    p.anonymous = False
-    return p
-
-
 class TestClaimProject:
+    """POST /<id>/claim — claim an anonymous project."""
+
+    @staticmethod
+    def makestub():
+        """Minimal claimed project stub."""
+        p = MagicMock()
+        p.slug = "anon-project"
+        p.user_id = 1
+        p.anonymous = False
+        return p
     """Tests for POST /api/projects/<id>/claim."""
 
     @pytest.fixture()
@@ -271,7 +272,7 @@ class TestClaimProject:
         return stub
 
     def test_claim_anonymous_project_succeeds(self, client, claim_repo_stub):
-        claim_repo_stub.claim.return_value = _make_claimed_stub()
+        claim_repo_stub.claim.return_value = self.makestub()
 
         r = client.post("/api/projects/anon-project/claim")
 
@@ -281,7 +282,7 @@ class TestClaimProject:
         assert body["claimed"] is True
 
     def test_claim_calls_repo_with_correct_args(self, client, claim_repo_stub):
-        claim_repo_stub.claim.return_value = _make_claimed_stub()
+        claim_repo_stub.claim.return_value = self.makestub()
 
         client.post("/api/projects/anon-project/claim")
 
