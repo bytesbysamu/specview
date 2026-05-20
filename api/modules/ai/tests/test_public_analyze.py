@@ -227,7 +227,7 @@ def isolated_projects_dir(tmp_path, monkeypatch):
     return projects
 
 
-def _start_with_mocks(braindump: str):
+def startwithmocks(braindump: str):
     """Call start_analysis with Thread, generate_slug, register_slug,
     and DB write all mocked so no side-effects escape the test."""
     with (
@@ -247,7 +247,7 @@ def _start_with_mocks(braindump: str):
 
 def test_start_analysis_creates_project_directory(isolated_projects_dir):
     """start_analysis must create a per-project directory under PROJECTS_DIR."""
-    job_id, _slug = _start_with_mocks("Build a todo app")
+    job_id, _slug = startwithmocks("Build a todo app")
     assert (isolated_projects_dir / job_id).is_dir(), (
         f"Expected project directory at {isolated_projects_dir / job_id}"
     )
@@ -256,7 +256,7 @@ def test_start_analysis_creates_project_directory(isolated_projects_dir):
 def test_start_analysis_writes_braindump_md(isolated_projects_dir):
     """start_analysis must write braindump.md with the exact input content."""
     braindump = "Build a todo app with reminders"
-    job_id, _slug = _start_with_mocks(braindump)
+    job_id, _slug = startwithmocks(braindump)
     braindump_path = isolated_projects_dir / job_id / "braindump.md"
     assert braindump_path.exists(), "braindump.md must be written by start_analysis"
     assert braindump_path.read_text(encoding="utf-8") == braindump
@@ -265,7 +265,7 @@ def test_start_analysis_writes_braindump_md(isolated_projects_dir):
 def test_start_analysis_writes_project_json_with_share_slug(isolated_projects_dir):
     """project.json must contain name, createdAt, anonymous=True, and shareSlug."""
     braindump = "Launch a landing page"
-    job_id, _slug = _start_with_mocks(braindump)
+    job_id, _slug = startwithmocks(braindump)
     meta_path = isolated_projects_dir / job_id / "project.json"
     assert meta_path.exists(), "project.json must be written by start_analysis"
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -278,7 +278,7 @@ def test_start_analysis_writes_project_json_with_share_slug(isolated_projects_di
 
 def test_start_analysis_returns_project_id_and_share_slug(isolated_projects_dir):
     """start_analysis must return a (project_id, share_slug) tuple."""
-    result = _start_with_mocks("Some braindump text")
+    result = startwithmocks("Some braindump text")
     assert isinstance(result, tuple), "start_analysis must return a tuple"
     assert len(result) == 2, "start_analysis must return exactly two values"
     project_id, share_slug = result
