@@ -251,7 +251,7 @@ class TestRevertFile:
 # ---------------------------------------------------------------------------
 # POST /<id>/claim
 # ---------------------------------------------------------------------------
-def make_claimed_stub():
+def _make_claimed_stub():
     """Minimal claimed project stub used by TestClaimProject."""
     p = MagicMock()
     p.slug = "anon-project"
@@ -271,7 +271,7 @@ class TestClaimProject:
         return stub
 
     def test_claim_anonymous_project_succeeds(self, client, claim_repo_stub):
-        claim_repo_stub.claim.return_value = make_claimed_stub()
+        claim_repo_stub.claim.return_value = _make_claimed_stub()
 
         r = client.post("/api/projects/anon-project/claim")
 
@@ -281,7 +281,7 @@ class TestClaimProject:
         assert body["claimed"] is True
 
     def test_claim_calls_repo_with_correct_args(self, client, claim_repo_stub):
-        claim_repo_stub.claim.return_value = make_claimed_stub()
+        claim_repo_stub.claim.return_value = _make_claimed_stub()
 
         client.post("/api/projects/anon-project/claim")
 
