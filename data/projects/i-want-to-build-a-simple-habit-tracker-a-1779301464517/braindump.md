@@ -1,0 +1,1 @@
+I want to build a simple habit tracker app. Users can add habits, mark them complete each day, and see a streak counter. Mobile first, maybe React Native. Need offline support and cloud sync.
