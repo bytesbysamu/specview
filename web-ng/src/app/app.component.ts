@@ -565,7 +565,9 @@ export class AppComponent implements OnInit, OnDestroy {
   canGenerateSpecs = computed(() => {
     const proj = this.activeProject();
     if (!proj) return false;
-    return !proj.specs.some(s => s.filename === 'analysis.md');
+    const has = (f: string) => proj.specs.some(s => s.filename === f && !s.locked);
+    // Show when project has a braindump but is missing any of the full spec suite
+    return has('braindump.md') && (!has('analysis.md') || !has('epic.md') || !has('architecture.md'));
   });
 
   // True when project has an epic but no implementation-guide yet
