@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 import time
 import unittest.mock as mock
-from pathlib import Path
 
 import pytest
 

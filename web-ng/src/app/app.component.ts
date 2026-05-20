@@ -13,7 +13,7 @@ import { AiService } from './services/ai.service';
 import { Section, sectionFor, SECTION_ORDER } from './services/section-taxonomy.service';
 import { projectTeaser, countTasks } from './services/project-teaser';
 import { WordCountPipe } from './word-count.pipe';
-import { UsageMeterComponent } from './components/usage-meter/usage-meter.component';
+
 import { SubscriptionService } from './services/subscription.service';
 
 interface ParagraphDiff {
