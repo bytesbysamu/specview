@@ -46,7 +46,7 @@ def test_prune_removes_expired_entries():
     # A fresh call should trigger pruning
     with mock.patch("threading.Thread") as mock_thread:
         mock_thread.return_value = mock.MagicMock()
-        svc.start_analysis("some braindump")
+        svc.start_analysis("some braindump")  # return value intentionally unused here
 
     assert "old-job" not in svc._JOBS
 
@@ -64,7 +64,7 @@ def test_prune_keeps_recent_entries():
 
     with mock.patch("threading.Thread") as mock_thread:
         mock_thread.return_value = mock.MagicMock()
-        svc.start_analysis("some braindump")
+        svc.start_analysis("some braindump")  # return value intentionally unused here
 
     assert "recent-job" in svc._JOBS
 
@@ -73,7 +73,7 @@ def test_start_analysis_adds_started_at():
     """Newly created jobs include a started_at timestamp."""
     with mock.patch("threading.Thread") as mock_thread:
         mock_thread.return_value = mock.MagicMock()
-        job_id = svc.start_analysis("hello world")
+        job_id, _slug = svc.start_analysis("hello world")
 
     job = svc.get_job(job_id)
     assert job is not None
@@ -85,7 +85,7 @@ def test_start_analysis_new_job_initial_state():
     """New job entries start with running=True, done=False."""
     with mock.patch("threading.Thread") as mock_thread:
         mock_thread.return_value = mock.MagicMock()
-        job_id = svc.start_analysis("a valid braindump")
+        job_id, _slug = svc.start_analysis("a valid braindump")
 
     job = svc.get_job(job_id)
     assert job["running"] is True
@@ -168,7 +168,7 @@ def test_exact_limit_braindump_is_accepted(app):
     """POST with exactly 10000 chars is accepted."""
     exact_input = "a" * 10000
     patch_target = "modules.ai.routes.public_analyze.start_analysis"
-    with mock.patch(patch_target, return_value="test-job-id") as mock_start:
+    with mock.patch(patch_target, return_value=("test-job-id", "slug-abc")) as mock_start:
         resp = app.test_client().post(
             "/api/public/analyze",
             json={"braindump": exact_input},
@@ -180,7 +180,7 @@ def test_exact_limit_braindump_is_accepted(app):
 def test_valid_braindump_is_stripped_before_service_call(app):
     """Leading/trailing whitespace is stripped before start_analysis is called."""
     patch_target = "modules.ai.routes.public_analyze.start_analysis"
-    with mock.patch(patch_target, return_value="job-123") as mock_start:
+    with mock.patch(patch_target, return_value=("job-123", "slug-xyz")) as mock_start:
         resp = app.test_client().post(
             "/api/public/analyze",
             json={"braindump": "  hello world  "},
@@ -190,12 +190,14 @@ def test_valid_braindump_is_stripped_before_service_call(app):
 
 
 def test_valid_braindump_returns_202_with_job_id(app):
-    """A valid POST returns 202 with a job_id field."""
+    """A valid POST returns 202 with a job_id and share_slug."""
     patch_target = "modules.ai.routes.public_analyze.start_analysis"
-    with mock.patch(patch_target, return_value="abc-123"):
+    with mock.patch(patch_target, return_value=("abc-123", "slug-def")):
         resp = app.test_client().post(
             "/api/public/analyze",
             json={"braindump": "I want to build a thing"},
         )
     assert resp.status_code == 202
-    assert resp.get_json()["job_id"] == "abc-123"
+    body = resp.get_json()
+    assert body["job_id"] == "abc-123"
+    assert body["share_slug"] == "slug-def"

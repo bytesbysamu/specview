@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { ActivatedRoute } from '@angular/router';
 
 import { AppComponent } from './app.component';
 import { ProjectsService } from './services/projects.service';
@@ -9,10 +10,17 @@ import { AuthService } from './services/auth.service';
 import { createProjectsServiceMock } from './services/projects.service.mock';
 import { createAiServiceMock } from './services/ai.service.mock';
 
+const MOCK_ACTIVATED_ROUTE = {
+  snapshot: { queryParamMap: { get: () => null } },
+};
+
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent, HttpClientTestingModule],
+      providers: [
+        { provide: ActivatedRoute, useValue: MOCK_ACTIVATED_ROUTE },
+      ],
     }).compileComponents();
   });
 
@@ -36,6 +44,7 @@ describe('AppComponent — polling lifecycle', () => {
       providers: [
         { provide: ProjectsService, useValue: projectsMock },
         { provide: AiService, useValue: aiMock },
+        { provide: ActivatedRoute, useValue: MOCK_ACTIVATED_ROUTE },
       ],
     }).compileComponents();
   });

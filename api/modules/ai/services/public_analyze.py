@@ -16,6 +16,7 @@ from pathlib import Path
 
 from config import PROJECTS_DIR
 from modules.data.projects.service import _make_id
+from modules.data.public.service import generate_slug, register_slug
 from modules.runtime.chain import adapter
 from modules.runtime.chain.errors import ProviderError
 
@@ -114,6 +115,16 @@ def get_job(job_id: str) -> dict | None:
         logger.warning("public_analyze: could not read analysis.md for job=%s", job_id)
         return None
 
+    # Attempt to recover share_slug from project.json on disk.
+    share_slug: str | None = None
+    meta_path = project_dir / "project.json"
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            share_slug = meta.get("shareSlug") or None
+        except (OSError, json.JSONDecodeError):
+            pass
+
     return {
         "running": False,
         "done": True,
@@ -121,6 +132,7 @@ def get_job(job_id: str) -> dict | None:
         "error": None,
         "project_id": job_id,
         "braindump": braindump,
+        "share_slug": share_slug,
         "started_at": 0,
     }
 
@@ -172,8 +184,8 @@ def run_analysis(job_id: str, braindump: str) -> None:
         _fail_job(job_id, str(exc))
 
 
-def start_analysis(braindump: str) -> str:
-    """Create a project directory, spawn a daemon thread, and return the job_id.
+def start_analysis(braindump: str) -> tuple[str, str]:
+    """Create a project directory, spawn a daemon thread, and return (job_id, share_slug).
 
     The job_id equals the project slug so no mapping table is required.
     Prunes expired anonymous job entries (older than 15 minutes) on each
@@ -193,19 +205,23 @@ def start_analysis(braindump: str) -> str:
             .isoformat(timespec="milliseconds")
             .replace("+00:00", "Z")
         )
+        slug = generate_slug()
         meta = {
             "name": braindump[:40].strip(),
             "createdAt": created_at,
             "anonymous": True,
+            "shareSlug": slug,
         }
         (project_dir / "project.json").write_text(
             json.dumps(meta, indent=2), encoding="utf-8"
         )
-        logger.debug("public_analyze: initialised project directory for job=%s", project_id)
+        register_slug(slug, project_id)
+        logger.debug("public_analyze: initialised project directory for job=%s slug=%s", project_id, slug)
     except OSError:
         logger.exception(
             "public_analyze: failed to initialise project directory for job=%s", project_id
         )
+        slug = generate_slug()  # still provide a slug even if file write fails
 
     # Attempt DB write; log and continue on failure.
     try:
@@ -227,6 +243,7 @@ def start_analysis(braindump: str) -> str:
             "error": None,
             "project_id": project_id,
             "braindump": braindump,
+            "share_slug": slug,
             "started_at": time.time(),
         }
 
@@ -237,5 +254,5 @@ def start_analysis(braindump: str) -> str:
         name=f"public-analyze-{project_id[:8]}",
     )
     thread.start()
-    logger.info("public_analyze: started job=%s", project_id)
-    return project_id
+    logger.info("public_analyze: started job=%s slug=%s", project_id, slug)
+    return project_id, slug

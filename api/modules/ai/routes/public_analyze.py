@@ -41,8 +41,8 @@ def submit_analysis():
     if len(braindump) > 10000:
         return jsonify({"error": "braindump exceeds maximum length of 10000 characters"}), 400
 
-    job_id = start_analysis(braindump)
-    return jsonify({"job_id": job_id, "project_id": job_id}), 202
+    job_id, share_slug = start_analysis(braindump)
+    return jsonify({"job_id": job_id, "project_id": job_id, "share_slug": share_slug}), 202
 
 
 @public_analyze_bp.get("/analyze/<job_id>")
@@ -61,4 +61,5 @@ def get_analysis_status(job_id: str):
         "error": job.get("error"),
         "project_id": job.get("project_id"),
         "braindump": job.get("braindump"),
+        "share_slug": job.get("share_slug"),
     }), 200
