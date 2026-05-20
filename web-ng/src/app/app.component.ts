@@ -397,12 +397,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     const shareSlug = this.route.snapshot.queryParamMap.get('share');
     if (shareSlug) {
-      this.projectsSvc.getPublicSharedProject(shareSlug).then(proj => {
-        this.activeProject.set(proj);
-        this.activeFile.set(proj.specs?.[0]?.filename ?? null);
-      }).catch(() => {
-        // Ignore — project not found or network error; fall through to normal view
-      });
+      this._loadSharedProject(shareSlug);
     }
   }
 
@@ -413,10 +408,38 @@ export class AppComponent implements OnInit, OnDestroy {
     this._stopSyncElapsedTimer();
     this._stopTimer();
     if (this._successFlashTimer) clearTimeout(this._successFlashTimer);
+    if (this._shareInterval) { clearInterval(this._shareInterval); this._shareInterval = null; }
   }
 
   private stopPolling() {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+  }
+
+  private _shareInterval: ReturnType<typeof setInterval> | null = null;
+
+  private _loadSharedProject(slug: string) {
+    // Load immediately — show braindump even if analysis is still generating
+    this.projectsSvc.getPublicSharedProject(slug).then(proj => {
+      this.activeProject.set(proj);
+      const firstFile = proj.specs?.[0]?.filename ?? null;
+      this.activeFile.set(firstFile);
+
+      // If analysis.md is missing, poll until it appears
+      const hasAnalysis = proj.specs.some(s => s.filename === 'analysis.md' && s.content && s.content.length > 0);
+      if (!hasAnalysis) {
+        this._shareInterval = setInterval(() => {
+          this.projectsSvc.getPublicSharedProject(slug).then(updated => {
+            const analysis = updated.specs.find(s => s.filename === 'analysis.md');
+            if (analysis && analysis.content && analysis.content.length > 0) {
+              this.activeProject.set(updated);
+              // Switch to analysis.md when it arrives
+              this.activeFile.set('analysis.md');
+              if (this._shareInterval) { clearInterval(this._shareInterval); this._shareInterval = null; }
+            }
+          }).catch(() => {});
+        }, 3000);
+      }
+    }).catch(() => {});
   }
 
   private _startGenPoll() {
