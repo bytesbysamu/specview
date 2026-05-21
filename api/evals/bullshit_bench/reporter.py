@@ -273,14 +273,7 @@ def _leaderboard_comparison(headlines: dict[str, Any]) -> dict[str, Any]:
 
     leaderboard_score = headlines["leaderboard_score"]
     green_rate = (headlines["pct_fully_rejected"] or 0) / 100.0
-    red_rate_approx = 1.0 - ((headlines.get("pct_at_least_1") or 0) / 100.0) if "pct_at_least_1" not in headlines else None
-
-    # Compute red_rate from headline data — pct scoring 0 = 100 - pct_at_least_1
-    scored = headlines.get("scored_count", 0)
-    pct_at_least_1 = None
-    # We need to get pct_at_least_1 from the records, but we only have headlines here.
-    # Use a rough approximation: red_rate ≈ 1 - pct_at_least_1/100.
-    # The caller can provide this if needed.
+    red_rate = (headlines.get("pct_accepted") or 0) / 100.0
 
     specview_entry = {
         "model": "specview-analysis-pipeline",
@@ -289,6 +282,7 @@ def _leaderboard_comparison(headlines: dict[str, Any]) -> dict[str, Any]:
         "avg_score": round(avg_score, 4),
         "leaderboard_score": leaderboard_score,
         "green_rate": round(green_rate, 2),
+        "red_rate": round(red_rate, 2),
     }
 
     # Find where Specview would rank.
