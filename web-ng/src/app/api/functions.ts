@@ -49,6 +49,8 @@ export type { RepairProject$Params as RepairProject$Params } from './fn/projects
 export { repairProject as repairProject } from './fn/projects/repair-project';
 export type { ShareProject$Params as ShareProject$Params } from './fn/projects/share-project';
 export { shareProject as shareProject } from './fn/projects/share-project';
+export type { ClaimProject$Params as ClaimProject$Params } from './fn/projects/claim-project';
+export { claimProject as claimProject } from './fn/projects/claim-project';
 export type { StartGenerateTask$Params as StartGenerateTask$Params } from './fn/task-gen/start-generate-task';
 export { startGenerateTask as startGenerateTask } from './fn/task-gen/start-generate-task';
 export type { GetGenerateTaskStatus$Params as GetGenerateTaskStatus$Params } from './fn/task-gen/get-generate-task-status';

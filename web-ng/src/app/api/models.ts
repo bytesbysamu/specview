@@ -13,6 +13,7 @@ export type { BootstrapStartResponse } from './models/bootstrap-start-response';
 export type { BrainstormRequest } from './models/brainstorm-request';
 export type { CancelAcceptedResponse } from './models/cancel-accepted-response';
 export type { CheckoutSessionResponse } from './models/checkout-session-response';
+export type { ClaimProjectResponse } from './models/claim-project-response';
 export type { CoherenceFlag } from './models/coherence-flag';
 export type { CoherenceResponse } from './models/coherence-response';
 export type { CommitEntry } from './models/commit-entry';
