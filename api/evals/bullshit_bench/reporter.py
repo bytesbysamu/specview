@@ -46,6 +46,29 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 KNOWN_DOMAINS = {"software", "finance", "legal", "medical", "physics"}
+
+# ---------------------------------------------------------------------------
+# Published BullshitBench v2 leaderboard baselines (top models per org)
+# Source: https://github.com/petergpt/bullshit-benchmark data/v2/latest/leaderboard.csv
+# Last synced: 2026-05-21
+# avg_score is on a 0–2 scale; leaderboard_score = (avg_score / 2) × 100
+# ---------------------------------------------------------------------------
+
+LEADERBOARD_BASELINES: list[dict[str, Any]] = [
+    {"rank": 1,  "model": "claude-sonnet-4.6",      "org": "anthropic",   "reasoning": "high",    "avg_score": 1.8700, "green_rate": 0.91, "red_rate": 0.03},
+    {"rank": 2,  "model": "claude-sonnet-4.6",      "org": "anthropic",   "reasoning": "none",    "avg_score": 1.8600, "green_rate": 0.89, "red_rate": 0.02},
+    {"rank": 4,  "model": "claude-opus-4.6",        "org": "anthropic",   "reasoning": "high",    "avg_score": 1.8367, "green_rate": 0.87, "red_rate": 0.03},
+    {"rank": 5,  "model": "claude-opus-4.6",        "org": "anthropic",   "reasoning": "none",    "avg_score": 1.7933, "green_rate": 0.83, "red_rate": 0.03},
+    {"rank": 7,  "model": "qwen3.5-397b-a17b",      "org": "qwen",       "reasoning": "high",    "avg_score": 1.7033, "green_rate": 0.78, "red_rate": 0.05},
+    {"rank": 17, "model": "kimi-k2.6",              "org": "moonshotai",  "reasoning": "none",    "avg_score": 1.4933, "green_rate": 0.65, "red_rate": 0.14},
+    {"rank": 18, "model": "grok-4.20-multi-agent",  "org": "x-ai",       "reasoning": "xhigh",   "avg_score": 1.4333, "green_rate": 0.64, "red_rate": 0.20},
+    {"rank": 25, "model": "gpt-5.5",                "org": "openai",      "reasoning": "xhigh",   "avg_score": 1.2667, "green_rate": 0.47, "red_rate": 0.13},
+    {"rank": 36, "model": "gemini-3-pro-preview",   "org": "google",      "reasoning": "low",     "avg_score": 1.1267, "green_rate": 0.48, "red_rate": 0.37},
+    {"rank": 50, "model": "claude-3.7-sonnet",      "org": "anthropic",   "reasoning": "default", "avg_score": 1.0267, "green_rate": 0.43, "red_rate": 0.38},
+    {"rank": 83, "model": "o3",                     "org": "openai",      "reasoning": "default", "avg_score": 0.6667, "green_rate": 0.26, "red_rate": 0.58},
+    {"rank": 108, "model": "gpt-4o",                "org": "openai",      "reasoning": "default", "avg_score": 0.4933, "green_rate": 0.12, "red_rate": 0.61},
+    {"rank": 158, "model": "gemma-3-27b-it",        "org": "google",      "reasoning": "default", "avg_score": 0.1467, "green_rate": 0.03, "red_rate": 0.88},
+]
 KNOWN_TECHNIQUES = {
     "authoritative_framing",
     "confident_extrapolation",
@@ -160,14 +183,18 @@ def _headline_numbers(records: list[QuestionResult]) -> dict[str, Any]:
     mean_score = sum(scores) / n
     # BullshitBench leaderboard format: (mean / 2) × 100
     leaderboard_score = round((mean_score / 2.0) * 100.0, 2)
+    pct_at_least_1 = round(100.0 * sum(1 for s in scores if s >= 1) / n, 2)
     pct_fully_rejected = round(100.0 * sum(1 for s in scores if s >= 2) / n, 2)
+    pct_accepted = round(100.0 * sum(1 for s in scores if s == 0) / n, 2)
 
     return {
         "scored_count": n,
         "total_count": len(records),
         "mean_score": round(mean_score, 4),
         "leaderboard_score": leaderboard_score,
+        "pct_at_least_1": pct_at_least_1,
         "pct_fully_rejected": pct_fully_rejected,
+        "pct_accepted": pct_accepted,
     }
 
 
@@ -228,6 +255,107 @@ def _outliers(
     worst_misses = [_serialise_outlier(e) for e in by_deviation_asc[:top_n]]
 
     return {"best_catches": best_catches, "worst_misses": worst_misses}
+
+
+# ---------------------------------------------------------------------------
+# Leaderboard comparison
+# ---------------------------------------------------------------------------
+
+def _leaderboard_comparison(headlines: dict[str, Any]) -> dict[str, Any]:
+    """Place Specview's score on the BullshitBench v2 leaderboard.
+
+    Returns a dict with the Specview entry, its estimated rank, and a table
+    of nearby baselines for context.
+    """
+    avg_score = headlines.get("mean_score")
+    if avg_score is None:
+        return {"error": "no scored results to compare"}
+
+    leaderboard_score = headlines["leaderboard_score"]
+    green_rate = (headlines["pct_fully_rejected"] or 0) / 100.0
+    red_rate_approx = 1.0 - ((headlines.get("pct_at_least_1") or 0) / 100.0) if "pct_at_least_1" not in headlines else None
+
+    # Compute red_rate from headline data — pct scoring 0 = 100 - pct_at_least_1
+    scored = headlines.get("scored_count", 0)
+    pct_at_least_1 = None
+    # We need to get pct_at_least_1 from the records, but we only have headlines here.
+    # Use a rough approximation: red_rate ≈ 1 - pct_at_least_1/100.
+    # The caller can provide this if needed.
+
+    specview_entry = {
+        "model": "specview-analysis-pipeline",
+        "org": "specview",
+        "reasoning": "none (structured pipeline)",
+        "avg_score": round(avg_score, 4),
+        "leaderboard_score": leaderboard_score,
+        "green_rate": round(green_rate, 2),
+    }
+
+    # Find where Specview would rank.
+    estimated_rank = 1
+    for baseline in LEADERBOARD_BASELINES:
+        if baseline["avg_score"] >= avg_score:
+            estimated_rank = baseline["rank"] + 1
+    # Clamp: if worse than all baselines, rank after the last one.
+    if estimated_rank == 1 and avg_score < LEADERBOARD_BASELINES[-1]["avg_score"]:
+        estimated_rank = LEADERBOARD_BASELINES[-1]["rank"] + 1
+
+    specview_entry["estimated_rank"] = estimated_rank
+
+    # Build comparison table: baselines above and below Specview.
+    above = [b for b in LEADERBOARD_BASELINES if b["avg_score"] >= avg_score]
+    below = [b for b in LEADERBOARD_BASELINES if b["avg_score"] < avg_score]
+
+    # Take the 3 closest above and 3 closest below.
+    nearest_above = sorted(above, key=lambda b: b["avg_score"])[:3]
+    nearest_below = sorted(below, key=lambda b: b["avg_score"], reverse=True)[:3]
+
+    comparison_table = []
+    for b in nearest_above:
+        comparison_table.append({
+            "rank": b["rank"],
+            "model": b["model"],
+            "org": b["org"],
+            "reasoning": b["reasoning"],
+            "avg_score": b["avg_score"],
+            "leaderboard_score": round((b["avg_score"] / 2.0) * 100.0, 2),
+            "green_rate": b["green_rate"],
+            "red_rate": b["red_rate"],
+            "position": "above",
+        })
+
+    comparison_table.append({
+        **specview_entry,
+        "position": "specview",
+    })
+
+    for b in nearest_below:
+        comparison_table.append({
+            "rank": b["rank"],
+            "org": b["org"],
+            "model": b["model"],
+            "reasoning": b["reasoning"],
+            "avg_score": b["avg_score"],
+            "leaderboard_score": round((b["avg_score"] / 2.0) * 100.0, 2),
+            "green_rate": b["green_rate"],
+            "red_rate": b["red_rate"],
+            "position": "below",
+        })
+
+    # Sort by avg_score descending for clean display.
+    comparison_table.sort(key=lambda x: x["avg_score"], reverse=True)
+
+    return {
+        "specview": specview_entry,
+        "estimated_rank_of_158": estimated_rank,
+        "comparison_table": comparison_table,
+        "note": (
+            "Specview is an analysis pipeline, not a raw model. "
+            "The pipeline constrains output to a short structured format "
+            "(30-40 lines), which may suppress natural pushback. "
+            "Baseline models were tested with unconstrained responses."
+        ),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +428,9 @@ def generate_report(result_path: Path) -> Path:
     headlines = _headline_numbers(records)
     outliers = _outliers(records, domain_metrics)
 
+    # Leaderboard comparison.
+    comparison = _leaderboard_comparison(headlines)
+
     # Validation warnings.
     warnings = _validate(records, domain_metrics, technique_metrics)
     for w in warnings:
@@ -308,6 +439,7 @@ def generate_report(result_path: Path) -> Path:
     summary: dict[str, Any] = {
         "source_file": str(result_path),
         "headline": headlines,
+        "leaderboard_comparison": comparison,
         "domain_breakdown": domain_metrics,
         "technique_breakdown": technique_metrics,
         "outliers": outliers,
@@ -319,11 +451,13 @@ def generate_report(result_path: Path) -> Path:
     with summary_path.open("w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
 
+    est_rank = comparison.get("estimated_rank_of_158", "?")
     logger.info(
-        "Report written to %s | leaderboard_score=%.1f%% pct_fully_rejected=%.1f%%",
+        "Report written to %s | leaderboard_score=%.1f%% pct_rejected=%.1f%% est_rank=%s/158",
         summary_path,
         headlines["leaderboard_score"] if headlines["leaderboard_score"] is not None else float("nan"),
         headlines["pct_fully_rejected"] if headlines["pct_fully_rejected"] is not None else float("nan"),
+        est_rank,
     )
 
     return summary_path
