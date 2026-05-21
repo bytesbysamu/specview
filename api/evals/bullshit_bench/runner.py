@@ -8,7 +8,7 @@ Lines file under api/evals/bullshit_bench/results/.
 Usage (from the api/ directory):
 
     python -m evals.bullshit_bench.runner [--limit N] [--filter DOMAIN] \
-        [--dry-run] [--skip-judge]
+        [--split tuning|holdout|all] [--dry-run] [--skip-judge]
 
     python -m evals.bullshit_bench.runner --rejudge results/run_<timestamp>.jsonl
 
@@ -16,6 +16,8 @@ Flags:
   --limit N        Process only the first N questions (after filtering).
   --filter DOMAIN  Restrict to questions whose domain_group matches DOMAIN
                    (case-insensitive substring match).
+  --split SPLIT    Restrict to questions in the given split: tuning, holdout,
+                   or all (default: all).  Requires splits.json to exist.
   --dry-run        Build prompts and write result records without calling the
                    adapter.  The constructed prompt is stored in response_text.
   --skip-judge     Leave judge score fields empty (no scoring pass).  Useful
@@ -49,6 +51,7 @@ if str(_API_DIR) not in sys.path:
 
 from modules.runtime.chain import adapter  # noqa: E402  (import after path tweak)
 from modules.runtime.chain.errors import ProviderError  # noqa: E402
+from modules.ai.services.public_analyze import _ANALYSIS_SYSTEM, _ANALYSIS_USER  # noqa: E402
 
 from evals.bullshit_bench.models import QuestionResult, RunHeader  # noqa: E402
 from evals.bullshit_bench.judge import score_result, rejudge_file  # noqa: E402
@@ -57,45 +60,16 @@ from evals.bullshit_bench.reporter import generate_report  # noqa: E402
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Constants — mirror the anonymous analysis path exactly.
+# Constants
 # ---------------------------------------------------------------------------
 MODEL = "claude-opus-4-6"
 MAX_TOKENS = 2048
 
-_ANALYSIS_SYSTEM = "You are a markdown spec writer."
-
-_ANALYSIS_USER = """\
-You are a filter between a messy brain dump and a structured analysis.
-Keep it SHORT — 30-40 lines max. No severity tables. No analogies.
-
-## Output Format
-OUTPUT ONLY markdown. Start with #. No preamble.
-
----
-
-# Analysis
-
-## The Problem
-[2-3 sentences. What exists today, why it's broken, what changes.]
-
-## Hard Constraints
-[Decisions already made. Deadlines. Budget limits.]
-
-## Open Questions
-[Things the brain dump left ambiguous.]
-
-## Dependencies & Sequencing
-[What blocks what.]
-
-## Explicitly Out of Scope
-[Things mentioned that should NOT be in the epic.]
-
----
-
-INPUT:
-{braindump}"""
+# _ANALYSIS_SYSTEM and _ANALYSIS_USER are imported from
+# modules.ai.services.public_analyze — single source of truth.
 
 _FIXTURES_PATH = Path(__file__).resolve().parent / "fixtures" / "questions.v2.json"
+_SPLITS_PATH = Path(__file__).resolve().parent / "fixtures" / "splits.json"
 _RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 
@@ -124,15 +98,29 @@ def _build_prompt(question_text: str) -> str:
     return _ANALYSIS_USER.format(braindump=question_text)
 
 
+def _load_splits() -> dict[str, str]:
+    """Load the splits sidecar mapping question_id → "tuning" | "holdout".
+
+    Returns an empty dict if splits.json does not exist yet.
+    """
+    if not _SPLITS_PATH.exists():
+        logger.warning("splits.json not found at %s — split filtering disabled", _SPLITS_PATH)
+        return {}
+    with _SPLITS_PATH.open(encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 def _load_questions(
     fixture_path: Path,
     filter_domain: str | None,
     limit: int | None,
+    split_filter: str | None = None,
 ) -> tuple[list[dict], str]:
     """Load and flatten questions from the fixture file.
 
     Returns (questions, fixture_version).
-    Applies domain filter (case-insensitive substring) then limit cap.
+    Applies split filter, then domain filter (case-insensitive substring),
+    then limit cap.  Each question dict gains a "split" key from splits.json.
     """
     with fixture_path.open(encoding="utf-8") as fh:
         data = json.load(fh)
@@ -145,6 +133,21 @@ def _load_questions(
         all_questions.extend(technique_block.get("questions", []))
 
     logger.info("Loaded %d total questions from fixture (version=%s)", len(all_questions), fixture_version)
+
+    # Attach split label from sidecar.
+    splits = _load_splits()
+    for q in all_questions:
+        q["split"] = splits.get(q.get("id", ""), None)
+
+    if split_filter and split_filter != "all":
+        before = len(all_questions)
+        all_questions = [q for q in all_questions if q.get("split") == split_filter]
+        logger.info(
+            "After --split %r: %d questions (dropped %d)",
+            split_filter,
+            len(all_questions),
+            before - len(all_questions),
+        )
 
     if filter_domain:
         before = len(all_questions)
@@ -197,6 +200,7 @@ def run(
     filter_domain: str | None,
     dry_run: bool,
     skip_judge: bool,
+    split_filter: str | None = None,
 ) -> Path:
     """Execute the eval run and write results to disk.
 
@@ -212,15 +216,18 @@ def run(
     header_path = _RESULTS_DIR / f"run_{run_slug}.header.json"
 
     logger.info(
-        "Starting BullshitBench eval run | model=%s dry_run=%s limit=%s filter=%r",
+        "Starting BullshitBench eval run | model=%s dry_run=%s limit=%s filter=%r split=%r",
         MODEL,
         dry_run,
         limit,
         filter_domain,
+        split_filter,
     )
 
     # Load questions
-    questions, fixture_version = _load_questions(_FIXTURES_PATH, filter_domain, limit)
+    questions, fixture_version = _load_questions(
+        _FIXTURES_PATH, filter_domain, limit, split_filter=split_filter
+    )
 
     if not questions:
         logger.warning("No questions to process — check --filter value.")
@@ -267,6 +274,7 @@ def run(
                 difficulty=q.get("difficulty", ""),
                 difficulty_label=q.get("difficulty_label", ""),
                 is_control=bool(q.get("is_control", False)),
+                split=q.get("split"),
                 prompt_sent=prompt,
                 response_text=prompt,   # prompt stored in place of response
                 latency_seconds=0.0,
@@ -328,6 +336,7 @@ def run(
             difficulty=q.get("difficulty", ""),
             difficulty_label=q.get("difficulty_label", ""),
             is_control=bool(q.get("is_control", False)),
+            split=q.get("split"),
             prompt_sent=prompt,
             response_text=response_text,
             latency_seconds=latency_seconds,
@@ -398,6 +407,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Restrict to questions whose domain or domain_group contains DOMAIN (case-insensitive).",
     )
     parser.add_argument(
+        "--split",
+        dest="split_filter",
+        choices=["tuning", "holdout", "all"],
+        default="all",
+        help=(
+            "Restrict to questions in the given split: tuning (~60 questions), "
+            "holdout (~40 questions), or all (default: all). "
+            "Requires fixtures/splits.json to exist (run split.py first)."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
@@ -465,6 +485,7 @@ def main(argv: list[str] | None = None) -> None:
         filter_domain=args.filter_domain,
         dry_run=args.dry_run,
         skip_judge=args.skip_judge,
+        split_filter=args.split_filter,
     )
 
     if args.report and result_path is not None:
