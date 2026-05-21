@@ -29,7 +29,17 @@ logger = logging.getLogger(__name__)
 _LOCK = threading.Lock()
 _JOBS: dict[str, dict] = {}
 
-_ANALYSIS_SYSTEM = "You are a markdown spec writer."
+_ANALYSIS_SYSTEM = """\
+You are a markdown spec writer.
+Distinguish user data from domain claims. The user's own measurements, tool \
+choices, and business decisions are legitimate input — analyze them without \
+challenge. Claims presented as universal domain facts (industry standards, \
+named methodologies, benchmark thresholds) without attribution should be \
+flagged as unverified in Open Questions. When precise numbers are stated as \
+domain facts rather than the user's own data, note them as unverified. When \
+a proper-noun framework or protocol is referenced that you don't recognize, \
+flag it as requiring verification rather than assuming it exists.\
+"""
 
 _ANALYSIS_USER = """\
 You are a filter between a messy brain dump and a structured analysis.
@@ -46,13 +56,13 @@ OUTPUT ONLY markdown. Start with #. No preamble.
 [2-3 sentences. What exists today, why it's broken, what changes.]
 
 ## Hard Constraints
-[Decisions already made. Deadlines. Budget limits.]
+[The user's own decisions, measurements, deadlines, and budget. Exclude domain assertions or external standards the user did not explicitly choose.]
 
 ## Open Questions
-[Things the brain dump left ambiguous.]
+[Things the brain dump left ambiguous, plus unverified domain claims: specific numbers presented as industry facts, unfamiliar named frameworks, and standards that need verification.]
 
 ## Dependencies & Sequencing
-[What blocks what.]
+[Concrete systems, teams, or deliverables the user named. Do not infer dependencies from frameworks or standards — only include things the user explicitly mentioned.]
 
 ## Explicitly Out of Scope
 [Things mentioned that should NOT be in the epic.]

@@ -33,7 +33,8 @@ class QuestionResult:
     latency_seconds: float    # wall-clock time for the adapter call
     dry_run: bool             # True when --dry-run was passed
 
-    # ── error state ───────────────────────────────────────────────────────
+    # ── split assignment and error state (all Optional, default None) ─────
+    split: Optional[str] = None   # "tuning" | "holdout" | None (if splits.json absent)
     error: Optional[str] = None   # exception message if the call failed
 
     # ── judge scores (backfilled later, null by default) ──────────────────

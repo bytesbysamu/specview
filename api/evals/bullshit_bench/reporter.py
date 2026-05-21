@@ -392,6 +392,104 @@ def _validate(
 
 
 # ---------------------------------------------------------------------------
+# Filter / human-review helper
+# ---------------------------------------------------------------------------
+
+def filter_cases(
+    result_path: Path,
+    score_min: int | None = None,
+    score_max: int | None = None,
+    technique: str | None = None,
+) -> list[QuestionResult]:
+    """Filter scored result records by score range and/or technique name.
+
+    Args:
+        result_path: Path to a scored JSONL result file.
+        score_min:   Lower bound for judge_score (inclusive).  None = no lower bound.
+        score_max:   Upper bound for judge_score (inclusive).  None = no upper bound.
+        technique:   Substring to match against the record's technique field
+                     (case-insensitive).  None = no technique filter.
+
+    Returns:
+        The list of matching QuestionResult records (with judge_score populated).
+        Records whose judge_score is None are excluded.
+
+    Each matching record is printed via logger.info in a human-readable block.
+    """
+    if not result_path.exists():
+        raise FileNotFoundError(f"Result file not found: {result_path}")
+
+    logger.info("Loading records from %s", result_path)
+    records = load_records(result_path)
+    logger.info("Loaded %d records total", len(records))
+
+    # Drop un-scored records first.
+    scored = [r for r in records if r.judge_score is not None]
+
+    # Apply filters.
+    matches: list[QuestionResult] = []
+    for r in scored:
+        score = r.judge_score  # already asserted non-None above
+
+        if score_min is not None and score < score_min:
+            continue
+        if score_max is not None and score > score_max:
+            continue
+        if technique is not None and technique.lower() not in (r.technique or "").lower():
+            continue
+
+        matches.append(r)
+
+    filter_desc_parts: list[str] = []
+    if score_min is not None or score_max is not None:
+        lo = str(score_min) if score_min is not None else "*"
+        hi = str(score_max) if score_max is not None else "*"
+        filter_desc_parts.append(f"score [{lo},{hi}]")
+    if technique is not None:
+        filter_desc_parts.append(f"technique ~'{technique}'")
+    filter_desc = ", ".join(filter_desc_parts) if filter_desc_parts else "none"
+
+    logger.info(
+        "Filter: %s  →  %d / %d scored records match",
+        filter_desc,
+        len(matches),
+        len(scored),
+    )
+
+    # Print each matching record in a readable block.
+    for i, r in enumerate(matches, start=1):
+        block = (
+            f"\n{'=' * 72}\n"
+            f"  CASE {i}/{len(matches)}\n"
+            f"{'=' * 72}\n"
+            f"  question_id        : {r.question_id}\n"
+            f"  technique          : {r.technique}\n"
+            f"  domain_group       : {r.domain_group}\n"
+            f"  judge_score        : {r.judge_score}  ({r.judge_label})\n"
+            f"{'-' * 72}\n"
+            f"  QUESTION\n"
+            f"{'-' * 72}\n"
+            f"{r.question_text}\n"
+            f"{'-' * 72}\n"
+            f"  NONSENSICAL ELEMENT\n"
+            f"{'-' * 72}\n"
+            f"{r.nonsensical_element}\n"
+            f"{'-' * 72}\n"
+            f"  PIPELINE RESPONSE\n"
+            f"{'-' * 72}\n"
+            f"{r.response_text}\n"
+            f"{'-' * 72}\n"
+            f"  JUDGE REASONING\n"
+            f"{'-' * 72}\n"
+            f"{r.judge_reasoning}\n"
+            f"{'=' * 72}"
+        )
+        logger.info(block)
+
+    return matches
+
+
+# ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
@@ -472,12 +570,19 @@ def main(argv: list[str] | None = None) -> None:
 
     parser = argparse.ArgumentParser(
         prog="python -m evals.bullshit_bench.reporter",
-        description="Compute aggregate metrics from a scored BullshitBench result file.",
+        description=(
+            "Compute aggregate metrics from a scored BullshitBench result file, "
+            "or filter cases for human review."
+        ),
     )
     parser.add_argument(
         "result_file",
         metavar="RESULT_FILE",
-        help="Path to the scored JSONL result file (absolute or relative to results/).",
+        nargs="?",
+        help=(
+            "Path to the scored JSONL result file (absolute or relative to results/). "
+            "Required unless --filter-cases is supplied."
+        ),
     )
     parser.add_argument(
         "--verbose",
@@ -486,17 +591,79 @@ def main(argv: list[str] | None = None) -> None:
         help="Enable DEBUG-level logging.",
     )
 
+    # --- filter-cases sub-command flags ---
+    filter_group = parser.add_argument_group(
+        "filter-cases",
+        "Print matching records for human review instead of generating a summary.",
+    )
+    filter_group.add_argument(
+        "--filter-cases",
+        metavar="RESULT_FILE",
+        default=None,
+        dest="filter_cases_file",
+        help=(
+            "Path to the scored JSONL result file to filter "
+            "(absolute or relative to results/). "
+            "When supplied, the normal aggregate report is NOT produced."
+        ),
+    )
+    filter_group.add_argument(
+        "--score",
+        metavar="SCORE",
+        type=int,
+        nargs="+",
+        default=None,
+        dest="score",
+        help=(
+            "Filter by judge_score.  Accepts one value (exact match) or two values "
+            "(inclusive range, low high).  Example: --score 0  or  --score 0 1"
+        ),
+    )
+    filter_group.add_argument(
+        "--technique",
+        metavar="TECHNIQUE",
+        default=None,
+        dest="technique",
+        help=(
+            "Filter by technique (substring match, case-insensitive).  "
+            "Example: --technique specificity_trap"
+        ),
+    )
+
     args = parser.parse_args(argv)
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    result_path = Path(args.result_file)
-    if not result_path.is_absolute():
-        # Resolve relative to the results directory for convenience.
-        _RESULTS_DIR = Path(__file__).resolve().parent / "results"
-        result_path = _RESULTS_DIR / result_path
+    def _resolve(path_str: str) -> Path:
+        p = Path(path_str)
+        if not p.is_absolute():
+            _RESULTS_DIR = Path(__file__).resolve().parent / "results"
+            p = _RESULTS_DIR / p
+        return p
 
+    # --- filter-cases mode ---
+    if args.filter_cases_file is not None:
+        result_path = _resolve(args.filter_cases_file)
+
+        score_min: int | None = None
+        score_max: int | None = None
+        if args.score is not None:
+            if len(args.score) == 1:
+                score_min = score_max = args.score[0]
+            elif len(args.score) == 2:
+                score_min, score_max = args.score[0], args.score[1]
+            else:
+                parser.error("--score accepts 1 or 2 values")
+
+        filter_cases(result_path, score_min=score_min, score_max=score_max, technique=args.technique)
+        return
+
+    # --- normal aggregate-report mode ---
+    if args.result_file is None:
+        parser.error("RESULT_FILE is required unless --filter-cases is supplied.")
+
+    result_path = _resolve(args.result_file)
     summary_path = generate_report(result_path)
     logger.info("Summary written to: %s", summary_path)
 
