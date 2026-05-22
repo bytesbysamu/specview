@@ -191,6 +191,19 @@ TGTG and cooking are complementary, not competing:
 
 This gives 3 cooked meals + 2-3 TGTG + 1 eat-out = CHF ~200/week food vs current CHF ~400/week. Savings: CHF 800/month.
 
+### The booking rhythm — morning reserve, evening pickup
+
+TGTG bags sell out fast. The flow is: reserve in the morning, pick up in the evening. Two reminders per bag:
+
+- **8:00 AM reminder**: "Check TooGoodToGo now — reserve a dinner bag for tonight. Good spots near you: [favorites]. Bags go fast, book before work."
+- **~12 hours later, 1 hour before pickup**: "TGTG bag from [place] — pickup at 18:00. Don't forget on the way home."
+
+On days I plan to TGTG (e.g., Tue/Thu from the weekly template):
+- Morning: system reminds me to open the app and reserve
+- Evening: system reminds me to pick up
+
+On other days, morning prompt is just: "Cook tonight? You have ingredients for [meal]. Or check TGTG for a last-minute bag."
+
 ### What needs to happen technically
 
 - Check if TooGoodToGo has an API or if there's a third-party integration (tgtg-python library exists)
