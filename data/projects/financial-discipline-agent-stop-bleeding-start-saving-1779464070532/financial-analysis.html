@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sam's Financial Analysis — Jan–Apr 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 24px; max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 28px; margin-bottom: 8px; color: #fff; }
+h2 { font-size: 20px; margin: 32px 0 16px; color: #fff; border-bottom: 1px solid #333; padding-bottom: 8px; }
+h3 { font-size: 16px; margin: 24px 0 12px; color: #aaa; }
+.subtitle { color: #888; margin-bottom: 32px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.card { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a2a; }
+.card .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+.card .value { font-size: 32px; font-weight: 700; margin-top: 4px; }
+.card .delta { font-size: 14px; margin-top: 4px; }
+.red { color: #ff4444; }
+.green { color: #44ff88; }
+.yellow { color: #ffaa44; }
+.orange { color: #ff8844; }
+.chart-container { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a2a; margin-bottom: 24px; }
+.chart-container canvas { max-height: 350px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #222; font-size: 14px; }
+th { color: #888; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+tr:hover { background: #1a1a1a; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+.tag-food { background: #ff444420; color: #ff6666; }
+.tag-rent { background: #ff884420; color: #ffaa66; }
+.tag-transport { background: #4488ff20; color: #66aaff; }
+.tag-tech { background: #8844ff20; color: #aa66ff; }
+.tag-social { background: #44ff8820; color: #66ffaa; }
+.tag-insurance { background: #ff44aa20; color: #ff66cc; }
+.tag-shopping { background: #ffff4420; color: #ffff88; }
+.tag-transfer { background: #44ffff20; color: #88ffff; }
+.insight { background: #1a1a1a; border-left: 3px solid #ff4444; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+.insight.positive { border-left-color: #44ff88; }
+.insight.warning { border-left-color: #ffaa44; }
+.insight strong { color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Financial Reality Check</h1>
+<p class="subtitle">Migros Bank Privatkonto — January to April 2026</p>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">Opening Balance (Jan 1)</div>
+    <div class="value">8'521</div>
+    <div class="delta">CHF</div>
+  </div>
+  <div class="card">
+    <div class="label">Closing Balance (Apr 30)</div>
+    <div class="value">7'749</div>
+    <div class="delta red">-CHF 772 in 4 months</div>
+  </div>
+  <div class="card">
+    <div class="label">Total Income</div>
+    <div class="value green">32'886</div>
+    <div class="delta">CHF (salary + transfers)</div>
+  </div>
+  <div class="card">
+    <div class="label">Total Spending</div>
+    <div class="value red">33'658</div>
+    <div class="delta">CHF (you spent more than you earned)</div>
+  </div>
+</div>
+
+<div class="insight">
+  <strong>You're losing money.</strong> Over 4 months, your account dropped CHF 772. Your CHF 1k/month savings goal would require CHF 4k in savings by now. Instead, you're CHF -772. That's a CHF 4'772 gap from where you wanted to be.
+</div>
+
+<h2>Monthly Overview</h2>
+
+<div class="chart-container">
+  <canvas id="monthlyChart"></canvas>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Month</th><th>Opening</th><th>Income</th><th>Spending</th><th>Net</th><th>Closing</th><th>Savings vs 1k Goal</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>January</td><td>8'521</td><td class="green">11'133</td><td class="red">9'717</td><td class="green">+1'416</td><td>9'937</td><td class="green">+416</td></tr>
+    <tr><td>February</td><td>9'937</td><td class="green">6'463</td><td class="red">8'803</td><td class="red">-2'340</td><td>7'598</td><td class="red">-3'340</td></tr>
+    <tr><td>March</td><td>7'598</td><td class="green">8'220</td><td class="red">7'297</td><td class="green">+923</td><td>8'521</td><td class="yellow">-77</td></tr>
+    <tr><td>April</td><td>8'521</td><td class="green">7'071</td><td class="red">7'842</td><td class="red">-771</td><td>7'749</td><td class="red">-1'771</td></tr>
+  </tbody>
+</table>
+
+<div class="insight warning">
+  <strong>February was the crisis month.</strong> CHF 8'803 spending with only CHF 6'463 income. Key culprits: IKEA CHF 375 (new flat), Fizzen CHF 594, Weisse Arena CHF 351 (ski trip), Jumbo CHF 121, and the usual rent/insurance/subscriptions. The move and lifestyle inflation hit hard.
+</div>
+
+<h2>Spending by Category</h2>
+
+<div class="chart-container">
+  <canvas id="categoryChart"></canvas>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Category</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Total</th><th>% of Spend</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="tag tag-rent">Rent & Housing</span></td><td>1'790</td><td>1'790</td><td>1'790</td><td>1'790</td><td class="red">7'160</td><td>21%</td></tr>
+    <tr><td><span class="tag tag-food">Food & Dining</span></td><td>1'450</td><td>1'680</td><td>1'890</td><td>1'520</td><td class="red">6'540</td><td>19%</td></tr>
+    <tr><td><span class="tag tag-transfer">Transfers Out</span></td><td>5'582</td><td>2'500</td><td>420</td><td>0</td><td class="orange">8'502</td><td>25%</td></tr>
+    <tr><td><span class="tag tag-insurance">Insurance & Health</span></td><td>0</td><td>961</td><td>809</td><td>1'303</td><td>3'073</td><td>9%</td></tr>
+    <tr><td><span class="tag tag-transport">Transport (SBB/TWINT)</span></td><td>290</td><td>380</td><td>310</td><td>340</td><td>1'320</td><td>4%</td></tr>
+    <tr><td><span class="tag tag-tech">Tech & Subscriptions</span></td><td>275</td><td>305</td><td>270</td><td>340</td><td>1'190</td><td>4%</td></tr>
+    <tr><td><span class="tag tag-social">Social & Entertainment</span></td><td>180</td><td>720</td><td>650</td><td>380</td><td>1'930</td><td>6%</td></tr>
+    <tr><td><span class="tag tag-shopping">Shopping & One-offs</span></td><td>151</td><td>467</td><td>1'158</td><td>2'169</td><td>3'945</td><td>12%</td></tr>
+  </tbody>
+</table>
+
+<h2>Top Spending Categories — 4 Month Breakdown</h2>
+
+<div class="chart-container">
+  <canvas id="categoryBreakdown"></canvas>
+</div>
+
+<h2>Recurring Fixed Costs (Monthly)</h2>
+
+<table>
+  <thead>
+    <tr><th>Item</th><th>Amount</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Rent (Dauerauftrag Anita Syfrig)</td><td class="red">1'790</td><td>WG Walchestrasse 25 → moved from Bühlstrasse</td></tr>
+    <tr><td>Rent (Dauerauftrag Guido Thaler)</td><td class="red">1'360</td><td>Second rent payment — old flat? Overlap?</td></tr>
+    <tr><td>Krankenkasse (CSS + Agrisano)</td><td class="red">~810</td><td>CSS ~355 + Agrisano ~455</td></tr>
+    <tr><td>Sunrise/Yallo (mobile)</td><td>89</td><td>Monthly</td></tr>
+    <tr><td>Spotify</td><td>16</td><td>Monthly</td></tr>
+    <tr><td>Claude.AI Subscription</td><td>~80</td><td>Varies: 19-117 CHF/month (USD billing)</td></tr>
+    <tr><td>Hostinger</td><td>~15</td><td>Web hosting, monthly</td></tr>
+    <tr><td>Apple (iCloud/services)</td><td>~11</td><td>Monthly</td></tr>
+    <tr><td>ChatGPT (OpenAI)</td><td>~19</td><td>January only</td></tr>
+  </tbody>
+</table>
+
+<div class="insight">
+  <strong>Fixed costs eat CHF 4'160/month minimum</strong> (rent 1'790 + old rent 1'360 + insurance 810 + phone 89 + subscriptions ~111). That's 53% of your net salary before you buy a single meal. The Guido Thaler Dauerauftrag (CHF 1'360/month in Jan-Apr) — is this still the old flat? If so, that's CHF 5'440 gone to a place you don't live.
+</div>
+
+<h2>Salary & Income</h2>
+
+<div class="chart-container">
+  <canvas id="incomeChart"></canvas>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Month</th><th>Salary (Finnofleet)</th><th>Family (Yoseph)</th><th>Friends/Other</th><th>Total</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>January</td><td>6'453</td><td>400</td><td>4'280 (Lea 4'157, Boss 10, others)</td><td class="green">11'133</td></tr>
+    <tr><td>February</td><td>6'453</td><td>0</td><td>10 (Thomas)</td><td>6'463</td></tr>
+    <tr><td>March</td><td>7'225</td><td>800</td><td>195 (friends TWINT)</td><td class="green">8'220</td></tr>
+    <tr><td>April</td><td>6'491</td><td>800</td><td>-221 (net: received some, sent some)</td><td>7'071</td></tr>
+  </tbody>
+</table>
+
+<div class="insight positive">
+  <strong>March salary jumped to CHF 7'225</strong> — that's the promotion kicking in (+CHF 772/month). But your spending tracked upward too, canceling the raise.
+</div>
+
+<h2>AI & Tech Spending</h2>
+
+<table>
+  <thead>
+    <tr><th>Service</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Total</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Claude.AI</td><td>19+81=100</td><td>87</td><td>19+77=96</td><td>117</td><td class="red">400</td></tr>
+    <tr><td>OpenAI/ChatGPT</td><td>19</td><td>0</td><td>0</td><td>0</td><td>19</td></tr>
+    <tr><td>Hostinger</td><td>75+8=83</td><td>17</td><td>17</td><td>9</td><td>126</td></tr>
+    <tr><td>Replit</td><td>0</td><td>21</td><td>0</td><td>0</td><td>21</td></tr>
+    <tr><td>Cursor</td><td>0</td><td>0</td><td>0</td><td>51</td><td>51</td></tr>
+    <tr><td>Replicate</td><td>0</td><td>0</td><td>0</td><td>29</td><td>29</td></tr>
+    <tr><td>Anthropic (API)</td><td>0</td><td>0</td><td>0</td><td>52</td><td>52</td></tr>
+    <tr><td>Coollabs/Coolify</td><td>0</td><td>5</td><td>5</td><td>6</td><td>16</td></tr>
+    <tr><td>GoDaddy/PayPal</td><td>6+21=27</td><td>0</td><td>0</td><td>0</td><td>27</td></tr>
+    <tr><td><strong>Total</strong></td><td><strong>229</strong></td><td><strong>130</strong></td><td><strong>118</strong></td><td><strong>264</strong></td><td class="red"><strong>741</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="insight warning">
+  <strong>CHF 741 on AI/tech tools in 4 months — CHF 0 revenue.</strong> Claude.AI alone is CHF 400. You're spending ~CHF 185/month on tools that generate no income. This is the builder-vs-seller gap in hard numbers. Either ship something that pays for these tools, or cut them.
+</div>
+
+<h2>Eating Out vs Groceries</h2>
+
+<div class="chart-container">
+  <canvas id="foodChart"></canvas>
+</div>
+
+<div class="insight warning">
+  <strong>Restaurants are ~60% of food spending.</strong> Parsaco Food Courts, Burger King, McDonald's, GoldenIndia, Kennedy's Irish Pub, Mama Shelter, Wesley's Kitchen, Thai Style, Action Burger, La Taqueria (CHF 115!), Mesob (CHF 280!) — you eat out almost daily. Cooking at home could save CHF 500-800/month.
+</div>
+
+<h2>The Big One-Offs</h2>
+
+<table>
+  <thead>
+    <tr><th>Date</th><th>What</th><th>Amount</th><th>Category</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Jan 21</td><td>Lea Schellenbaum (Rückzahlung to you)</td><td class="green">+4'157</td><td>Personal</td></tr>
+    <tr><td>Jan 26</td><td>Vergütung Mariana (EUR 880)</td><td class="red">826</td><td>Transfer</td></tr>
+    <tr><td>Jan 29</td><td>Vergütung Colin Baumann</td><td class="red">4'756</td><td>Transfer (old flat deposit?)</td></tr>
+    <tr><td>Feb 7</td><td>Fizzen (furniture?)</td><td class="red">594</td><td>Shopping</td></tr>
+    <tr><td>Feb 9</td><td>IKEA (x2)</td><td class="red">375</td><td>New flat furnishing</td></tr>
+    <tr><td>Feb 22-26</td><td>Weisse Arena + Mountain Vision (ski)</td><td class="red">~430</td><td>Entertainment</td></tr>
+    <tr><td>Feb 27</td><td>Jumbo Oerlikon</td><td class="red">121</td><td>Home improvement</td></tr>
+    <tr><td>Mar 4</td><td>Bancomatbezug ZKB CHF 300</td><td class="red">302</td><td>Cash withdrawal</td></tr>
+    <tr><td>Mar 14</td><td>Mama Shelter (multiple)</td><td class="red">~47</td><td>Social night out</td></tr>
+    <tr><td>Mar 16</td><td>Miss Miu Europaallee</td><td class="red">85</td><td>Dining</td></tr>
+    <tr><td>Mar 25</td><td>Mesob Restaurant (Ethiopian dinner)</td><td class="red">280</td><td>Social hosting</td></tr>
+    <tr><td>Apr 7</td><td>Kennedy's Irish Pub</td><td class="red">55</td><td>Social</td></tr>
+    <tr><td>Apr 14</td><td>Lea TWINT</td><td class="red">776</td><td>Personal</td></tr>
+    <tr><td>Apr 24</td><td>La Taqueria</td><td class="red">115</td><td>Dining</td></tr>
+    <tr><td>Apr 24</td><td>Playtomic</td><td class="red">62</td><td>Sports</td></tr>
+  </tbody>
+</table>
+
+<h2>Balance Trend</h2>
+
+<div class="chart-container">
+  <canvas id="balanceChart"></canvas>
+</div>
+
+<h2>Key Findings</h2>
+
+<div class="insight">
+  <strong>1. You're spending CHF 772 more than you earn over 4 months.</strong> Your savings goal was +CHF 4'000. Actual: -CHF 772. Gap: CHF 4'772.
+</div>
+
+<div class="insight warning">
+  <strong>2. The Guido Thaler Dauerauftrag (CHF 1'360/month) needs investigation.</strong> If this is the old flat in Dietikon and you've moved to Walchestrasse, that's CHF 5'440 over 4 months going to a place you don't live. Is this a deposit being held? A sublease? This single item could be the entire savings gap.
+</div>
+
+<div class="insight">
+  <strong>3. Eating out costs ~CHF 1'200-1'500/month.</strong> Parsaco, Burger King, restaurants — almost daily. Cooking 4 days/week instead of 1 could save CHF 600/month.
+</div>
+
+<div class="insight warning">
+  <strong>4. AI tools: CHF 185/month, revenue: CHF 0.</strong> Claude Max, Cursor, Replicate, Anthropic API, Hostinger. These are investments in building — but nothing you've built generates income yet.
+</div>
+
+<div class="insight positive">
+  <strong>5. March salary boost (+CHF 772) proves the promotion works.</strong> But lifestyle inflated to match. The raise exists — you're just eating it.
+</div>
+
+<div class="insight">
+  <strong>6. Krankenkasse is ~CHF 810/month.</strong> November comparison deadline — this is worth checking. Even a CHF 100/month reduction = CHF 1'200/year.
+</div>
+
+<h2>What to Do — Ranked by CHF Impact</h2>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Action</th><th>Monthly Savings</th><th>Effort</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Resolve the CHF 1'360 Dauerauftrag</td><td class="green">+1'360</td><td>One phone call</td></tr>
+    <tr><td>2</td><td>Cook 4x/week instead of eating out</td><td class="green">+600</td><td>Moderate</td></tr>
+    <tr><td>3</td><td>Compare Krankenkasse in November</td><td class="green">+100-200</td><td>1 hour</td></tr>
+    <tr><td>4</td><td>Cut unused tech subscriptions</td><td class="green">+50-100</td><td>10 minutes</td></tr>
+    <tr><td>5</td><td>Set a CHF 200/week discretionary budget</td><td class="green">+200-400</td><td>Discipline</td></tr>
+  </tbody>
+</table>
+
+<script>
+// Monthly Income vs Spending
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: ['January', 'February', 'March', 'April'],
+    datasets: [
+      { label: 'Income', data: [11133, 6463, 8220, 7071], backgroundColor: '#44ff8840', borderColor: '#44ff88', borderWidth: 2 },
+      { label: 'Spending', data: [9717, 8803, 7297, 7842], backgroundColor: '#ff444440', borderColor: '#ff4444', borderWidth: 2 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: 'Monthly Income vs Spending (CHF)', color: '#fff', font: { size: 16 } }, legend: { labels: { color: '#aaa' } } },
+    scales: { y: { ticks: { color: '#888' }, grid: { color: '#222' } }, x: { ticks: { color: '#888' }, grid: { color: '#222' } } }
+  }
+});
+
+// Category Pie
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Rent & Housing', 'Food & Dining', 'Transfers Out', 'Insurance & Health', 'Transport', 'Tech & Subs', 'Social & Entertainment', 'Shopping'],
+    datasets: [{ data: [7160, 6540, 8502, 3073, 1320, 1190, 1930, 3945], backgroundColor: ['#ff8844', '#ff4444', '#88ffff', '#ff66cc', '#6688ff', '#aa66ff', '#66ffaa', '#ffff88'] }]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: 'Spending by Category — 4 Months Total (CHF 33\'658)', color: '#fff', font: { size: 16 } }, legend: { position: 'right', labels: { color: '#aaa', padding: 12 } } }
+  }
+});
+
+// Category monthly breakdown
+new Chart(document.getElementById('categoryBreakdown'), {
+  type: 'bar',
+  data: {
+    labels: ['January', 'February', 'March', 'April'],
+    datasets: [
+      { label: 'Rent', data: [1790, 1790, 1790, 1790], backgroundColor: '#ff8844' },
+      { label: 'Food', data: [1450, 1680, 1890, 1520], backgroundColor: '#ff4444' },
+      { label: 'Insurance', data: [0, 961, 809, 1303], backgroundColor: '#ff66cc' },
+      { label: 'Social', data: [180, 720, 650, 380], backgroundColor: '#66ffaa' },
+      { label: 'Tech', data: [229, 130, 118, 264], backgroundColor: '#aa66ff' },
+      { label: 'Transport', data: [290, 380, 310, 340], backgroundColor: '#6688ff' }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: 'Category Trends by Month', color: '#fff', font: { size: 16 } }, legend: { labels: { color: '#aaa' } } },
+    scales: { x: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' } }, y: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' } } }
+  }
+});
+
+// Food breakdown
+new Chart(document.getElementById('foodChart'), {
+  type: 'bar',
+  data: {
+    labels: ['January', 'February', 'March', 'April'],
+    datasets: [
+      { label: 'Restaurants & Takeout', data: [870, 1010, 1130, 910], backgroundColor: '#ff444480' },
+      { label: 'Groceries (Migros/Coop)', data: [580, 670, 760, 610], backgroundColor: '#44ff8880' }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: 'Eating Out vs Groceries (CHF)', color: '#fff', font: { size: 16 } }, legend: { labels: { color: '#aaa' } } },
+    scales: { y: { ticks: { color: '#888' }, grid: { color: '#222' } }, x: { ticks: { color: '#888' }, grid: { color: '#222' } } }
+  }
+});
+
+// Income breakdown
+new Chart(document.getElementById('incomeChart'), {
+  type: 'bar',
+  data: {
+    labels: ['January', 'February', 'March', 'April'],
+    datasets: [
+      { label: 'Salary', data: [6453, 6453, 7225, 6491], backgroundColor: '#44ff8860', borderColor: '#44ff88', borderWidth: 2 },
+      { label: 'Family', data: [400, 0, 800, 800], backgroundColor: '#4488ff60', borderColor: '#4488ff', borderWidth: 2 },
+      { label: 'Other', data: [4280, 10, 195, -221], backgroundColor: '#ffaa4460', borderColor: '#ffaa44', borderWidth: 2 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: 'Income Sources by Month (CHF)', color: '#fff', font: { size: 16 } }, legend: { labels: { color: '#aaa' } } },
+    scales: { x: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' } }, y: { stacked: true, ticks: { color: '#888' }, grid: { color: '#222' } } }
+  }
+});
+
+// Balance trend
+new Chart(document.getElementById('balanceChart'), {
+  type: 'line',
+  data: {
+    labels: ['Jan 1', 'Jan 15', 'Jan 31', 'Feb 15', 'Feb 28', 'Mar 15', 'Mar 31', 'Apr 15', 'Apr 30'],
+    datasets: [{
+      label: 'Account Balance (CHF)',
+      data: [8521, 8077, 9937, 6432, 7598, 5984, 8521, 6527, 7749],
+      borderColor: '#4488ff',
+      backgroundColor: '#4488ff20',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 4,
+      pointBackgroundColor: '#4488ff'
+    }, {
+      label: 'Target (1k/month savings)',
+      data: [8521, 9021, 9521, 10021, 10521, 11021, 11521, 12021, 12521],
+      borderColor: '#44ff8840',
+      borderDash: [5, 5],
+      pointRadius: 0,
+      fill: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: 'Balance vs Savings Target', color: '#fff', font: { size: 16 } }, legend: { labels: { color: '#aaa' } } },
+    scales: { y: { ticks: { color: '#888' }, grid: { color: '#222' } }, x: { ticks: { color: '#888' }, grid: { color: '#222' } } }
+  }
+});
+</script>
+
+</body>
+</html>

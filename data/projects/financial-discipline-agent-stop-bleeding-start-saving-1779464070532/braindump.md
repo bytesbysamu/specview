@@ -1,158 +1,206 @@
 # Life Discipline Agent — Track Everything, Stall on Nothing
 
-## The pattern (from actual diary data)
+## The financial reality (from actual bank data, Jan-Apr 2026)
 
-March 3: "The plan now is officially promoted in April, in May find new jobs, at least 115,000, till then work on CV and skills, new job by August."
-March 4: "Career prep commitment: 2 hours/day starting now."
-March 11: "Career prep: 2h/day commitment unclear — no tracking since March 4."
-May 22: Career prep absent entirely. May was supposed to be application month. Zero applications.
+4 months of Migros Bank statements tell the story:
+- Opening balance Jan 1: CHF 8'521
+- Closing balance Apr 30: CHF 7'749
+- **Net result: -CHF 772** (should be +CHF 4'000 at 1k/month savings target)
 
-Same pattern everywhere:
-- CHF 1k/month savings goal stated March 11. "No tracker running." Never mentioned again.
-- MRI March 4. "Follow-up overdue." Disappeared from diary.
-- "Keep writing diary — don't let another 8 days pass." Then 68 days of silence until May 22.
-- Gym trial March 3 ("did not feel comfortable"). No gym mention since.
+### The real budget (non-negotiable)
 
-Meanwhile, shipped: BullshitBench 93.4%, 4 OpenClaw skills, VPS deployment, Bubls discovery system — all in days. The engineering dopamine loop works. The life discipline loop doesn't exist.
+Two rents — I support my family:
+- CHF 1'790/month: my flat (Walchestrasse 25, Zürich)
+- CHF 1'360/month: family flat (Dauerauftrag Anita Syfrig)
+- Total rent: **CHF 3'150/month** — this cannot change
 
-## What I need
+Insurance — I pay Krankenkasse for myself AND my brother:
+- CSS: ~CHF 355/month
+- Agrisano: ~CHF 455/month (brother)
+- Total insurance: **~CHF 810/month**
 
-The same CI/CD I have for code, applied to life. Not a planning tool — a tracking + nudging system that reads what I'm already writing in my diary and surfaces what I'm ignoring.
+My brother Yoseph transfers me CHF 400/month to help with rent. So net family support cost is ~CHF 2'750 + 810 - 400 = **CHF 3'160/month** going to family obligations.
 
-## Financial discipline
+Phone (Sunrise/Yallo): CHF 89/month.
 
-### Spending awareness (Phase 1 — immediate)
-I already mention spending naturally: "had kebap for dinner" (March 3), "hosting wine & cheese" (March 10). The diary-process skill should extract CHF amounts with context. If I don't mention an amount, infer the category (eating out, groceries, transport).
+**Fixed costs: CHF 4'049/month.** On a net salary of ~CHF 6'500, that leaves CHF 2'451 for everything else.
 
-Weekly Sunday digest:
-- Total spent this week
-- Top 3 spending categories
-- vs last week (↑/↓)
-- Savings projection: "at CHF X/month spending, you'll save CHF Y vs your 1k target"
+### Anomalies in Jan-Feb (not recurring)
+- Jan: Lea transferred CHF 4'157 (savings she was holding from the relationship)
+- Jan: Paid Mariana CHF 826 (EUR transfer) and Colin Baumann CHF 4'756 (probably old flat deposit)
+- Feb: IKEA CHF 375 + Fizzen CHF 594 + Jumbo CHF 121 = new flat furnishing
+- Jan-Feb: Two ski trips (Megève + Weisse Arena) = ~CHF 560 combined
+- These are one-time. The recurring problem is eating out.
 
-Monthly 1st-of-month check:
-- Did I hit CHF 1k savings?
-- Self-reported or derived from spending mentions
+### The eating out crisis
 
-### Swiss financial calendar (set-and-forget reminders)
-These are hard deadlines I shouldn't miss:
-- **November 30**: Krankenkasse switch deadline. Remind me 3 weeks before. Link comparis.ch.
-- **December 31**: Pillar 3a max contribution. Remind me November 1. Current provider: [need to find out — VIAC? Frankly?]
-- **March 31** (or canton deadline): Tax return. Remind me January 15 to start collecting.
-- **Quellensteuer**: If I change jobs, I may switch from Quellensteuer to regular taxation. Flag this if job change is detected.
+From the bank data, restaurant/takeout spending:
+- January: ~CHF 870 (Parsaco, Burger King, Kasheme Gastro, PG Glattburg, Zeqiri, etc.)
+- February: ~CHF 1'010 (Hafenkneipe, Bros Gastgewerbe, HolyCow, Cafe Bar Grande, Nordiska Roddfor, etc.)
+- March: ~CHF 1'130 (Kennedy's Irish Pub x3, Mama Shelter x5, Mesob CHF 280, Dynamo Chuchi, etc.)
+- April: ~CHF 910 (Asia Palast, Kennedy's CHF 55, La Taqueria CHF 115, Action Burger x2, Zueri Bistro, etc.)
 
-### Deal hunting (Phase 4 — nice to have)
-- TooGoodToGo: I already wanted to automate this on March 3 ("maybe we can automate this too ;)"). Alert via Telegram for bags near Walchestrasse 25.
-- SBB supersaver: Zurich-Bern, Zurich-Geneva routes.
+**Average: CHF 980/month on restaurants.** That's almost 40% of my discretionary budget going to food I could cook for 1/3 the price.
 
-## Career discipline
+The March Mesob dinner (CHF 280) was the Ethiopian dinner I hosted for 6 people — social investment, worth it. But the daily Parsaco Food Courts, Burger Kings, and kiosk purchases are pure habit spending.
 
-### The accountability gap
-The diary proves the pattern: I set career goals with conviction, then they vanish within a week. The system needs to catch this automatically.
+### Where the money should come from
 
-- If "career", "job", "application", "CV", "interview", "LeetCode" not mentioned in diary for 14 days → nudge: "Career prep has been silent for 2 weeks. Your May application deadline passed."
-- If I mention a company or role → track as pipeline entry (applied/interviewing/rejected/ghosted)
-- Monthly career momentum: how many career-related actions this month vs last month?
+If I cook 5 days/week instead of eating out daily:
+- Current: ~CHF 980/month restaurants + ~CHF 650 groceries = CHF 1'630 total food
+- Target: ~CHF 300/month restaurants (weekends only) + ~CHF 800 groceries = CHF 1'100 total food
+- **Savings: ~CHF 530/month**
 
-### Skill tracking
-- AZ-900 was "in progress" March 3. Status? If not mentioned in 30 days, ask.
-- LeetCode/coding practice: any mentions? Count per week.
-- Conference/meetup: did I attend anything tech-related this month?
+Combined with using TooGoodToGo more (already used it — 3 purchases visible in bank data at CHF 5-12 each, great value) and meal planning, this is realistic.
 
-## Health discipline
+### AI tool spending: CHF 185/month, revenue: CHF 0
 
-### What the diary shows
-March 3: Knee injury from dancing. MRI booked March 4. Trial gym same day ("did not like it"). Then: nothing. No gym, no MRI follow-up, no physio, no recovery update until May 22 where it's briefly "going well."
+- Claude.AI: CHF 80-117/month (varies with USD rate)
+- Hostinger: ~CHF 15/month
+- Cursor: CHF 51 (April)
+- Replicate: CHF 29 (April)
+- Anthropic API: CHF 52 (April)
+- Coolify: ~CHF 5/month
+- Spotify: CHF 16/month
 
-The system should track:
-- Gym mentions: weekly count. If 0 for 2 consecutive weeks → nudge
-- Knee/injury/physio/MRI: if mentioned and then disappears for 30 days → "what happened with your knee?"
-- Sleep: if mentioned, track quality/quantity pattern
-- Eating out vs cooking ratio: derived from spending data. March 3 I had kebap alone. Is that a pattern?
+Total: ~CHF 185/month on tools. These are investments in building — but nothing generates income yet. The discipline agent should track: are these tools producing revenue? If CHF 0 after 3 months, cut the non-essential ones.
 
-### Annual health reminders
-- Doctor checkup: if "doctor" not mentioned in 12 months → remind
-- Dentist: same
-- Eye exam: same
+## What I need — a financial co-pilot
 
-## Social discipline
+I lack the discipline and cooking skills to fix this on willpower alone. I need the system to do the heavy lifting: track, remind, gamify, nudge, and make the invisible visible. Every day, every week.
 
-### What's working (don't break it)
-March 3: "I felt like I never had a good social circle." March 11: "Social life is exploding. I'm orchestrating group dinners and building event infrastructure." That's a massive 8-day transformation. The system should protect this momentum.
+### Daily tracking (from diary entries)
 
-### What to track
-- When I mention meeting someone new ("met Alex at pub quiz"), create a follow-up reminder for 3-5 days
-- Birthday mentions → store and remind day before
-- Network warming: if I mention someone 3+ times across entries (Hannah, Adi, Isabelle, Krisi, Mariana, etc.), they're "inner circle." Flag if not mentioned in 30+ days.
-- Event hosting cadence: March had wine night → Ethiopian dinner → pub quiz → BBQ plan. If I go 6 weeks without mentioning hosting, nudge.
+When I write my diary via Telegram, the system extracts:
+- Any CHF amounts mentioned ("had dinner at Parsaco CHF 25")
+- Meals: did I cook today or eat out? Just detecting "cooked" vs restaurant names
+- TooGoodToGo purchases (track savings vs regular price)
 
-### Social health score (weekly)
-- How many people did I mention this week?
-- How many different social contexts? (1-on-1, group dinner, work, random meetup)
-- Am I seeing the same 3 people or expanding?
+### Daily nudge (proactive, morning)
 
-## Side project discipline
+Every morning via Telegram:
+- "Day 5 streak: you've cooked 4 out of 5 days this week 🔥"
+- "Eating out budget this week: CHF 45 of CHF 75 used"
+- "TooGoodToGo: 2 bags available near Walchestrasse right now"
 
-### Revenue reality check
-- humaniz.me: live since May. Revenue? If CHF 0 for 3 months → flag: "ship marketing or kill it"
-- Trendfy: May 1 kill date passed. What happened? If no diary mention → ask
-- Pattern: "you've mentioned 4 projects this month but zero marketing activities"
+### Weekly scorecard (Sunday)
 
-### The builder-vs-seller gap
-March 11: "Am I building or avoiding?" The reality-check already identified this. The discipline agent should track the ratio: hours mentioned building vs hours mentioned selling/marketing/reaching out. If the ratio is 10:0 for a month, that's a problem.
+Gamified Telegram report:
+- 🍳 Cooking streak: X days this week (goal: 5)
+- 🍔 Eating out: CHF X (budget: CHF 75/week)
+- 💰 Weekly spending: CHF X
+- 📊 Savings pace: on track for CHF X this month (target: CHF 1'000)
+- 🏆 Level: "Apprentice Chef" → "Home Cook" → "Kitchen Boss" → "Savings Machine"
+- ⭐ Points: +10 per home-cooked meal, +5 per TooGoodToGo save, -5 per restaurant meal >CHF 30
 
-## How it all works
+### Monthly accountability (1st of month)
 
-### Input: Diary entries (already happening)
-I write naturally to ClawBoi via Telegram. The system extracts everything — spending, people, health, career, projects — from what I'm already saying.
+Full report:
+- Total spent vs budget
+- Category breakdown (rent, food, transport, social, tech)
+- Savings achieved vs CHF 1'000 target
+- Cooking ratio: X home-cooked vs Y restaurant meals
+- Tech tool ROI: CHF X spent on AI tools, CHF Y revenue generated
+- Comparison to previous month
 
-### Output: Weekly discipline digest (Sunday)
-One Telegram message:
-- 💰 Spent: CHF X (↑12% vs last week). Top: eating out CHF Y.
-- 💼 Career: 0 mentions this week. ⚠️ Silent for 14 days.
-- 🏋️ Health: 0 gym mentions. Knee status unknown.
-- 👥 Social: 4 people mentioned. Follow-up due: Alex (5 days ago).
-- 🚀 Projects: 0 marketing activities. humaniz.me revenue: CHF 0.
+### TooGoodToGo tracking
 
-### Output: Monthly accountability (1st of month)
-Full report with trends. Did anything actually improve?
+I already use it (3 purchases in bank data). The system should:
+- Alert me via Telegram when good bags are available near Walchestrasse 25
+- Track how much I save vs retail price
+- Gamify: "You saved CHF 45 with TooGoodToGo this month"
 
-### Output: Proactive nudges (when triggered)
-Not scheduled — fired when the pattern detector catches a gap:
-- "Career prep absent 14 days."
-- "Krankenkasse deadline in 3 weeks."
-- "You haven't mentioned Hanna in 6 weeks."
-- "Gym: 0 visits, 3rd consecutive week."
+### Cooking support
+
+I said I lack skills. The system can help:
+- When I say "what should I cook tonight" in Telegram, suggest a simple recipe based on what's cheap at Migros/Coop this week
+- Keep a list of 10 go-to cheap meals I can rotate (pasta, rice bowls, stir fry, etc.)
+- Weekly meal prep suggestion every Sunday morning: "cook X and Y, lasts 3 days"
+
+### Swiss financial calendar
+
+Hard deadlines I shouldn't miss:
+- **November 30**: Krankenkasse comparison. I pay CHF 810/month — even a 10% reduction saves CHF 970/year
+- **December 31**: Pillar 3a contribution deadline. Max it out for tax savings.
+- **March 31**: Tax return. Start collecting documents in January.
+- Annual: review Sunrise/Yallo plan — CHF 89/month might be reducible
+
+## Beyond food: career and side projects
+
+The eating out fix saves ~CHF 530/month. But the real breakthrough is income:
+- CHF 95k → CHF 115k job = +CHF 1'667/month net (rough)
+- Any side project revenue would be on top
+- FINIA compliance SaaS: CHF 299-999/month per customer
+
+The discipline agent should track career and project momentum alongside finances — they're connected. More income + less eating out = savings goal hit.
+
+## Social discipline (integrated)
+
+From diary data, my social life is active (Hannah, Adi, Isabelle, Krisi, Mariana, flatmates). The system should:
+- Track follow-ups: "met Alex at pub quiz" → remind in 3-5 days
+- Birthday reminders from conversations
+- Network warming: flag if inner circle contacts go 30+ days without mention
+- Event hosting cadence: flag if >6 weeks without hosting
+
+## Health discipline (integrated)
+
+From diary data: knee injury March, MRI March 4, gym trial March 3. Then silence.
+- Track gym mentions: weekly count
+- Knee recovery: flag if no mention in 30 days
+- Annual doctor/dentist reminders
+
+## Gamification model
+
+### Points system
+- +10: Home-cooked meal
+- +5: TooGoodToGo purchase
+- +5: Diary entry written
+- +3: Gym visit
+- +2: Social interaction logged
+- -5: Restaurant meal >CHF 30
+- -3: Skipped diary for 2+ days
+
+### Levels
+- Level 1: "Starting Out" (0-50 points/week)
+- Level 2: "Getting Disciplined" (50-80)
+- Level 3: "Momentum Builder" (80-120)
+- Level 4: "Savings Machine" (120+)
+
+### Streaks
+- Cooking streak (consecutive days)
+- Diary streak (consecutive days)
+- Under-budget streak (consecutive weeks)
 
 ## Phases
 
-### Phase 1: Financial awareness + Swiss calendar
-- CHF extraction from diary
-- Weekly spending digest
-- Swiss deadline reminders (Krankenkasse, 3a, tax)
-Immediate ROI. Saves real money.
-
-### Phase 2: Career + health tracking
-- Career mention tracking + gap detection
-- Health/gym tracking
-- Proactive nudges for silence gaps
-
-### Phase 3: Social + project tracking
-- People extraction + follow-up reminders
-- Network warming
-- Side project revenue/marketing tracking
-
-### Phase 4: Deal hunting + advanced
+### Phase 1: Food spending fix (immediate — this is the CHF 530/month win)
+- Daily cooking/eating out tracking from diary
+- Weekly spending scorecard with gamification
 - TooGoodToGo alerts
-- SBB supersaver monitoring
-- Monthly accountability report with trends
+- Simple recipe suggestions
+- Weekly eating out budget: CHF 75
+
+### Phase 2: Full financial tracking
+- All spending categories from diary
+- Monthly accountability report
+- Swiss calendar reminders
+- Tech tool ROI tracking
+
+### Phase 3: Career + social + health
+- Career mention tracking + gap detection
+- Social follow-ups and network warming
+- Health/gym tracking
+
+### Phase 4: Investing + advanced
+- Once saving CHF 1k/month consistently: where to put it (Pillar 3a, ETFs, etc.)
+- Deal hunting (SBB supersaver, grocery deals)
 
 ## Constraints
 
-- Everything comes from diary entries — zero extra effort
-- No bank APIs — spending is self-reported through natural diary writing
-- No separate apps — everything in Telegram
+- Everything from diary entries — zero extra effort
+- No bank API integration — spending is self-reported through diary
+- All output via Telegram
 - CHF default currency
-- Sharp friend tone, not guilt machine
+- Sharp friend tone with gamification — motivating, not guilt-tripping
 - Running on VPS (OpenClaw on bytesbysamu.cloud)
 - Skills-first: SKILL.md files, no build step
