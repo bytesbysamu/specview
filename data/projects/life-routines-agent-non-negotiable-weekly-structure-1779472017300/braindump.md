@@ -110,10 +110,51 @@ Add these to the existing discipline digest:
 - Not separate from the financial agent — these routines ARE the financial agent's input
 - Not a standalone app — everything flows through the existing diary → Telegram pipeline
 
+## The persistence problem — don't wait for my input
+
+ClawBoi's own assessment: "The system will work. Whether you use it consistently is the only variable." The kill scenarios: skipping the Sunday data dump, not logging meals, letting the diary habit die.
+
+This means the system CANNOT be passive. It must be persistent and self-triggering:
+
+### If I go silent, escalate
+- Day 1 no diary: nothing (grace period)
+- Day 2 no diary: gentle ping at 9 PM: "No diary today. Quick one-liner before bed?"
+- Day 3 no diary: direct: "3 days without a diary entry. Streak broken. What's going on?"
+- Day 7 no diary: blunt: "Last entry was 7 days ago. This is the pattern — you go silent when the hard stuff piles up. Send me one sentence about today."
+
+### Proactive triggers (don't wait for me to ask)
+- **Monday 7:00 AM**: weekly preview auto-sent. Not optional. "This week: Office Mon/Wed. Gym: plan Tue/Thu. Friends: nothing scheduled — who to text? Family: last visit 18 days ago."
+- **Wednesday 8 PM**: mid-week check auto-sent. "Mid-week: Office 1/2 ✅ Gym 0/2 ⚠️ Friends 1/2. Room clean? 10-min tidy before bed."
+- **Friday 6 PM**: weekend planning auto-sent. "Weekend: Family visit? Meal prep Sunday? Who to see?"
+- **Sunday 9 AM**: weekly scorecard auto-sent (from financial agent). Full gamified report.
+- **Sunday 9 PM**: weekly review prompt. "How was the week? Quick diary entry to close it out."
+
+### Heartbeat integration
+The OpenClaw heartbeat already runs every 10 minutes. Use it to:
+- Check if a diary entry exists for today (after 9 PM)
+- Check if the Monday/Wednesday/Friday/Sunday messages were acknowledged
+- If any routine metric is at zero by end of week (gym 0, friends 0), escalate in the next heartbeat
+
+### Don't just track — initiate
+The system shouldn't just count what I report. It should initiate:
+- "It's Tuesday evening. Kon-Tiki Comedy is tonight, free entry. Hannah said she's down for standup. Text her?"
+- "You have groceries for pasta aglio e olio. Cook tonight = +10 points and streak continues."
+- "Valentino hasn't been mentioned in 25 days. Quick TWINT beer invite?"
+- "SBB supersaver to Wallenwil available for CHF 12 this Saturday. Visit family?"
+
+### The diary isn't optional — make it the easiest thing in the world
+If I send just "7/10, cooked, gym, saw Hannah" — that's enough. The system should parse even ultra-short entries. Lower the bar until it's impossible to fail:
+- One sentence counts as a diary entry
+- "good day, cooked" → mood 7, cooked meal, no spending
+- "shit day" → mood 3, no data, but the streak lives
+- Even an emoji response to the evening prompt counts: 👍 = decent day logged
+
 ## Constraints
 
 - All tracking from diary entries — zero extra apps
-- Nudges via Telegram from ClawBoi
-- Monday preview + Sunday review as the two anchor points
+- Nudges via Telegram from ClawBoi — proactive, not passive
+- Monday preview + Wednesday check + Friday planning + Sunday review as four anchor points
+- Escalating persistence: grace → gentle → direct → blunt
 - Sharp friend tone: "you've been to the gym 0 times in 3 weeks. Your Playtomic receipt says you like padel. Book a session?"
 - Must suggest activities, not just track — "Hannah mentioned wanting to try standup comedy. Kon-Tiki Comedy is every Tuesday, free entry."
+- The system comes to me. I never have to remember to open anything.
