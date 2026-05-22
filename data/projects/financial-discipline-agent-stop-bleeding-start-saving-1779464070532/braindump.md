@@ -62,3 +62,12 @@ Phase 1 is just: extract spending from diary entries + weekly Telegram digest. T
 - Swiss Francs (CHF) as default currency
 - Weekly digest via Telegram, not email
 - Running on the VPS (OpenClaw on bytesbysamu.cloud)
+
+## Social outreach (from Phase 2)
+
+Bubls handles event discovery. But I also need relationship maintenance integrated into the same system:
+
+- Follow-up reminders: when I meet someone interesting, log it in the diary ("met Alex at the pub quiz, works in fintech"), and the system should remind me to follow up in 3-5 days
+- Birthday tracking: store birthdays mentioned in conversations, send a reminder the day before via Telegram
+- Network warming: for my top 20 contacts, remind me to reach out if I haven't mentioned them in 30+ days. The diary already captures social interactions — pattern-detect can flag "you haven't mentioned Hanna in 6 weeks"
+- This is passive — it reads the diary entries I'm already writing and nudges me. No separate contact management app.

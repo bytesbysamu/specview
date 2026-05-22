@@ -45,3 +45,11 @@ The diary-process + reality-check skills already catch stalled goals. The job se
 - All external actions (sending applications, emails) require my confirmation via Telegram
 - No paid APIs unless absolutely necessary — prefer scraping public listings
 - The base CV needs to exist before any of this works — generating it is step 0
+
+## OpenClaw config needed for this
+
+- SOUL.md needs updating to include the career assistant role — not just diary reflection, but proactive job search support
+- AGENTS.md needs orchestration: heartbeat should check for new job postings matching my profile on a schedule (daily or every 2 days)
+- HEARTBEAT.md should include proactive job board checks alongside existing proactive tasks
+- Memory structure: job search logs (roles found, applications sent, statuses) should go in memory/job-search/ separate from diary entries
+- Workspace files (USER.md, IDENTITY.md) should reflect my full technical profile for accurate job matching
