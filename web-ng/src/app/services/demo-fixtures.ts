@@ -392,7 +392,7 @@ export const DEMO_FIXTURE_PROJECTS: Project[] = [
   {
     id: 'fixture-incident-platform',
     name: 'Incident Response Platform',
-    createdAt: '2026-05-01T09:00:00Z',
+    createdAt: '2026-05-19T09:00:00Z',
     specs: [
       { filename: 'braindump.md',         label: 'Braindump',         content: INCIDENT_BRAINDUMP },
       { filename: 'analysis.md',          label: 'Analysis',          content: INCIDENT_ANALYSIS },
@@ -406,9 +406,11 @@ export const DEMO_FIXTURE_PROJECTS: Project[] = [
     name: 'Internal Developer Platform',
     createdAt: '2026-04-22T14:00:00Z',
     specs: [
-      { filename: 'braindump.md', label: 'Braindump', content: IDP_BRAINDUMP },
-      { filename: 'analysis.md',  label: 'Analysis',  content: IDP_ANALYSIS },
-      { filename: 'epic.md',      label: 'Epic',      content: IDP_EPIC },
+      { filename: 'braindump.md',            label: 'Braindump',            content: IDP_BRAINDUMP },
+      { filename: 'analysis.md',             label: 'Analysis',             content: IDP_ANALYSIS },
+      { filename: 'epic.md',                 label: 'Epic',                 content: IDP_EPIC },
+      { filename: 'architecture.md',         label: 'Architecture',         content: IDP_ARCHITECTURE },
+      { filename: 'implementation-guide.md', label: 'Implementation Guide', content: IDP_GUIDE },
     ],
   },
   {
@@ -416,9 +418,11 @@ export const DEMO_FIXTURE_PROJECTS: Project[] = [
     name: 'API Rate Limiting Service',
     createdAt: '2026-05-10T11:30:00Z',
     specs: [
-      { filename: 'braindump.md', label: 'Braindump', content: RATELIMIT_BRAINDUMP },
-      { filename: 'analysis.md',  label: 'Analysis',  content: RATELIMIT_ANALYSIS },
-      { filename: 'epic.md',      label: 'Epic',      content: RATELIMIT_EPIC },
+      { filename: 'braindump.md',            label: 'Braindump',            content: RATELIMIT_BRAINDUMP },
+      { filename: 'analysis.md',             label: 'Analysis',             content: RATELIMIT_ANALYSIS },
+      { filename: 'epic.md',                 label: 'Epic',                 content: RATELIMIT_EPIC },
+      { filename: 'architecture.md',         label: 'Architecture',         content: RATELIMIT_ARCHITECTURE },
+      { filename: 'implementation-guide.md', label: 'Implementation Guide', content: RATELIMIT_GUIDE },
     ],
   },
 ];
