@@ -23,7 +23,7 @@ My brother Yoseph transfers me CHF 400/month to help with rent. So net family su
 
 Phone (Sunrise/Yallo): CHF 89/month.
 
-**Fixed costs: CHF 4'049/month.** On a net salary of ~CHF 6'500, that leaves CHF 2'451 for everything else.
+**Fixed costs: CHF 4'049/month.** On a net salary of ~CHF 6'491 (April is the real number — the March bump was a one-time bonus, not a raise), that leaves **CHF 2'442 for everything else.** That's food, transport, social, tech, savings — all from CHF 2'442.
 
 ### Anomalies in Jan-Feb (not recurring)
 - Jan: Lea transferred CHF 4'157 (savings she was holding from the relationship)
@@ -124,6 +124,45 @@ Hard deadlines I shouldn't miss:
 - **December 31**: Pillar 3a contribution deadline. Max it out for tax savings.
 - **March 31**: Tax return. Start collecting documents in January.
 - Annual: review Sunrise/Yallo plan — CHF 89/month might be reducible
+
+## Social life — active but expensive
+
+From bank data, social/entertainment spending:
+- Kennedy's Irish Pub: 5 visits across Jan-Mar, CHF 10-55 each
+- Mama Shelter: 5 visits in March alone, CHF 3-18 each
+- Mesob Ethiopian dinner: CHF 280 (hosted 6 people)
+- Barmuenster: CHF 85
+- Miss Miu Europaallee: CHF 85
+- La Taqueria: CHF 115
+- Swiss Cannabis Club: CHF 35-46/month
+- Weisse Arena hospitality: CHF 310 + CHF 27 + CHF 13
+- Playtomic (padel): CHF 62
+- Eventfrog/Ticketcorner: CHF 21 + CHF 39
+
+**Social spending: ~CHF 480/month average.** My social life is thriving (wine nights, Ethiopian dinners, pub quiz, ski trips) but it's expensive. The system should suggest equally good but cheaper alternatives.
+
+### Cheaper social ideas the agent should suggest
+
+Free/cheap Zurich activities:
+- Lake walks (Tiefbrunnen, Zürichhorn) — I already do this (March 3 diary)
+- Free museum days (Kunsthaus first Wednesday, Landesmuseum free)
+- Cooking at home with friends instead of restaurants (Ethiopian dinner at home = CHF 40 total vs CHF 280 at Mesob)
+- Park hangs, terrace BBQ at my flat (CHF 0 venue cost, I have a 45m2 terrace!)
+- Free concerts and events (Bubls should surface these)
+- Running/walking groups
+- Board game nights at the flat
+
+### Bubls integration — this is the missing piece
+
+Bubls was designed to discover events and match people. It was never deployed. But the concept is exactly what the discipline agent needs:
+
+- **Weekly social planner**: suggest 2-3 activities for the week, prioritizing free/cheap options
+- **"Who to see"**: based on diary mentions, suggest who I haven't seen in a while + a cheap activity to do together
+- **Event matching**: surface free events in Zurich that match my interests (music, food, tech meetups, outdoor activities)
+- **Social budget**: set a weekly social budget (CHF 50?) and track against it
+- **Hosting prompts**: "You have a 45m2 terrace. Instead of Kennedy's (CHF 55), invite 4 friends over for beers (CHF 20 total)"
+
+The social life shouldn't shrink — it should get smarter. Same number of interactions, 1/3 the cost.
 
 ## Beyond food: career and side projects
 
