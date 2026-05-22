@@ -158,3 +158,42 @@ If I send just "7/10, cooked, gym, saw Hannah" — that's enough. The system sho
 - Sharp friend tone: "you've been to the gym 0 times in 3 weeks. Your Playtomic receipt says you like padel. Book a session?"
 - Must suggest activities, not just track — "Hannah mentioned wanting to try standup comedy. Kon-Tiki Comedy is every Tuesday, free entry."
 - The system comes to me. I never have to remember to open anything.
+
+## TooGoodToGo meal planning
+
+Bank data shows 3 TooGoodToGo purchases in March (CHF 4.90, 6.90, 11.90) — already using it, but inconsistently. A CHF 5 TGTG bag replaces a CHF 20-30 restaurant meal. That's CHF 15-25 saved per bag. 10 bags/month = CHF 150-250 saved.
+
+### How the agent helps
+
+- **Daily meal planning prompt (5 PM)**: "Dinner tonight: cook (pasta aglio e olio, 15 min, CHF 4) or grab a TGTG bag? Bags available near Walchestrasse right now: [list]"
+- **TGTG reservation reminder**: many TGTG bags have pickup windows (e.g., 18:00-19:00). Remind me 1 hour before pickup: "TGTG bag from Mesob ready for pickup at 18:00. Don't forget!"
+- **Weekly TGTG planning**: Sunday preview should include: "This week, plan 2-3 TGTG pickups for dinner. Check availability Mon/Wed/Fri evening."
+- **Track savings**: every TGTG purchase, log it with the estimated retail value. "TGTG bag CHF 5.90 — estimated retail CHF 18. You saved CHF 12.10. Monthly TGTG savings: CHF 48."
+
+### Favorite spots near Walchestrasse 25
+
+The system should learn which TGTG spots I like and prioritize alerts for those:
+- Restaurants in Zürich Kreis 1/4/5 (walking distance)
+- Bakeries (morning bags for breakfast/lunch)
+- Asian/Ethiopian/Indian restaurants (my food preferences from bank data)
+- Avoid: places I've rated poorly or never picked up from
+
+### Integration with cooking
+
+TGTG and cooking are complementary, not competing:
+- Monday: cook (meal prep for Tue lunch)
+- Tuesday: TGTG dinner bag
+- Wednesday: cook
+- Thursday: TGTG dinner bag
+- Friday: eat out (social budget, CHF 25 max)
+- Saturday: cook or TGTG
+- Sunday: meal prep for Monday
+
+This gives 3 cooked meals + 2-3 TGTG + 1 eat-out = CHF ~200/week food vs current CHF ~400/week. Savings: CHF 800/month.
+
+### What needs to happen technically
+
+- Check if TooGoodToGo has an API or if there's a third-party integration (tgtg-python library exists)
+- If no API: manual approach — I check the app and tell ClawBoi "reserved TGTG from [place] for 18:00", system sets a pickup reminder
+- If API available: automated alerts when bags appear near my location
+- Either way, the 5 PM meal planning prompt should mention TGTG as an option alongside cooking
