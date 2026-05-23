@@ -1,0 +1,1 @@
+I'm ready. Paste your braindump below—I'll extract the signal and structure it into the five sections.

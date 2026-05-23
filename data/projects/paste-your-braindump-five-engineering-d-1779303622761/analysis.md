@@ -1,0 +1,1 @@
+Ready. Paste your brain dump and I'll structure it.

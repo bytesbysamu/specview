@@ -1,0 +1,1 @@
+Paste your braindump. Five engineering documents back in under a minute.

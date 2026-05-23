@@ -1,0 +1,1 @@
+I need a CLI tool that converts markdown files into beautiful PDF reports with custom headers, footers, and table of contents. Should support themes and be installable via npm.
