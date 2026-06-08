@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from config import PROJECTS_DIR
+from modules.ai.services import SKEPTICISM_PROMPT
 from modules.data.projects.service import _make_id
 from modules.data.public.service import generate_slug, register_slug
 from modules.runtime.chain import adapter
@@ -28,8 +29,6 @@ logger = logging.getLogger(__name__)
 
 _LOCK = threading.Lock()
 _JOBS: dict[str, dict] = {}
-
-from modules.ai.services import SKEPTICISM_PROMPT
 
 _ANALYSIS_SYSTEM = f"You are a markdown spec writer.\n{SKEPTICISM_PROMPT}"
 
