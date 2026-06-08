@@ -16,6 +16,7 @@ import threading
 from pathlib import Path
 
 from modules.runtime.chain import adapter as chain_adapter
+from modules.ai.services import SKEPTICISM_PROMPT
 from modules.data.projects.service import update_file
 from modules.runtime.workflows.execution import WorkflowExecution
 
@@ -55,9 +56,6 @@ def run_generation(
     try:
         project_dir = projects_dir / project_id
 
-        # Empty system prompt is intentional: the CLI provider routes through
-        # chain-agent (via CHAIN_AGENT env var) which supplies its own system
-        # prompt from its agent definition. --add-dir grants /data/ access.
         prompt = f"""Read epic.md and architecture.md from {project_dir}.
 Also read analysis.md from that directory if it exists.
 Return ONLY the markdown document below — do not write any files, do not add preamble.
@@ -102,7 +100,7 @@ Shell commands allowed (e.g. `ng build --configuration production`). No code log
 - Steps prose only — describe what to do, not the code that does it.
 """
         result = chain_adapter.generate(
-            "",
+            SKEPTICISM_PROMPT,
             prompt,
             max_tokens=8192,
         )

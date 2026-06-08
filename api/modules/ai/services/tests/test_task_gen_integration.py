@@ -187,11 +187,12 @@ def test_run_generation_does_not_append_contracts_when_empty(tmp_path: Path):
     assert "Do NOT re-declare" not in prompt
 
 
-def test_run_generation_calls_generate_with_empty_system_string(tmp_path: Path):
-    """chain_adapter.generate is called with an empty system string."""
+def test_run_generation_calls_generate_with_skepticism_system(tmp_path: Path):
+    """chain_adapter.generate is called with SKEPTICISM_PROMPT as system."""
     import modules.ai.services.task_gen as svc
+    from modules.ai.services import SKEPTICISM_PROMPT
 
-    pid = "empty-system-test"
+    pid = "skepticism-system-test"
     _H.project(tmp_path, pid)
     exc = _H.execution()
     fake_result = ChainResult(text=CLEAN_GUIDE, latency_ms=5)
@@ -202,7 +203,7 @@ def test_run_generation_calls_generate_with_empty_system_string(tmp_path: Path):
         svc.run_generation(pid, tmp_path, task_num="1", execution=exc)
 
     system_arg = mock_gen.call_args[0][0]
-    assert system_arg == "", f"Expected empty system, got: {system_arg!r}"
+    assert system_arg == SKEPTICISM_PROMPT, f"Expected SKEPTICISM_PROMPT, got: {system_arg!r}"
 
 
 # ---------------------------------------------------------------------------
