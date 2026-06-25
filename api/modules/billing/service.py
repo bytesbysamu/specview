@@ -52,7 +52,24 @@ def _pro_price_id() -> str:
 
 
 def _frontend_url() -> str:
-    return os.environ.get("FRONTEND_URL", "http://localhost:4201")
+    return os.environ.get("FRONTEND_URL", "http://localhost:4200")
+
+
+def _price_id_for(product: str, plan: str) -> str:
+    """Resolve a Stripe price ID from product+plan slug.
+
+    Products: oll_pro, headshot_chf29, headshot_chf49, headshot_chf79
+    Plans:    monthly, yearly, one_time
+
+    Each maps to an env var: STRIPE_PRICE_{PRODUCT}_{PLAN} (upper-snaked).
+    Falls back to STRIPE_PRO_PRICE_ID for the default oll_pro/monthly case.
+    """
+    env_key = f"STRIPE_PRICE_{product.upper()}_{plan.upper()}"
+    price_id = os.environ.get(env_key, "")
+    if price_id:
+        return price_id
+    # Backward-compat default
+    return _pro_price_id()
 
 
 # ── public exceptions ───────────────────────────────────────────────────────
@@ -88,17 +105,24 @@ def _ensure_api_key() -> None:
     stripe.api_key = _stripe_secret_key()
 
 
-def create_checkout_session(user: User) -> str:
-    """Create a Stripe Checkout session for the Pro plan and return its URL."""
+def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "monthly") -> str:
+    """Create a Stripe Checkout session and return its URL.
+
+    product: slug identifying the product (oll_pro, headshot_chf29, etc.)
+    plan:    billing interval (monthly, yearly, one_time)
+    """
     _ensure_api_key()
     customer_id = _get_or_create_stripe_customer(user)
+    price_id = _price_id_for(product, plan)
+    mode = "payment" if plan == "one_time" else "subscription"
     session = stripe.checkout.Session.create(
         customer=customer_id,
-        mode="subscription",
-        line_items=[{"price": _pro_price_id(), "quantity": 1}],
-        success_url=f"{_frontend_url()}/upgrade?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{_frontend_url()}/upgrade",
-        metadata={"auth_user_id": user.auth_user_id, "user_id": str(user.id)},
+        mode=mode,
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=f"{_frontend_url()}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{_frontend_url()}/pricing",
+        client_reference_id=str(user.id),
+        metadata={"user_id": str(user.id), "product": product, "plan": plan},
     )
     return session.url
 
@@ -252,7 +276,7 @@ def _get_or_create_stripe_customer(user: User) -> str:
 
         customer = stripe.Customer.create(
             email=user.email,
-            metadata={"auth_user_id": user.auth_user_id, "user_id": str(user.id)},
+            metadata={"user_id": str(user.id)},
         )
         if sub is None:
             sub = Subscription(
@@ -346,6 +370,14 @@ def _on_checkout_completed(session: Session, obj) -> None:
         stripe_subscription_id=obj.get("subscription"),
     )
     _set_user_plan(session, user_id, "pro")
+    # Send confirmation email — fire and forget, never blocks the webhook
+    user = session.get(User, user_id)
+    if user:
+        try:
+            from modules.email.service import send_subscription_activated
+            send_subscription_activated(user.email, plan=metadata.get("plan", "Pro").title())
+        except Exception:
+            logger.exception("checkout_completed: email send failed for user_id=%d", user_id)
 
 
 @_register("customer.subscription.updated")
@@ -377,6 +409,11 @@ def _on_subscription_deleted(session: Session, obj) -> None:
         canceled_at=datetime.utcnow(),
     )
     _set_user_plan(session, user.id, "free")
+    try:
+        from modules.email.service import send_subscription_canceled
+        send_subscription_canceled(user.email)
+    except Exception:
+        logger.exception("subscription_deleted: email send failed for user_id=%d", user.id)
 
 
 @_register("invoice.payment_succeeded")
