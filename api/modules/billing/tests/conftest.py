@@ -34,6 +34,11 @@ def patched_session(monkeypatch, billing_engine):
     monkeypatch.setattr("modules.data.db.session.get_session", _session)
     monkeypatch.setattr("modules.billing.service.get_session", _session)
     monkeypatch.setattr("modules.billing.routes.get_session", _session)
+    # Default Stripe key so the service-level empty-key guard
+    # (BillingConfigError) does not fire in tests that patch the SDK without
+    # setting a key. Hermetic — independent of the developer's local .env.
+    # Tests asserting the empty-key path delenv this explicitly.
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_conftest")
     yield
 
 

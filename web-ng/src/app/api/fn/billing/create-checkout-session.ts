@@ -7,14 +7,17 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
+import { CheckoutSessionRequest } from '../../models/checkout-session-request';
 import { CheckoutSessionResponse } from '../../models/checkout-session-response';
 
 export interface CreateCheckoutSession$Params {
+      body?: CheckoutSessionRequest
 }
 
 export function createCheckoutSession(http: HttpClient, rootUrl: string, params?: CreateCheckoutSession$Params, context?: HttpContext): Observable<StrictHttpResponse<CheckoutSessionResponse>> {
   const rb = new RequestBuilder(rootUrl, createCheckoutSession.PATH, 'post');
   if (params) {
+    rb.body(params.body, 'application/json');
   }
 
   return http.request(

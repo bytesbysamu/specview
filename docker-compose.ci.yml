@@ -1,9 +1,45 @@
-# CI override — exposes ports to the runner host for smoke testing.
+# CI override — exposes ports to the runner host for smoke testing, and
+# supplies a production-shaped config so the hardened boot-gate is satisfied.
+#
+# The API now refuses to boot in APP_ENV=production without its required
+# secrets (AUTH_JWT_SECRET/JWT_SECRET, STRIPE_WEBHOOK_SECRET) and a parseable,
+# reachable DATABASE_URL — the entrypoint runs `alembic upgrade head` before
+# serving. So the smoke test must hand it real (dummy-but-valid) secrets and a
+# live Postgres. This means CI exercises the REAL production boot path:
+# gate satisfied → migrations apply → app serves. These values are throwaway
+# CI-only credentials, never used outside the ephemeral runner.
+#
 # Usage: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: specview
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d specview"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
   web:
     ports:
       - "8080:80"
+
   api:
     ports:
       - "3101:3101"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Boot-gate secrets — dummy but valid-shaped, CI-only.
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/specview
+      JWT_SECRET: ci-only-dummy-jwt-secret-not-used-anywhere-real-0000000000
+      STRIPE_SECRET_KEY: sk_test_ci_dummy
+      STRIPE_WEBHOOK_SECRET: whsec_dev_dummy
+      STRIPE_PRO_PRICE_ID: price_ci_dummy
+      FRONTEND_URL: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080

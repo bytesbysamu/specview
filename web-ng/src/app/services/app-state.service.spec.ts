@@ -32,7 +32,7 @@ function makeSpec(filename: string, content = 'hello') {
 
 function makeAuthServiceMock(isLoggedIn = false): jasmine.SpyObj<AuthService> {
   const isLoggedInSignal = signal(isLoggedIn);
-  const mock = jasmine.createSpyObj<AuthService>('AuthService', ['signOut', 'login', 'register', 'getStoredJwt']);
+  const mock = jasmine.createSpyObj<AuthService>('AuthService', ['signOut', 'getStoredJwt']);
   Object.defineProperty(mock, 'isLoggedIn', { get: () => isLoggedInSignal, configurable: true });
   mock.signOut.and.callFake(() => { isLoggedInSignal.set(false); });
   return mock;

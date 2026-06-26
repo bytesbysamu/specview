@@ -24,8 +24,26 @@ services:
       SPEC_DOC_DIR: /data/spec-doc
       CHAIN_PROVIDER: ${CHAIN_PROVIDER:-cli}
       DATABASE_URL: ${DATABASE_URL}
+      # Auth — hardened Core boot-gate requires a JWT secret (accepts JWT_SECRET as legacy alias)
       JWT_SECRET: ${JWT_SECRET}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-${JWT_SECRET}}
+      # Billing — Core boot-gate also requires STRIPE_WEBHOOK_SECRET; prod must supply all of these
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID}
+      # Email (optional — empty disables sending gracefully)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-}
+      # Frontend — magic-link + Stripe success/cancel redirect base.
+      # Coolify sets FRONTEND_URL=https://oll.am; local override sets :8095. NEVER hardcoded in code.
+      FRONTEND_URL: ${FRONTEND_URL}
+      SITE_URL: ${SITE_URL:-${FRONTEND_URL}}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      # Per-product/plan Stripe price routing (optional; falls back to STRIPE_PRO_PRICE_ID)
+      STRIPE_PRICE_OLL_PRO_MONTHLY: ${STRIPE_PRICE_OLL_PRO_MONTHLY:-}
+      STRIPE_PRICE_OLL_PRO_YEARLY: ${STRIPE_PRICE_OLL_PRO_YEARLY:-}
+      # AI (required only when CHAIN_PROVIDER=claude)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - claude-credentials:/home/appuser/.claude
     healthcheck:

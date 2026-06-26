@@ -986,11 +986,17 @@ paths:
 
   /api/billing/create-checkout-session:
     post:
-      summary: Create a Stripe Checkout session for the Pro plan
+      summary: Create a Stripe Checkout session for the given product + plan
       operationId: createCheckoutSession
       tags: [billing]
       security:
         - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutSessionRequest'
       responses:
         '200':
           description: >
@@ -1002,6 +1008,86 @@ paths:
                 $ref: '#/components/schemas/CheckoutSessionResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Stripe is not configured (STRIPE_SECRET_KEY unset).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/billing/portal:
+    post:
+      summary: >
+        Return a live Stripe Customer Portal URL for the authenticated user
+        to self-manage their subscription.
+      operationId: createBillingPortal
+      tags: [billing]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Portal session URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No active subscription / Stripe customer for this user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Stripe is not configured (STRIPE_SECRET_KEY unset).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/email/send:
+    post:
+      summary: >
+        Send a transactional email via Resend. The recipient is scoped to the
+        authenticated user's own address.
+      operationId: sendEmail
+      tags: [email]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailSendRequest'
+      responses:
+        '200':
+          description: Email accepted for delivery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailSendResponse'
+        '400':
+          description: Missing or invalid fields (unknown template, missing custom subject/html).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Recipient is not the authenticated user's own address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Email provider failed to accept the message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/billing/webhook:
     post:
@@ -1179,26 +1265,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/AiStatsResponse'
 
-  /api/auth/login:
+  /api/auth/magic-link:
     post:
-      summary: Authenticate with email and password; returns a JWT.
-      operationId: loginUser
+      summary: Request a passwordless sign-in link by email.
+      description: >
+        Mints a single-use, 15-minute token and emails a sign-in link to the
+        address. Always returns 200 {sent: true} regardless of whether an
+        account exists, to prevent account enumeration. Rate-limited per IP.
+      operationId: requestMagicLink
       tags: [auth]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthCredentials'
+              $ref: '#/components/schemas/MagicLinkRequest'
       responses:
         '200':
-          description: Login successful; returns JWT and email.
+          description: Link issued (or silently ignored for unknown addresses).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokenResponse'
+                $ref: '#/components/schemas/MagicLinkResponse'
+        '429':
+          description: Too many requests from this IP.
+
+  /api/auth/verify:
+    post:
+      summary: Exchange a magic-link token for a JWT.
+      description: >
+        Validates the single-use token (exists, not expired, not used), marks
+        it used, find-or-creates the User by email, and returns a JWT.
+      operationId: verifyMagicLink
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+      responses:
+        '200':
+          description: Token valid; returns a JWT and the canonical email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
         '401':
-          description: Invalid email or password.
+          description: Token is unknown, already used, or expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/auth/me:
     get:
@@ -1214,37 +1332,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeResponse'
-
-  /api/auth/register:
-    post:
-      summary: Register a new user account with email and password.
-      operationId: registerUser
-      tags: [auth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthCredentials'
-      responses:
-        '201':
-          description: User created; returns a JWT and the registered email.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthTokenResponse'
-        '400':
-          description: Missing fields or password policy violation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Email already registered.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /api/auth/refresh:
     post:
@@ -2142,6 +2229,25 @@ components:
             navigates to this URL when a UsageLimitError is received.
           example: /upgrade
 
+    CheckoutSessionRequest:
+      type: object
+      description: >
+        Optional product + plan selector. Defaults to oll_pro / monthly when
+        omitted. Each (product, plan) pair resolves to a Stripe price via the
+        STRIPE_PRICE_{PRODUCT}_{PLAN} env convention.
+      properties:
+        product:
+          type: string
+          description: Product slug (e.g. oll_pro, headshot_chf29).
+          default: oll_pro
+          example: oll_pro
+        plan:
+          type: string
+          description: Billing interval / variant.
+          enum: [monthly, yearly, one_time]
+          default: monthly
+          example: monthly
+
     CheckoutSessionResponse:
       type: object
       required:
@@ -2227,16 +2333,44 @@ components:
             Truncated upstream error message (max 100 chars). Present
             only when status=degraded.
 
-    AuthCredentials:
+    MagicLinkRequest:
       type: object
-      required: [email, password]
+      required: [email]
       properties:
         email:
           type: string
           format: email
-        password:
+          description: Address to send the single-use sign-in link to.
+
+    MagicLinkResponse:
+      type: object
+      required: [sent]
+      properties:
+        sent:
+          type: boolean
+          description: >
+            Always true on a 200 response. Does not reveal whether an account
+            exists for the address (anti-enumeration).
+          example: true
+
+    VerifyRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
           type: string
-          minLength: 8
+          description: The single-use token from the emailed sign-in link.
+
+    VerifyResponse:
+      type: object
+      required: [token, email]
+      properties:
+        token:
+          type: string
+          description: Signed JWT for use as Authorization Bearer.
+        email:
+          type: string
+          description: Canonical email of the authenticated user.
 
     AuthTokenResponse:
       type: object
@@ -2298,19 +2432,85 @@ components:
 
     MeResponse:
       type: object
-      required: [id, email, auth_user_id]
+      required: [id, email, plan]
       properties:
         id:
           type: integer
           description: Spec-doc internal user row id.
         email:
           type: string
-          description: User email (mirrors the Neon Auth claim).
-        auth_user_id:
+          description: Canonical email of the authenticated user.
+        plan:
+          type: string
+          enum: [free, pro, lapsed]
+          description: >
+            Current account plan. Written exclusively by Stripe webhook
+            handlers; no in-app code path may set this to 'pro'.
+          example: free
+        token_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            ISO 8601 UTC expiry of the bearer token presented on this
+            request. Null when the expiry cannot be decoded.
+          example: "2026-06-29T00:00:00Z"
+
+    EmailSendRequest:
+      type: object
+      description: >
+        Transactional email request. The recipient is scoped server-side to
+        the authenticated user's own address; the `to` field must match it.
+      required: [to, template]
+      properties:
+        to:
+          type: string
+          format: email
+          description: >
+            Recipient address. Must equal the authenticated user's own email;
+            arbitrary recipients are rejected with 403.
+          example: user@example.com
+        template:
+          type: string
+          enum:
+            - subscription_activated
+            - subscription_canceled
+            - payment_failed
+            - magic_link
+            - order_confirmation
+            - custom
+          description: Named template to render, or 'custom' to pass subject + html directly.
+        subject:
+          type: string
+          description: Required when template is 'custom'.
+        html:
+          type: string
+          description: Required when template is 'custom'.
+        ctx:
+          type: object
+          additionalProperties: true
+          description: >
+            Template-specific context (e.g. plan, product, order_id, link).
+
+    EmailSendResponse:
+      type: object
+      required: [sent]
+      properties:
+        sent:
+          type: boolean
+          description: True when the provider accepted the message for delivery.
+          example: true
+
+    PortalSessionResponse:
+      type: object
+      required: [url]
+      properties:
+        url:
           type: string
           description: >
-            Stable identity from Neon Auth (sub claim). FK anchor for every
-            tenant-scoped table in saas-persistence.
+            Live Stripe Customer Portal URL for self-service subscription
+            management. Generated per-request; do not cache.
+          example: https://billing.stripe.com/p/session/xxx
 
   responses:
 

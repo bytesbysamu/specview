@@ -34,6 +34,7 @@ ENABLED_MODULES = [
     ('modules.ai.routes.actions', 'actions_bp'),            # Thin API Phase 3 — action routes
     ('modules.data.public.routes', 'public_bp'),            # Task 1 — public shareable spec URLs
     ('modules.ai.routes.public_analyze', 'public_analyze_bp'),  # Anonymous analysis endpoint
+    ('modules.email.routes',            'email_bp'),         # Core email service (Resend)
 ]
 
 
@@ -64,7 +65,41 @@ def _enforce_production_startup_gate() -> None:
         )
 
 
+def _enforce_secret_boot_gate() -> None:
+    """Fail-fast in production when security-critical secrets are unset.
+
+    Unlike the AI-provider gate (which only warns so the container stays
+    healthy), missing auth/webhook secrets are a hard security failure: a
+    forged Stripe webhook or an unsigned JWT must never be possible. In
+    production we refuse to boot rather than run insecurely; outside
+    production we warn so local dev stays frictionless.
+    """
+    is_production = os.environ.get("APP_ENV") == "production"
+    jwt_secret = os.environ.get("AUTH_JWT_SECRET") or os.environ.get("JWT_SECRET")
+    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
+
+    missing = []
+    if not jwt_secret:
+        missing.append("AUTH_JWT_SECRET (or JWT_SECRET)")
+    if not webhook_secret:
+        missing.append("STRIPE_WEBHOOK_SECRET")
+
+    if not missing:
+        return
+    if is_production:
+        raise RuntimeError(
+            "refusing to boot: missing required secret(s) in production: "
+            + ", ".join(missing)
+        )
+    sys.stderr.write(
+        "WARNING: missing secret(s): " + ", ".join(missing)
+        + " — required before production deploy.\n"
+    )
+
+
 def create_app(config=None):
+    # Security boot gate: refuse to boot in prod without auth/webhook secrets.
+    _enforce_secret_boot_gate()
     # SDK Provider Task 5: production startup gate before anything else binds.
     _enforce_production_startup_gate()
 
@@ -82,12 +117,18 @@ def create_app(config=None):
 
     CORS(app, origins=_parse_cors_origins())
 
+    @app.before_request
+    def _assign_request_id():
+        from flask import g, request as _req
+        g.request_id = _req.headers.get("X-Request-ID") or str(uuid.uuid4())
+
     @app.after_request
     def _add_security_headers(response):
+        from flask import g
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["X-Request-ID"] = str(uuid.uuid4())
+        response.headers["X-Request-ID"] = getattr(g, "request_id", None) or str(uuid.uuid4())
         return response
 
     for module_path, blueprint_attr in ENABLED_MODULES:

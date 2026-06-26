@@ -30,8 +30,15 @@ single test.
 """
 from __future__ import annotations
 
+import os
+
 import pytest
 from flask.testing import FlaskClient
+
+# Hermetic test secrets — set before any auth module reads them, so the suite
+# never depends on a developer's local .env (and never signs tokens with an
+# insecure default now that the hardcoded JWT fallback has been removed).
+os.environ.setdefault("AUTH_JWT_SECRET", "test-jwt-secret-do-not-use-in-prod")
 
 
 _FAKE_USER_ID = 1
