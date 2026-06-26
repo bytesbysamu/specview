@@ -24,7 +24,16 @@ services:
       SPEC_DOC_DIR: /data/spec-doc
       CHAIN_PROVIDER: ${CHAIN_PROVIDER:-cli}
       DATABASE_URL: ${DATABASE_URL}
+      # Auth — hardened Core boot-gate requires a JWT secret (accepts JWT_SECRET as legacy alias)
       JWT_SECRET: ${JWT_SECRET}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-${JWT_SECRET}}
+      # Billing — Core boot-gate also requires STRIPE_WEBHOOK_SECRET; prod must supply all of these
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID}
+      # Email (optional — empty disables sending gracefully)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-}
       CORS_ORIGINS: ${CORS_ORIGINS}
     volumes:
       - claude-credentials:/home/appuser/.claude
