@@ -7,17 +7,14 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { AuthCredentials } from '../../models/auth-credentials';
-import { AuthTokenResponse } from '../../models/auth-token-response';
+import { SuccessResponse } from '../../models/success-response';
 
-export interface LoginUser$Params {
-      body: AuthCredentials
+export interface DisconnectGithub$Params {
 }
 
-export function loginUser(http: HttpClient, rootUrl: string, params: LoginUser$Params, context?: HttpContext): Observable<StrictHttpResponse<AuthTokenResponse>> {
-  const rb = new RequestBuilder(rootUrl, loginUser.PATH, 'post');
+export function disconnectGithub(http: HttpClient, rootUrl: string, params?: DisconnectGithub$Params, context?: HttpContext): Observable<StrictHttpResponse<SuccessResponse>> {
+  const rb = new RequestBuilder(rootUrl, disconnectGithub.PATH, 'delete');
   if (params) {
-    rb.body(params.body, 'application/json');
   }
 
   return http.request(
@@ -25,9 +22,9 @@ export function loginUser(http: HttpClient, rootUrl: string, params: LoginUser$P
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<AuthTokenResponse>;
+      return r as StrictHttpResponse<SuccessResponse>;
     })
   );
 }
 
-loginUser.PATH = '/api/auth/login';
+disconnectGithub.PATH = '/api/github/connection';

@@ -7,15 +7,15 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { CheckoutSessionRequest } from '../../models/checkout-session-request';
-import { CheckoutSessionResponse } from '../../models/checkout-session-response';
+import { EmailSendRequest } from '../../models/email-send-request';
+import { EmailSendResponse } from '../../models/email-send-response';
 
-export interface CreateCheckoutSession$Params {
-      body?: CheckoutSessionRequest
+export interface SendEmail$Params {
+      body: EmailSendRequest
 }
 
-export function createCheckoutSession(http: HttpClient, rootUrl: string, params?: CreateCheckoutSession$Params, context?: HttpContext): Observable<StrictHttpResponse<CheckoutSessionResponse>> {
-  const rb = new RequestBuilder(rootUrl, createCheckoutSession.PATH, 'post');
+export function sendEmail(http: HttpClient, rootUrl: string, params: SendEmail$Params, context?: HttpContext): Observable<StrictHttpResponse<EmailSendResponse>> {
+  const rb = new RequestBuilder(rootUrl, sendEmail.PATH, 'post');
   if (params) {
     rb.body(params.body, 'application/json');
   }
@@ -25,9 +25,9 @@ export function createCheckoutSession(http: HttpClient, rootUrl: string, params?
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<CheckoutSessionResponse>;
+      return r as StrictHttpResponse<EmailSendResponse>;
     })
   );
 }
 
-createCheckoutSession.PATH = '/api/billing/create-checkout-session';
+sendEmail.PATH = '/api/email/send';

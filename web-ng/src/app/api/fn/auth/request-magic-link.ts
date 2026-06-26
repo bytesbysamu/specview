@@ -7,15 +7,15 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { CheckoutSessionRequest } from '../../models/checkout-session-request';
-import { CheckoutSessionResponse } from '../../models/checkout-session-response';
+import { MagicLinkRequest } from '../../models/magic-link-request';
+import { MagicLinkResponse } from '../../models/magic-link-response';
 
-export interface CreateCheckoutSession$Params {
-      body?: CheckoutSessionRequest
+export interface RequestMagicLink$Params {
+      body: MagicLinkRequest
 }
 
-export function createCheckoutSession(http: HttpClient, rootUrl: string, params?: CreateCheckoutSession$Params, context?: HttpContext): Observable<StrictHttpResponse<CheckoutSessionResponse>> {
-  const rb = new RequestBuilder(rootUrl, createCheckoutSession.PATH, 'post');
+export function requestMagicLink(http: HttpClient, rootUrl: string, params: RequestMagicLink$Params, context?: HttpContext): Observable<StrictHttpResponse<MagicLinkResponse>> {
+  const rb = new RequestBuilder(rootUrl, requestMagicLink.PATH, 'post');
   if (params) {
     rb.body(params.body, 'application/json');
   }
@@ -25,9 +25,9 @@ export function createCheckoutSession(http: HttpClient, rootUrl: string, params?
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<CheckoutSessionResponse>;
+      return r as StrictHttpResponse<MagicLinkResponse>;
     })
   );
 }
 
-createCheckoutSession.PATH = '/api/billing/create-checkout-session';
+requestMagicLink.PATH = '/api/auth/magic-link';

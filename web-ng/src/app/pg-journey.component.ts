@@ -137,7 +137,7 @@ export class PgJourneyComponent {
     {
       number: '04',
       name: 'Sign up',
-      description: 'Email and password — 30 seconds',
+      description: 'Just your email — magic link, no password',
     },
     {
       number: '05',

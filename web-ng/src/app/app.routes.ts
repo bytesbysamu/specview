@@ -21,6 +21,14 @@ export const routes: Routes = [
       import('./components/verify/verify.component').then(m => m.VerifyComponent),
   },
   {
+    // Stripe Checkout return target: FRONTEND_URL/upgrade?session_id=...
+    // (backend success_url / cancel_url both point here). Reads ?session_id,
+    // verifies the session, and shows success / pending / cancelled state.
+    path: 'upgrade',
+    loadComponent: () =>
+      import('./components/upgrade/upgrade.component').then(m => m.UpgradeComponent),
+  },
+  {
     path: 'playground',
     loadComponent: () =>
       import('./pg-scroll-shell.component').then(m => m.PgScrollShellComponent),

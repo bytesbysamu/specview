@@ -1463,6 +1463,22 @@ body {
 }
 .logout-btn:hover { background: var(--ink); color: var(--bg); }
 
+/* Upgrade / checkout CTA — filled accent so the money action reads as primary */
+.upgrade-btn {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid var(--accent, #567B95);
+  background: var(--accent, #567B95);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.upgrade-btn:hover { opacity: 0.85; }
+.upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ── Login bar (inline sign-in form) ───────────── */
 .login-bar {
   display: flex;
