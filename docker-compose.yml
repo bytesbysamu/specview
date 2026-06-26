@@ -34,7 +34,16 @@ services:
       # Email (optional — empty disables sending gracefully)
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       FROM_EMAIL: ${FROM_EMAIL:-}
+      # Frontend — magic-link + Stripe success/cancel redirect base.
+      # Coolify sets FRONTEND_URL=https://oll.am; local override sets :8095. NEVER hardcoded in code.
+      FRONTEND_URL: ${FRONTEND_URL}
+      SITE_URL: ${SITE_URL:-${FRONTEND_URL}}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      # Per-product/plan Stripe price routing (optional; falls back to STRIPE_PRO_PRICE_ID)
+      STRIPE_PRICE_OLL_PRO_MONTHLY: ${STRIPE_PRICE_OLL_PRO_MONTHLY:-}
+      STRIPE_PRICE_OLL_PRO_YEARLY: ${STRIPE_PRICE_OLL_PRO_YEARLY:-}
+      # AI (required only when CHAIN_PROVIDER=claude)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - claude-credentials:/home/appuser/.claude
     healthcheck:
