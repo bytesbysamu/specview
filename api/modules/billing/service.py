@@ -79,6 +79,14 @@ class BillingSignatureError(Exception):
     """Stripe webhook signature verification failed; route returns 400."""
 
 
+class BillingConfigError(Exception):
+    """Stripe is not configured (empty STRIPE_SECRET_KEY); route returns 503.
+
+    Guards every Stripe SDK call so a missing key surfaces as a typed 503
+    instead of an opaque SDK exception / silent crash inside checkout.
+    """
+
+
 # ── handler registry ────────────────────────────────────────────────────────
 
 
@@ -101,8 +109,14 @@ def _ensure_api_key() -> None:
 
     Tests monkeypatch STRIPE_SECRET_KEY between cases; reading it here keeps
     the module import-time cache in sync with whatever the test set.
+
+    Raises BillingConfigError when the key is empty so callers fail with a
+    typed 503 rather than handing an empty key to the Stripe SDK.
     """
-    stripe.api_key = _stripe_secret_key()
+    key = _stripe_secret_key()
+    if not key:
+        raise BillingConfigError("STRIPE_SECRET_KEY is not configured")
+    stripe.api_key = key
 
 
 def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "monthly") -> str:
@@ -119,8 +133,8 @@ def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "m
         customer=customer_id,
         mode=mode,
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{_frontend_url()}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{_frontend_url()}/pricing",
+        success_url=f"{_frontend_url()}/upgrade?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{_frontend_url()}/upgrade",
         client_reference_id=str(user.id),
         metadata={"user_id": str(user.id), "product": product, "plan": plan},
     )

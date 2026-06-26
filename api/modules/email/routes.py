@@ -26,8 +26,11 @@ Responses:
 from __future__ import annotations
 
 from flask import Blueprint, g, jsonify, request
+from pydantic import ValidationError
 
+from dtos.models import EmailSendRequest, EmailSendResponse
 from modules.auth.decorators import require_auth
+from modules.observability.errors import core_error
 
 from .service import (
     send_email,
@@ -40,36 +43,35 @@ from .service import (
 
 email_bp = Blueprint("email", __name__, url_prefix="/api/email")
 
-_TEMPLATES = {
-    "subscription_activated",
-    "subscription_canceled",
-    "payment_failed",
-    "magic_link",
-    "order_confirmation",
-    "custom",
-}
-
 
 @email_bp.post("/send")
 @require_auth
 def send():
-    body = request.get_json(silent=True) or {}
-    to = (body.get("to") or "").strip()
-    template = (body.get("template") or "custom").strip()
-    ctx = body.get("ctx") or {}
+    try:
+        req = EmailSendRequest.model_validate(request.get_json(silent=True) or {})
+    except ValidationError as exc:
+        first = exc.errors()[0] if exc.errors() else {}
+        loc = ".".join(str(p) for p in first.get("loc", ())) or "body"
+        return core_error("INVALID_REQUEST", f"{loc}: {first.get('msg', 'invalid')}", 400)
 
-    if not to:
-        return jsonify({"code": "MISSING_FIELD", "message": "to is required"}), 400
-    if template not in _TEMPLATES:
-        return jsonify({"code": "UNKNOWN_TEMPLATE",
-                        "message": f"template must be one of: {sorted(_TEMPLATES)}"}), 400
+    to = str(req.to)
+    template = req.template.value
+    ctx = req.ctx or {}
+
+    # Recipient scoping: a user may only email their own address. This is the
+    # only writer of `to` reachable over HTTP; webhook-driven emails go through
+    # the service layer directly and are not subject to this check.
+    own_email = getattr(g.current_user, "email", None) if g.current_user else None
+    if not own_email or to.lower() != own_email.lower():
+        return core_error("FORBIDDEN_RECIPIENT",
+                          "recipient must be your own account email", 403)
 
     if template == "custom":
-        subject = (body.get("subject") or "").strip()
-        html = (body.get("html") or "").strip()
+        subject = (req.subject or "").strip()
+        html = (req.html or "").strip()
         if not subject or not html:
-            return jsonify({"code": "MISSING_FIELD",
-                            "message": "subject and html are required for custom template"}), 400
+            return core_error("MISSING_FIELD",
+                              "subject and html are required for custom template", 400)
         sent = send_email(to=to, subject=subject, html=html)
 
     elif template == "subscription_activated":
@@ -84,7 +86,7 @@ def send():
     elif template == "magic_link":
         link = ctx.get("link", "")
         if not link:
-            return jsonify({"code": "MISSING_FIELD", "message": "ctx.link is required"}), 400
+            return core_error("MISSING_FIELD", "ctx.link is required", 400)
         sent = send_magic_link(to, link)
 
     elif template == "order_confirmation":
@@ -97,5 +99,5 @@ def send():
         sent = False
 
     if sent:
-        return jsonify({"sent": True}), 200
-    return jsonify({"sent": False, "code": "EMAIL_FAILED"}), 500
+        return jsonify(EmailSendResponse(sent=True).model_dump()), 200
+    return core_error("EMAIL_FAILED", "email provider did not accept the message", 500)

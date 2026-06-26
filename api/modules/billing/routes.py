@@ -22,7 +22,8 @@ from sqlmodel import select
 from dtos.models import (
     BillingStatusResponse,
     CheckoutSessionResponse,
-    Plan,
+    Plan1,
+    PortalSessionResponse,
     Status1,
     WebhookAckResponse,
 )
@@ -30,9 +31,11 @@ from modules.auth.models import User
 from modules.data.db.session import get_session
 
 from modules.auth.decorators import require_auth
+from modules.observability.errors import core_error
 
 from .models import Subscription
 from .service import (
+    BillingConfigError,
     BillingOwnershipError,
     BillingSessionError,
     BillingSignatureError,
@@ -67,7 +70,10 @@ def create_checkout():
     product = body.get("product", "oll_pro")
     plan = body.get("plan", "monthly")
     user: User = g.current_user
-    url = create_checkout_session(user, product=product, plan=plan)
+    try:
+        url = create_checkout_session(user, product=product, plan=plan)
+    except BillingConfigError as exc:
+        return core_error("STRIPE_NOT_CONFIGURED", str(exc), 503)
     return jsonify(CheckoutSessionResponse(url=url).model_dump()), 200
 
 
@@ -88,7 +94,7 @@ def billing_status():
     """GET /api/billing/status — returns plan + subscription state for the authed user."""
     if g.current_user is None:
         return jsonify(BillingStatusResponse(
-            plan=Plan("free"), status=None,
+            plan=Plan1("free"), status=None,
             current_period_end=None, manage_url=None,
         ).model_dump(mode="json")), 200
 
@@ -107,10 +113,16 @@ def billing_status():
 
     manage_url: Optional[str] = None
     if customer_id:
-        manage_url = create_portal_session(customer_id)
+        try:
+            manage_url = create_portal_session(customer_id)
+        except Exception:
+            # Degrade gracefully — a portal-URL failure (Stripe down or
+            # unconfigured) must not 500 the whole status read. The client
+            # simply gets manage_url=null.
+            manage_url = None
 
     body = BillingStatusResponse(
-        plan=Plan(plan_value),
+        plan=Plan1(plan_value),
         status=Status1(status_value) if status_value else None,
         current_period_end=_to_aware_iso(period_end),
         manage_url=manage_url,
@@ -128,15 +140,17 @@ def verify_checkout_session():
     """
     session_id = request.args.get("session_id", "").strip()
     if not session_id:
-        return jsonify({"error": "missing session_id"}), 400
+        return core_error("MISSING_PARAM", "missing session_id", 400)
 
     user: User = g.current_user
     try:
         result = verify_session(session_id, user.id)
     except BillingOwnershipError as exc:
-        return jsonify({"error": str(exc)}), 403
+        return core_error("OWNERSHIP_MISMATCH", str(exc), 403)
     except BillingSessionError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return core_error("INVALID_SESSION", str(exc), 400)
+    except BillingConfigError as exc:
+        return core_error("STRIPE_NOT_CONFIGURED", str(exc), 503)
 
     return jsonify(result), 200
 
@@ -157,7 +171,10 @@ def billing_portal():
 
     customer_id = sub.stripe_customer_id if sub else None
     if not customer_id:
-        return jsonify({"error": "no active subscription found"}), 404
+        return core_error("NO_SUBSCRIPTION", "no active subscription found", 404)
 
-    url = create_portal_session(customer_id)
-    return jsonify({"url": url}), 200
+    try:
+        url = create_portal_session(customer_id)
+    except BillingConfigError as exc:
+        return core_error("STRIPE_NOT_CONFIGURED", str(exc), 503)
+    return jsonify(PortalSessionResponse(url=url).model_dump()), 200

@@ -314,6 +314,10 @@ def test_create_checkout_session_invokes_stripe_with_pro_price(monkeypatch, make
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
     monkeypatch.setenv("STRIPE_PRO_PRICE_ID", "price_pro_test")
     monkeypatch.setenv("FRONTEND_URL", "http://localhost:4201")
+    # Hermetic: the more-specific STRIPE_PRICE_OLL_PRO_MONTHLY may leak in from a
+    # developer's local .env; delete it so this asserts the STRIPE_PRO_PRICE_ID
+    # fallback rather than the leaked value.
+    monkeypatch.delenv("STRIPE_PRICE_OLL_PRO_MONTHLY", raising=False)
 
     user = make_user(auth_user_id="auth-cs", email="cs@example.com")
 
