@@ -324,7 +324,7 @@ export class AppComponent implements OnInit, OnDestroy {
     filter((e): e is NavigationEnd => e instanceof NavigationEnd)
   ).subscribe(e => {
     const path = e.urlAfterRedirects.split('?')[0];
-    this.isFullPageRoute.set(['/playground', '/login', '/signup', '/analyze'].some(r => path === r || path.startsWith(r + '/')));
+    this.isFullPageRoute.set(['/playground', '/login', '/signup', '/auth/verify', '/analyze'].some(r => path === r || path.startsWith(r + '/')));
   });
 
   readonly sections = NAV_SECTIONS;
@@ -394,11 +394,6 @@ export class AppComponent implements OnInit, OnDestroy {
   shareUrl = signal<string | null>(null);
   shareCopied = signal(false);
   shareLoading = signal(false);
-
-  // Login form
-  showLoginForm = signal(false);
-  loginLoading = signal(false);
-  loginError = signal<string | null>(null);
 
   toolbarFloating = computed(() => !!(this.activeProject() && this.currentSpec()));
   polling = signal(false);
@@ -586,7 +581,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor() {
     // Set initial full-page route state
     const initialPath = this.router.url.split('?')[0];
-    this.isFullPageRoute.set(['/playground', '/login', '/signup', '/analyze'].some(r => initialPath === r || initialPath.startsWith(r + '/')));
+    this.isFullPageRoute.set(['/playground', '/login', '/signup', '/auth/verify', '/analyze'].some(r => initialPath === r || initialPath.startsWith(r + '/')));
 
     // Load projects on every auth state change (demo data when not logged in, real when logged in)
     effect(() => {
@@ -1489,25 +1484,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   logout() {
     this.auth.signOut();
-  }
-
-  toggleLoginForm() {
-    this.showLoginForm.update(v => !v);
-    this.loginError.set(null);
-  }
-
-  async doLogin(email: string, password: string) {
-    if (!email || !password) return;
-    this.loginLoading.set(true);
-    this.loginError.set(null);
-    try {
-      await this.auth.login(email, password);
-      this.showLoginForm.set(false);
-    } catch (e: any) {
-      this.loginError.set(e?.error?.error ?? 'Login failed');
-    } finally {
-      this.loginLoading.set(false);
-    }
   }
 
   async shareProject() {

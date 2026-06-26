@@ -7,9 +7,18 @@ export const routes: Routes = [
       import('./components/login/login.component').then(m => m.LoginComponent),
   },
   {
+    // Passwordless: "sign up" and "sign in" are the same magic-link flow
+    // (/api/auth/verify find-or-creates the user). Kept as a route so existing
+    // "Sign up free" links resolve.
     path: 'signup',
     loadComponent: () =>
-      import('./pages/signup/signup.component').then(m => m.SignupComponent),
+      import('./components/login/login.component').then(m => m.LoginComponent),
+  },
+  {
+    // Magic-link landing target: FRONTEND_URL/auth/verify?token=...
+    path: 'auth/verify',
+    loadComponent: () =>
+      import('./components/verify/verify.component').then(m => m.VerifyComponent),
   },
   {
     path: 'playground',

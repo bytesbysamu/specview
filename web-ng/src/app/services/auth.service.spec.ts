@@ -6,15 +6,7 @@ import { TokenLifecycleService } from './token-lifecycle.service';
 import { createTokenLifecycleServiceMock } from './token-lifecycle.service.mock';
 
 // ---------------------------------------------------------------------------
-// Factory helpers
-// ---------------------------------------------------------------------------
-
-function makeAuthResponse(overrides: Partial<{ token: string; email: string }> = {}) {
-  return { token: 'test.jwt.token', email: 'user@example.com', ...overrides };
-}
-
-// ---------------------------------------------------------------------------
-// AuthService
+// AuthService — passwordless magic-link flow
 // ---------------------------------------------------------------------------
 
 describe('AuthService', () => {
@@ -57,76 +49,73 @@ describe('AuthService', () => {
   });
 
   // -------------------------------------------------------------------------
-  // login
+  // requestMagicLink
   // -------------------------------------------------------------------------
 
-  describe('login', () => {
-    it('POSTs to /api/auth/login with email and password', async () => {
-      const promise = service.login('user@example.com', 'secret');
+  describe('requestMagicLink', () => {
+    it('POSTs to /api/auth/magic-link with the email', async () => {
+      const promise = service.requestMagicLink('user@example.com');
 
-      const req = httpController.expectOne('/api/auth/login');
+      const req = httpController.expectOne('/api/auth/magic-link');
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ email: 'user@example.com', password: 'secret' });
-      req.flush(makeAuthResponse());
+      expect(req.request.body).toEqual({ email: 'user@example.com' });
+      req.flush({ sent: true });
 
       await promise;
     });
 
-    it('calls storeToken with the token from the response', async () => {
-      const promise = service.login('user@example.com', 'secret');
-
-      const req = httpController.expectOne('/api/auth/login');
-      req.flush(makeAuthResponse({ token: 'returned.jwt' }));
-
+    it('does not store a token (none is returned yet)', async () => {
+      const promise = service.requestMagicLink('user@example.com');
+      httpController.expectOne('/api/auth/magic-link').flush({ sent: true });
       await promise;
-
-      expect(lifecycleMock.storeToken).toHaveBeenCalledWith('returned.jwt');
+      expect(lifecycleMock.storeToken).not.toHaveBeenCalled();
     });
 
     it('propagates HTTP errors to the caller', async () => {
-      const promise = service.login('bad@example.com', 'wrong');
-
-      const req = httpController.expectOne('/api/auth/login');
-      req.flush({ error: 'Invalid credentials' }, { status: 401, statusText: 'Unauthorized' });
-
+      const promise = service.requestMagicLink('user@example.com');
+      httpController
+        .expectOne('/api/auth/magic-link')
+        .flush({ error: 'rate limited' }, { status: 429, statusText: 'Too Many Requests' });
       await expectAsync(promise).toBeRejected();
     });
   });
 
   // -------------------------------------------------------------------------
-  // register
+  // verifyToken
   // -------------------------------------------------------------------------
 
-  describe('register', () => {
-    it('POSTs to /api/auth/register with email and password', async () => {
-      const promise = service.register('new@example.com', 'pass123');
+  describe('verifyToken', () => {
+    it('POSTs to /api/auth/verify with the token', async () => {
+      const promise = service.verifyToken('magic-token-123');
 
-      const req = httpController.expectOne('/api/auth/register');
+      const req = httpController.expectOne('/api/auth/verify');
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ email: 'new@example.com', password: 'pass123' });
-      req.flush(makeAuthResponse({ email: 'new@example.com' }));
+      expect(req.request.body).toEqual({ token: 'magic-token-123' });
+      req.flush({ token: 'returned.jwt', email: 'user@example.com' });
 
       await promise;
     });
 
-    it('calls storeToken with the token from the registration response', async () => {
-      const promise = service.register('new@example.com', 'pass123');
+    it('stores the JWT and returns the email on success', async () => {
+      const promise = service.verifyToken('magic-token-123');
+      httpController
+        .expectOne('/api/auth/verify')
+        .flush({ token: 'returned.jwt', email: 'user@example.com' });
 
-      const req = httpController.expectOne('/api/auth/register');
-      req.flush(makeAuthResponse({ token: 'reg.jwt' }));
+      const email = await promise;
 
-      await promise;
-
-      expect(lifecycleMock.storeToken).toHaveBeenCalledWith('reg.jwt');
+      expect(lifecycleMock.storeToken).toHaveBeenCalledWith('returned.jwt');
+      expect(email).toBe('user@example.com');
     });
 
-    it('propagates HTTP errors to the caller', async () => {
-      const promise = service.register('existing@example.com', 'pass');
-
-      const req = httpController.expectOne('/api/auth/register');
-      req.flush({ error: 'Email already registered' }, { status: 409, statusText: 'Conflict' });
+    it('propagates errors and does not store a token on an invalid token', async () => {
+      const promise = service.verifyToken('bad-token');
+      httpController
+        .expectOne('/api/auth/verify')
+        .flush({ error: 'invalid token' }, { status: 401, statusText: 'Unauthorized' });
 
       await expectAsync(promise).toBeRejected();
+      expect(lifecycleMock.storeToken).not.toHaveBeenCalled();
     });
   });
 

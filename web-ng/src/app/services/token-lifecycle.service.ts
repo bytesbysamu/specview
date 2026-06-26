@@ -74,9 +74,19 @@ export class TokenLifecycleService {
   // ---------------------------------------------------------------------------
 
   private async _doRefresh(): Promise<string | null> {
+    const current = localStorage.getItem(TOKEN_KEY);
+    if (!current) {
+      await this.handleAuthFailure();
+      return null;
+    }
     try {
+      // /api/auth/refresh requires the (still-valid, near-expiry) bearer, but it
+      // is a PUBLIC_PATH in the interceptor to avoid recursing through getToken().
+      // So we attach the current token's bearer header explicitly here.
       const res = await firstValueFrom(
-        this.http.post<RefreshResponse>('/api/auth/refresh', {})
+        this.http.post<RefreshResponse>('/api/auth/refresh', {}, {
+          headers: { Authorization: `Bearer ${current}` },
+        })
       );
       this.storeToken(res.token);
       return res.token;
