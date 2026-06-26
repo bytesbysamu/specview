@@ -12,7 +12,7 @@ import { createProjectsServiceMock } from './projects.service.mock';
 // ---------------------------------------------------------------------------
 
 function makeAuthServiceMock(loggedIn = false): jasmine.SpyObj<AuthService> {
-  const mock = jasmine.createSpyObj<AuthService>('AuthService', ['signOut', 'login', 'register', 'getStoredJwt']);
+  const mock = jasmine.createSpyObj<AuthService>('AuthService', ['signOut', 'getStoredJwt']);
   (mock as any).isLoggedIn = signal(loggedIn);
   return mock;
 }
