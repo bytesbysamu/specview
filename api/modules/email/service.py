@@ -7,10 +7,9 @@ Pattern: wardrobai email.py, generalized for multi-product use.
 """
 from __future__ import annotations
 
-import logging
 import os
 
-_log = logging.getLogger(__name__)
+from modules.observability.audit import audit
 
 _RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 _FROM_EMAIL = os.environ.get("FROM_EMAIL", "oll.am <hello@oll.am>")
@@ -18,23 +17,56 @@ _SITE_URL = os.environ.get("SITE_URL", "https://oll.am")
 
 
 def send_email(to: str, subject: str, html: str, from_email: str | None = None) -> bool:
-    """Send a transactional email via Resend. Returns True on success, False on failure."""
+    """Send a transactional email via Resend. Returns True on success, False on failure.
+
+    Every outcome is audited (success/failure, recipient, template/subject, and
+    the Resend message id or error) and correlated with the current request_id.
+    This contract still returns bool and NEVER raises — auditing only makes the
+    previously-silent result visible.
+    """
     if not _RESEND_API_KEY:
-        _log.warning("RESEND_API_KEY not set — skipping email to %s", to)
+        audit(
+            "email.send",
+            level="warning",
+            outcome="skipped",
+            reason="resend_api_key_unset",
+            to=to,
+            template=subject,
+        )
         return False
     try:
         import resend
         resend.api_key = _RESEND_API_KEY
-        resend.Emails.send({
+        result = resend.Emails.send({
             "from": from_email or _FROM_EMAIL,
             "to": [to],
             "subject": subject,
             "html": html,
         })
-        _log.info("email sent to=%s subject=%s", to, subject)
+        # Resend returns {"id": "..."} (dict) or an object exposing .id.
+        provider_id = None
+        if isinstance(result, dict):
+            provider_id = result.get("id")
+        elif result is not None:
+            provider_id = getattr(result, "id", None)
+        audit(
+            "email.send",
+            outcome="success",
+            to=to,
+            template=subject,
+            provider_id=provider_id,
+        )
         return True
     except Exception as exc:
-        _log.error("email failed to=%s: %s", to, exc)
+        audit(
+            "email.send",
+            level="error",
+            outcome="failure",
+            to=to,
+            template=subject,
+            error=str(exc),
+            error_type=type(exc).__name__,
+        )
         return False
 
 

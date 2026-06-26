@@ -15,9 +15,12 @@ module without an Angular interceptor or test breakage:
 
 import uuid
 
+import sentry_sdk
 from flask import g, has_request_context, jsonify
 from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
+
+from modules.observability.audit import audit
 
 
 def request_id() -> str:
@@ -73,6 +76,12 @@ def register_error_handlers(app) -> None:
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(exc: ValidationError):
+        audit(
+            "request.failure",
+            level="warning",
+            code="validation_failed",
+            status=422,
+        )
         return jsonify({
             "error": "validation_failed",
             "details": exc.errors(),
@@ -81,6 +90,14 @@ def register_error_handlers(app) -> None:
 
     @app.errorhandler(HTTPException)
     def handle_http_exception(exc: HTTPException):
+        status = exc.code or 500
+        # 4xx are client faults (warning); 5xx HTTPExceptions are server faults.
+        audit(
+            "request.failure",
+            level="error" if status >= 500 else "warning",
+            code=exc.name,
+            status=status,
+        )
         return jsonify({
             "error": exc.description,
             "status": exc.code,
@@ -88,7 +105,18 @@ def register_error_handlers(app) -> None:
 
     @app.errorhandler(Exception)
     def handle_unhandled_exception(exc: Exception):
+        # structlog + stdlib stack trace, plus Sentry when SENTRY_DSN is set
+        # (capture_exception is a no-op when Sentry is not initialised).
+        sentry_sdk.capture_exception(exc)
         app.logger.error("Unhandled exception", exc_info=True)
+        audit(
+            "request.failure",
+            level="error",
+            code="internal_error",
+            status=500,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
         return jsonify({
             "error": "Internal server error",
             "status": 500,

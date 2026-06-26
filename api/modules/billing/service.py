@@ -29,6 +29,7 @@ from sqlmodel import Session, select
 
 from modules.auth.models import User
 from modules.data.db.session import get_session
+from modules.observability.audit import audit
 
 from .models import Subscription
 
@@ -138,6 +139,16 @@ def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "m
         client_reference_id=str(user.id),
         metadata={"user_id": str(user.id), "product": product, "plan": plan},
     )
+    audit(
+        "billing.checkout",
+        outcome="created",
+        user_id=user.id,
+        product=product,
+        plan=plan,
+        price_id=price_id,
+        mode=mode,
+        session_id=getattr(session, "id", None),
+    )
     return session.url
 
 
@@ -173,6 +184,7 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
         event = _json.loads(payload)
 
     event_type = event["type"] if isinstance(event, dict) else event.type
+    event_id = event.get("id") if isinstance(event, dict) else getattr(event, "id", None)
     obj = (
         event["data"]["object"]
         if isinstance(event, dict)
@@ -181,12 +193,24 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
 
     handler = _HANDLERS.get(event_type)
     if handler is None:
-        logger.info("billing.webhook ignored event_type=%s", event_type)
+        audit(
+            "billing.webhook",
+            outcome="skipped",
+            reason="no_handler",
+            event_id=event_id,
+            event_type=event_type,
+        )
         return
 
     with get_session() as session:
         handler(session, obj)
         session.commit()
+    audit(
+        "billing.webhook",
+        outcome="handled",
+        event_id=event_id,
+        event_type=event_type,
+    )
 
 
 class BillingOwnershipError(Exception):
@@ -361,8 +385,16 @@ def _set_user_plan(session: Session, user_id: int, plan: str) -> None:
     User.plan are mutated in the same session for atomicity."""
     user = session.get(User, user_id)
     if user is not None:
+        previous = user.plan
         user.plan = plan
         session.add(user)
+        audit(
+            "billing.plan_write",
+            outcome="updated",
+            user_id=user_id,
+            previous_plan=previous,
+            new_plan=plan,
+        )
 
 
 @_register("checkout.session.completed")
