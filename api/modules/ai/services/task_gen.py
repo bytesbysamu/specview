@@ -32,7 +32,6 @@ from pathlib import Path
 from typing import Optional
 
 from modules.runtime.chain import adapter as chain_adapter
-from modules.ai.services import SKEPTICISM_PROMPT
 from modules.data.projects.service import get_project, update_file
 from modules.quality.lint import lint_task_guide
 from modules.runtime.workflows.execution import WorkflowExecution
@@ -468,7 +467,7 @@ def run_generation(
             prompt += f"\n\n{prior}"
 
         # Step 8: call chain adapter (the only AI call)
-        result = chain_adapter.generate(SKEPTICISM_PROMPT, prompt)
+        result = chain_adapter.generate("", prompt)
 
         # Step 9: pre-emit lint — run before any disk write
         flags = lint_task_guide(result.text)

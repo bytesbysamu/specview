@@ -307,6 +307,70 @@ def test_handle_webhook_ignores_unregistered_event_types(monkeypatch):
     billing_service.handle_webhook(b"{}", "ok-sig")
 
 
+# ── audit: every webhook event is recorded ──────────────────────────────────
+
+
+def test_handle_webhook_audits_handled_event(monkeypatch, db_session):
+    """A dispatched event emits a billing.webhook audit line with its id+type."""
+    import structlog
+
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
+    user = H.seed(
+        db_session, customer_id="cus_audit", subscription_id="sub_audit", plan="pro"
+    )
+    db_session.get(User, user.id).plan = "pro"
+    db_session.commit()
+
+    event = {
+        "id": "evt_handled_1",
+        "type": "invoice.payment_failed",
+        "data": {"object": {"subscription": "sub_audit"}},
+    }
+    monkeypatch.setattr(
+        "modules.billing.service.stripe.Webhook.construct_event",
+        lambda *a, **kw: event,
+    )
+
+    with structlog.testing.capture_logs() as cap:
+        billing_service.handle_webhook(b"{}", "ok-sig")
+
+    webhook_lines = [e for e in cap if e.get("event") == "billing.webhook"]
+    assert any(
+        line["outcome"] == "handled"
+        and line["event_id"] == "evt_handled_1"
+        and line["event_type"] == "invoice.payment_failed"
+        and line["audit"] is True
+        for line in webhook_lines
+    )
+    # The resulting plan write is audited too.
+    assert any(
+        e.get("event") == "billing.plan_write" and e["new_plan"] == "lapsed"
+        for e in cap
+    )
+
+
+def test_handle_webhook_audits_skipped_event(monkeypatch):
+    """An unregistered event emits a billing.webhook skipped audit line."""
+    import structlog
+
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
+    event = {"id": "evt_skip_1", "type": "some.other.event", "data": {"object": {}}}
+    monkeypatch.setattr(
+        "modules.billing.service.stripe.Webhook.construct_event",
+        lambda *a, **kw: event,
+    )
+
+    with structlog.testing.capture_logs() as cap:
+        billing_service.handle_webhook(b"{}", "ok-sig")
+
+    line = next(e for e in cap if e.get("event") == "billing.webhook")
+    assert line["outcome"] == "skipped"
+    assert line["event_id"] == "evt_skip_1"
+    assert line["event_type"] == "some.other.event"
+
+
 # ── checkout / portal session SDK calls ─────────────────────────────────────
 
 
@@ -314,6 +378,10 @@ def test_create_checkout_session_invokes_stripe_with_pro_price(monkeypatch, make
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
     monkeypatch.setenv("STRIPE_PRO_PRICE_ID", "price_pro_test")
     monkeypatch.setenv("FRONTEND_URL", "http://localhost:4201")
+    # Hermetic: the more-specific STRIPE_PRICE_OLL_PRO_MONTHLY may leak in from a
+    # developer's local .env; delete it so this asserts the STRIPE_PRO_PRICE_ID
+    # fallback rather than the leaked value.
+    monkeypatch.delenv("STRIPE_PRICE_OLL_PRO_MONTHLY", raising=False)
 
     user = make_user(auth_user_id="auth-cs", email="cs@example.com")
 

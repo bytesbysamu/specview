@@ -4,12 +4,7 @@
 export interface MeResponse {
 
   /**
-   * Stable identity from Neon Auth (sub claim). FK anchor for every tenant-scoped table in saas-persistence.
-   */
-  auth_user_id: string;
-
-  /**
-   * User email (mirrors the Neon Auth claim).
+   * Canonical email of the authenticated user.
    */
   email: string;
 
@@ -17,4 +12,14 @@ export interface MeResponse {
    * Spec-doc internal user row id.
    */
   id: number;
+
+  /**
+   * Current account plan. Written exclusively by Stripe webhook handlers; no in-app code path may set this to 'pro'.
+   */
+  plan: 'free' | 'pro' | 'lapsed';
+
+  /**
+   * ISO 8601 UTC expiry of the bearer token presented on this request. Null when the expiry cannot be decoded.
+   */
+  token_expires_at?: string | null;
 }

@@ -168,10 +168,9 @@ def test_start_returns_true_and_spawns_thread_when_idle(tmp_path: Path):
 # run_generation()
 # ---------------------------------------------------------------------------
 
-def test_run_generation_calls_generate_with_skepticism_system_and_path_prompt(tmp_path: Path):
-    """run_generation calls chain_adapter.generate with SKEPTICISM_PROMPT as system."""
+def test_run_generation_calls_generate_with_empty_system_and_path_prompt(tmp_path: Path):
+    """run_generation calls chain_adapter.generate with empty system string."""
     import modules.ai.services.epic_guide as svc
-    from modules.ai.services import SKEPTICISM_PROMPT
 
     pid = "gen-prompt-test"
     _H.seed(tmp_path, pid)
@@ -186,7 +185,7 @@ def test_run_generation_calls_generate_with_skepticism_system_and_path_prompt(tm
     system_arg = mock_gen.call_args[0][0]
     prompt_arg = mock_gen.call_args[0][1]
 
-    assert system_arg == SKEPTICISM_PROMPT, f"Expected SKEPTICISM_PROMPT, got: {system_arg!r}"
+    assert system_arg == "", f"Expected empty system string, got: {system_arg!r}"
     assert str(tmp_path / pid) in prompt_arg, "prompt must include project_dir path"
 
 

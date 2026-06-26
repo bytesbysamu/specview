@@ -29,6 +29,7 @@ from sqlmodel import Session, select
 
 from modules.auth.models import User
 from modules.data.db.session import get_session
+from modules.observability.audit import audit
 
 from .models import Subscription
 
@@ -52,7 +53,24 @@ def _pro_price_id() -> str:
 
 
 def _frontend_url() -> str:
-    return os.environ.get("FRONTEND_URL", "http://localhost:4201")
+    return os.environ.get("FRONTEND_URL", "http://localhost:4200")
+
+
+def _price_id_for(product: str, plan: str) -> str:
+    """Resolve a Stripe price ID from product+plan slug.
+
+    Products: oll_pro, headshot_chf29, headshot_chf49, headshot_chf79
+    Plans:    monthly, yearly, one_time
+
+    Each maps to an env var: STRIPE_PRICE_{PRODUCT}_{PLAN} (upper-snaked).
+    Falls back to STRIPE_PRO_PRICE_ID for the default oll_pro/monthly case.
+    """
+    env_key = f"STRIPE_PRICE_{product.upper()}_{plan.upper()}"
+    price_id = os.environ.get(env_key, "")
+    if price_id:
+        return price_id
+    # Backward-compat default
+    return _pro_price_id()
 
 
 # ── public exceptions ───────────────────────────────────────────────────────
@@ -60,6 +78,14 @@ def _frontend_url() -> str:
 
 class BillingSignatureError(Exception):
     """Stripe webhook signature verification failed; route returns 400."""
+
+
+class BillingConfigError(Exception):
+    """Stripe is not configured (empty STRIPE_SECRET_KEY); route returns 503.
+
+    Guards every Stripe SDK call so a missing key surfaces as a typed 503
+    instead of an opaque SDK exception / silent crash inside checkout.
+    """
 
 
 # ── handler registry ────────────────────────────────────────────────────────
@@ -84,21 +110,44 @@ def _ensure_api_key() -> None:
 
     Tests monkeypatch STRIPE_SECRET_KEY between cases; reading it here keeps
     the module import-time cache in sync with whatever the test set.
+
+    Raises BillingConfigError when the key is empty so callers fail with a
+    typed 503 rather than handing an empty key to the Stripe SDK.
     """
-    stripe.api_key = _stripe_secret_key()
+    key = _stripe_secret_key()
+    if not key:
+        raise BillingConfigError("STRIPE_SECRET_KEY is not configured")
+    stripe.api_key = key
 
 
-def create_checkout_session(user: User) -> str:
-    """Create a Stripe Checkout session for the Pro plan and return its URL."""
+def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "monthly") -> str:
+    """Create a Stripe Checkout session and return its URL.
+
+    product: slug identifying the product (oll_pro, headshot_chf29, etc.)
+    plan:    billing interval (monthly, yearly, one_time)
+    """
     _ensure_api_key()
     customer_id = _get_or_create_stripe_customer(user)
+    price_id = _price_id_for(product, plan)
+    mode = "payment" if plan == "one_time" else "subscription"
     session = stripe.checkout.Session.create(
         customer=customer_id,
-        mode="subscription",
-        line_items=[{"price": _pro_price_id(), "quantity": 1}],
+        mode=mode,
+        line_items=[{"price": price_id, "quantity": 1}],
         success_url=f"{_frontend_url()}/upgrade?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{_frontend_url()}/upgrade",
-        metadata={"auth_user_id": user.auth_user_id, "user_id": str(user.id)},
+        client_reference_id=str(user.id),
+        metadata={"user_id": str(user.id), "product": product, "plan": plan},
+    )
+    audit(
+        "billing.checkout",
+        outcome="created",
+        user_id=user.id,
+        product=product,
+        plan=plan,
+        price_id=price_id,
+        mode=mode,
+        session_id=getattr(session, "id", None),
     )
     return session.url
 
@@ -135,6 +184,7 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
         event = _json.loads(payload)
 
     event_type = event["type"] if isinstance(event, dict) else event.type
+    event_id = event.get("id") if isinstance(event, dict) else getattr(event, "id", None)
     obj = (
         event["data"]["object"]
         if isinstance(event, dict)
@@ -143,12 +193,24 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
 
     handler = _HANDLERS.get(event_type)
     if handler is None:
-        logger.info("billing.webhook ignored event_type=%s", event_type)
+        audit(
+            "billing.webhook",
+            outcome="skipped",
+            reason="no_handler",
+            event_id=event_id,
+            event_type=event_type,
+        )
         return
 
     with get_session() as session:
         handler(session, obj)
         session.commit()
+    audit(
+        "billing.webhook",
+        outcome="handled",
+        event_id=event_id,
+        event_type=event_type,
+    )
 
 
 class BillingOwnershipError(Exception):
@@ -252,7 +314,7 @@ def _get_or_create_stripe_customer(user: User) -> str:
 
         customer = stripe.Customer.create(
             email=user.email,
-            metadata={"auth_user_id": user.auth_user_id, "user_id": str(user.id)},
+            metadata={"user_id": str(user.id)},
         )
         if sub is None:
             sub = Subscription(
@@ -323,8 +385,16 @@ def _set_user_plan(session: Session, user_id: int, plan: str) -> None:
     User.plan are mutated in the same session for atomicity."""
     user = session.get(User, user_id)
     if user is not None:
+        previous = user.plan
         user.plan = plan
         session.add(user)
+        audit(
+            "billing.plan_write",
+            outcome="updated",
+            user_id=user_id,
+            previous_plan=previous,
+            new_plan=plan,
+        )
 
 
 @_register("checkout.session.completed")
@@ -346,6 +416,14 @@ def _on_checkout_completed(session: Session, obj) -> None:
         stripe_subscription_id=obj.get("subscription"),
     )
     _set_user_plan(session, user_id, "pro")
+    # Send confirmation email — fire and forget, never blocks the webhook
+    user = session.get(User, user_id)
+    if user:
+        try:
+            from modules.email.service import send_subscription_activated
+            send_subscription_activated(user.email, plan=metadata.get("plan", "Pro").title())
+        except Exception:
+            logger.exception("checkout_completed: email send failed for user_id=%d", user_id)
 
 
 @_register("customer.subscription.updated")
@@ -377,6 +455,11 @@ def _on_subscription_deleted(session: Session, obj) -> None:
         canceled_at=datetime.utcnow(),
     )
     _set_user_plan(session, user.id, "free")
+    try:
+        from modules.email.service import send_subscription_canceled
+        send_subscription_canceled(user.email)
+    except Exception:
+        logger.exception("subscription_deleted: email send failed for user_id=%d", user.id)
 
 
 @_register("invoice.payment_succeeded")

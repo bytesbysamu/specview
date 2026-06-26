@@ -107,7 +107,18 @@ def test_webhook_does_not_require_auth(client, monkeypatch):
 # ── GET /api/billing/status ─────────────────────────────────────────────────
 
 
-def test_status_for_free_user_returns_free_plan_and_null_manage_url(client):
+def test_status_for_free_user_returns_free_plan_and_null_manage_url(client, monkeypatch):
+    # The shared conftest auth-bypass loads a plan="pro" user; override it here
+    # so the billing route reads a genuine free-tier user from g.current_user.
+    from modules.auth.models import User
+    import modules.auth.decorators as _decorators
+
+    monkeypatch.setattr(
+        _decorators,
+        "_load_user",
+        lambda uid: User(id=uid, auth_user_id="free-user", email="free@example.com", plan="free"),
+    )
+
     resp = client.get(
         "/api/billing/status",
         headers={"X-User-Id": "free-1", "X-User-Email": "free@example.com"},
@@ -242,4 +253,68 @@ class TestVerifySession:
             "/api/billing/verify-session?session_id=cs_test_abc",
             headers={"Authorization": ""},
         )
+        assert resp.status_code == 401
+
+
+# ── POST /api/billing/portal ────────────────────────────────────────────────
+
+
+class TestBillingPortal:
+    def test_returns_url_for_user_with_customer(self, client, db_session, make_user):
+        from modules.billing.models import Subscription
+
+        user = make_user(auth_user_id="test-user", email="test@example.com")
+        db_session.add(
+            Subscription(
+                user_id=user.id,
+                plan="pro",
+                status="active",
+                stripe_customer_id="cus_portal_1",
+                stripe_subscription_id="sub_portal_1",
+            )
+        )
+        db_session.commit()
+
+        with patch(
+            "modules.billing.routes.create_portal_session",
+            return_value="https://billing.stripe.com/p/session/zzz",
+        ) as portal:
+            resp = client.post("/api/billing/portal")
+
+        assert resp.status_code == 200
+        assert resp.get_json() == {"url": "https://billing.stripe.com/p/session/zzz"}
+        portal.assert_called_once_with("cus_portal_1")
+
+    def test_returns_404_when_no_customer(self, client):
+        resp = client.post("/api/billing/portal")
+        assert resp.status_code == 404
+        body = resp.get_json()
+        assert body["code"] == "NO_SUBSCRIPTION"
+
+    def test_returns_503_when_stripe_unconfigured(self, client, db_session, make_user):
+        from modules.billing.models import Subscription
+        from modules.billing.service import BillingConfigError
+
+        user = make_user(auth_user_id="test-user", email="test@example.com")
+        db_session.add(
+            Subscription(
+                user_id=user.id,
+                plan="pro",
+                status="active",
+                stripe_customer_id="cus_portal_2",
+            )
+        )
+        db_session.commit()
+
+        with patch(
+            "modules.billing.routes.create_portal_session",
+            side_effect=BillingConfigError("STRIPE_SECRET_KEY is not configured"),
+        ):
+            resp = client.post("/api/billing/portal")
+
+        assert resp.status_code == 503
+        assert resp.get_json()["code"] == "STRIPE_NOT_CONFIGURED"
+
+    def test_returns_401_without_auth(self, client):
+        resp = client.post("/api/billing/portal", headers={"Authorization": ""})
         assert resp.status_code == 401

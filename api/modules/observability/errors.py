@@ -13,9 +13,57 @@ module without an Angular interceptor or test breakage:
                           "status": 500}, 500   (with app.logger.error stack)
 """
 
-from flask import jsonify
+import uuid
+
+import sentry_sdk
+from flask import g, has_request_context, jsonify
 from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
+
+from modules.observability.audit import audit
+
+
+def request_id() -> str:
+    """Return a stable per-request id.
+
+    Uses ``g.request_id`` when set by the app's ``before_request`` hook so the
+    value in the error body matches the ``X-Request-ID`` response header. Falls
+    back to a fresh uuid4 when called outside that hook (e.g. blueprint-only
+    unit tests that register a bare Flask app without the central before_request).
+    """
+    if has_request_context():
+        rid = getattr(g, "request_id", None)
+        if rid:
+            return rid
+        rid = str(uuid.uuid4())
+        g.request_id = rid
+        return rid
+    return str(uuid.uuid4())
+
+
+def error_envelope(code: str, message: str) -> dict:
+    """The single Core error envelope: ``{code, message, request_id}``.
+
+    ``error`` is retained as a deprecated alias of ``message`` for backward
+    compatibility with the existing Angular interceptor and pre-existing tests;
+    it can be dropped once every consumer reads ``message``.
+    """
+    return {
+        "code": code,
+        "message": message,
+        "request_id": request_id(),
+        "error": message,
+    }
+
+
+def core_error(code: str, message: str, status: int):
+    """Build a ``(response, status)`` tuple carrying the unified envelope.
+
+    Routes return this directly so the envelope is consistent without
+    depending on app-level error-handler registration (which blueprint-only
+    unit tests skip).
+    """
+    return jsonify(error_envelope(code, message)), status
 
 
 def register_error_handlers(app) -> None:
@@ -28,6 +76,12 @@ def register_error_handlers(app) -> None:
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(exc: ValidationError):
+        audit(
+            "request.failure",
+            level="warning",
+            code="validation_failed",
+            status=422,
+        )
         return jsonify({
             "error": "validation_failed",
             "details": exc.errors(),
@@ -36,6 +90,14 @@ def register_error_handlers(app) -> None:
 
     @app.errorhandler(HTTPException)
     def handle_http_exception(exc: HTTPException):
+        status = exc.code or 500
+        # 4xx are client faults (warning); 5xx HTTPExceptions are server faults.
+        audit(
+            "request.failure",
+            level="error" if status >= 500 else "warning",
+            code=exc.name,
+            status=status,
+        )
         return jsonify({
             "error": exc.description,
             "status": exc.code,
@@ -43,7 +105,18 @@ def register_error_handlers(app) -> None:
 
     @app.errorhandler(Exception)
     def handle_unhandled_exception(exc: Exception):
+        # structlog + stdlib stack trace, plus Sentry when SENTRY_DSN is set
+        # (capture_exception is a no-op when Sentry is not initialised).
+        sentry_sdk.capture_exception(exc)
         app.logger.error("Unhandled exception", exc_info=True)
+        audit(
+            "request.failure",
+            level="error",
+            code="internal_error",
+            status=500,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
         return jsonify({
             "error": "Internal server error",
             "status": 500,

@@ -15,7 +15,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from config import PROJECTS_DIR
-from modules.ai.services import SKEPTICISM_PROMPT
 from modules.data.projects.service import _make_id
 from modules.data.public.service import generate_slug, register_slug
 from modules.runtime.chain import adapter
@@ -30,7 +29,17 @@ logger = logging.getLogger(__name__)
 _LOCK = threading.Lock()
 _JOBS: dict[str, dict] = {}
 
-_ANALYSIS_SYSTEM = f"You are a markdown spec writer.\n{SKEPTICISM_PROMPT}"
+_ANALYSIS_SYSTEM = """\
+You are a markdown spec writer.
+Distinguish user data from domain claims. The user's own measurements, tool \
+choices, and business decisions are legitimate input — analyze them without \
+challenge. Claims presented as universal domain facts (industry standards, \
+named methodologies, benchmark thresholds) without attribution should be \
+flagged as unverified in Open Questions. When precise numbers are stated as \
+domain facts rather than the user's own data, note them as unverified. When \
+a proper-noun framework or protocol is referenced that you don't recognize, \
+flag it as requiring verification rather than assuming it exists.\
+"""
 
 _ANALYSIS_USER = """\
 You are a filter between a messy brain dump and a structured analysis.

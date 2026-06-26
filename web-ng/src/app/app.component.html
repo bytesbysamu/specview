@@ -21,6 +21,11 @@
           }
         </button>
         @if (auth.isLoggedIn()) {
+          @if (!subscription.isPro()) {
+            <button class="upgrade-btn" data-test="upgrade-checkout" [disabled]="checkoutLoading()" (click)="startUpgrade()" title="Upgrade to Pro">
+              {{ checkoutLoading() ? 'Redirecting…' : 'Upgrade to Pro' }}
+            </button>
+          }
           <button class="logout-btn" (click)="logout()" title="Sign out">Sign out</button>
         } @else if (isAnonShareView()) {
           <a class="logout-btn" [routerLink]="['/signup']" [queryParams]="{share: shareSlug()}" title="Sign up free">Sign up free</a>

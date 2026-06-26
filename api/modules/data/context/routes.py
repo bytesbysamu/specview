@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 
 from config import CONTEXT_PATHS
 from dtos.models import ContextResponse, ContextUpdateRequest, SuccessResponse
+from modules.auth.decorators import require_auth
 from .service import read_context, write_context
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ def _put_handler(key: str):
 
 
 @context_bp.get("/api/context/<key>")
+@require_auth
 def get_context(key: str):
     if key not in _VALID_KEYS:
         return jsonify({"error": f"Unknown context key: {key!r}"}), 404
@@ -39,6 +41,7 @@ def get_context(key: str):
 
 
 @context_bp.put("/api/context/<key>")
+@require_auth
 def put_context(key: str):
     if key not in _VALID_KEYS:
         return jsonify({"error": f"Unknown context key: {key!r}"}), 404

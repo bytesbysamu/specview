@@ -31,3 +31,8 @@ node_modules/
 
 # Data — archive only
 data/archive/
+
+# Runtime project data & local DB (never track — keep master code-only)
+data/spec_doc.db
+data/projects/
+/projects/

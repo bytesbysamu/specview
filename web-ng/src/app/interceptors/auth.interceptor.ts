@@ -4,7 +4,11 @@ import { from } from 'rxjs';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { TokenLifecycleService } from '../services/token-lifecycle.service';
 
-const PUBLIC_PATHS = ['/api/auth/login', '/api/auth/register', '/api/auth/refresh'];
+// Passwordless endpoints that must NOT carry a bearer (magic-link request and
+// the link-token exchange happen before a JWT exists). /api/auth/refresh is
+// also listed so the proactive-refresh path in TokenLifecycleService does not
+// recurse through getToken(); it attaches its own bearer header directly.
+const PUBLIC_PATHS = ['/api/auth/magic-link', '/api/auth/verify', '/api/auth/refresh'];
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const lifecycle = inject(TokenLifecycleService);
