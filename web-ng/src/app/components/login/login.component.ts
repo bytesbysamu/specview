@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
-import { AuthService } from '../../services/auth.service';
+import { ActivatedRoute } from '@angular/router';
+import { AuthService, PENDING_SHARE_KEY } from '../../services/auth.service';
 
 /**
  * Passwordless sign-in: collect an email, request a magic link, then show a
@@ -122,6 +123,7 @@ export class LoginComponent {
   sentTo = signal('');
 
   private auth = inject(AuthService);
+  private route = inject(ActivatedRoute);
 
   async submit(e: Event) {
     e.preventDefault();
@@ -130,6 +132,15 @@ export class LoginComponent {
     if (!email) {
       this.error.set('Please enter your email.');
       return;
+    }
+
+    // Preserve a ?share=slug across the magic-link email round-trip: the emailed
+    // /auth/verify link carries no query params, so stash the slug now and let
+    // VerifyComponent restore it after sign-in. Same-device assumption matches
+    // the "Open it on this device" copy below.
+    const share = this.route.snapshot.queryParamMap.get('share');
+    if (share) {
+      localStorage.setItem(PENDING_SHARE_KEY, share);
     }
 
     this.loading.set(true);

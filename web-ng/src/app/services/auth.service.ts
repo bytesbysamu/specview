@@ -7,6 +7,14 @@ interface MagicLinkResponse { sent: boolean; }
 interface VerifyResponse { token: string; email: string; }
 
 /**
+ * localStorage key holding a ?share=slug captured before the magic-link email
+ * round-trip. Set on the login/signup page (which carries the slug as a query
+ * param) and consumed by VerifyComponent to land the user back on the shared
+ * project after sign-in instead of an empty home.
+ */
+export const PENDING_SHARE_KEY = 'specview_pending_share';
+
+/**
  * Passwordless, magic-link auth against oll-core.
  *
  *   requestMagicLink(email) → POST /api/auth/magic-link  (emails a sign-in link)

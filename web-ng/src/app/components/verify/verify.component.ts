@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, PENDING_SHARE_KEY } from '../../services/auth.service';
 
 /**
  * Landing target for emailed magic links: FRONTEND_URL/auth/verify?token=...
@@ -76,8 +76,25 @@ export class VerifyComponent implements OnInit {
       return;
     }
     try {
+      // verifyToken() stores the JWT and flips the isLoggedIn signal
+      // synchronously, so the app shell at '/' renders the authenticated view
+      // immediately — no re-login flicker, no guard race.
       await this.auth.verifyToken(token);
-      await this.router.navigateByUrl('/');
+
+      // If the user started from a shared link (/?share=slug → /login?share=slug),
+      // the slug was stashed before the email round-trip. Restore it so they land
+      // back on the shared project instead of an empty home.
+      const share = localStorage.getItem(PENDING_SHARE_KEY);
+      if (share) {
+        localStorage.removeItem(PENDING_SHARE_KEY);
+        // Hard navigation (not router): AppComponent reads ?share from
+        // window.location.search in ngOnInit, which only runs on a fresh mount.
+        // A full load re-boots the shell — now logged in — so it picks up the
+        // slug and claims/opens the shared project.
+        window.location.assign(`/?share=${encodeURIComponent(share)}`);
+      } else {
+        await this.router.navigateByUrl('/');
+      }
     } catch {
       this.error.set('This sign-in link is invalid or has expired.');
     }
