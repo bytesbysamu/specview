@@ -4,6 +4,7 @@ Each handler is exercised through its registered key in service._HANDLERS so
 the dispatch table itself is also under test.
 """
 from __future__ import annotations
+import json
 from datetime import datetime
 from unittest.mock import patch
 
@@ -288,7 +289,7 @@ def test_handle_webhook_dispatches_to_registered_handler(monkeypatch, db_session
         lambda *a, **kw: event,
     )
 
-    billing_service.handle_webhook(b"{}", "ok-sig")
+    billing_service.handle_webhook(json.dumps(event).encode(), "ok-sig")
 
     sub = H.sub(db_session, user.id)
     assert sub.status == "past_due"
@@ -304,7 +305,7 @@ def test_handle_webhook_ignores_unregistered_event_types(monkeypatch):
         lambda *a, **kw: event,
     )
     # Must not raise.
-    billing_service.handle_webhook(b"{}", "ok-sig")
+    billing_service.handle_webhook(json.dumps(event).encode(), "ok-sig")
 
 
 # ── audit: every webhook event is recorded ──────────────────────────────────
@@ -333,7 +334,7 @@ def test_handle_webhook_audits_handled_event(monkeypatch, db_session):
     )
 
     with structlog.testing.capture_logs() as cap:
-        billing_service.handle_webhook(b"{}", "ok-sig")
+        billing_service.handle_webhook(json.dumps(event).encode(), "ok-sig")
 
     webhook_lines = [e for e in cap if e.get("event") == "billing.webhook"]
     assert any(
@@ -363,7 +364,7 @@ def test_handle_webhook_audits_skipped_event(monkeypatch):
     )
 
     with structlog.testing.capture_logs() as cap:
-        billing_service.handle_webhook(b"{}", "ok-sig")
+        billing_service.handle_webhook(json.dumps(event).encode(), "ok-sig")
 
     line = next(e for e in cap if e.get("event") == "billing.webhook")
     assert line["outcome"] == "skipped"
@@ -484,3 +485,56 @@ def test_verify_session_raises_session_error_on_invalid_id(monkeypatch):
     ):
         with pytest.raises(billing_service.BillingSessionError):
             billing_service.verify_session("cs_bad_id", 1)
+
+
+# ── full handle_webhook path with a webhook secret set (regression) ──────────
+# The other webhook tests call the handlers with plain dicts, or patch
+# handle_webhook entirely, so none exercise the construct_event path. With a
+# secret configured, stripe>=15 returns a StripeObject (no .get()); dispatching
+# off it 500'd every event. This test signs a real payload and drives the true
+# verify -> dispatch path, asserting the plan flip survives.
+
+
+def test_handle_webhook_with_secret_flips_plan_to_pro(db_session, monkeypatch):
+    import hashlib
+    import hmac
+    import time
+
+    def stripe_sig(payload: bytes, secret: str) -> str:
+        ts = str(int(time.time()))
+        mac = hmac.new(secret.encode(), f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
+        return f"t={ts},v1={mac}"
+
+    secret = "whsec_regression_test"
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", secret)
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_regression")
+
+    user = H.seed(db_session, email="hook@example.com", plan="free")
+
+    payload = json.dumps({
+        "id": "evt_regression_1",
+        "object": "event",
+        "type": "checkout.session.completed",
+        "data": {"object": {
+            "metadata": {"user_id": str(user.id), "plan": "pro"},
+            "customer": "cus_regression_1",
+            "subscription": "sub_regression_1",
+        }},
+    }).encode()
+
+    # Real signature → construct_event verifies it; dispatch runs off the JSON dict.
+    billing_service.handle_webhook(payload, stripe_sig(payload, secret))
+
+    assert H.user(db_session, user.id).plan == "pro"
+    assert H.sub(db_session, user.id).stripe_customer_id == "cus_regression_1"
+
+
+def test_handle_webhook_rejects_forged_signature(db_session, monkeypatch):
+    import json
+
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_regression_test")
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_regression")
+    payload = json.dumps({"id": "evt_x", "object": "event", "type": "checkout.session.completed",
+                          "data": {"object": {}}}).encode()
+    with pytest.raises(billing_service.BillingSignatureError):
+        billing_service.handle_webhook(payload, "t=1,v1=deadbeef")

@@ -169,27 +169,31 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
     without importing stripe directly. Unrecognised event types are ignored
     (Stripe sends events the app doesn't subscribe to in some account configs).
     """
+    import json as _json
+
     _ensure_api_key()
     secret = _webhook_secret()
     if secret:
+        # construct_event is used ONLY to verify the signature (it raises on a
+        # forged payload). We do NOT dispatch off its return value: in
+        # stripe>=15 that is a StripeObject with no .get(), so the handlers
+        # below — which all use dict.get() — would 500 the moment a webhook
+        # secret is configured (i.e. exactly when production hardens this).
         try:
-            event = stripe.Webhook.construct_event(payload, sig_header, secret)
+            stripe.Webhook.construct_event(payload, sig_header, secret)
         except stripe.error.SignatureVerificationError as exc:
             raise BillingSignatureError(str(exc)) from exc
     else:
-        # No webhook secret configured — parse without signature verification.
+        # No webhook secret configured — accept without signature verification.
         # Acceptable for local dev; production MUST set STRIPE_WEBHOOK_SECRET.
         logger.warning("webhook: STRIPE_WEBHOOK_SECRET not set — skipping signature verification")
-        import json as _json
-        event = _json.loads(payload)
 
-    event_type = event["type"] if isinstance(event, dict) else event.type
-    event_id = event.get("id") if isinstance(event, dict) else getattr(event, "id", None)
-    obj = (
-        event["data"]["object"]
-        if isinstance(event, dict)
-        else event.data.object
-    )
+    # Dispatch off plain JSON dicts so handler behaviour is identical whether or
+    # not a webhook secret is set.
+    event = _json.loads(payload)
+    event_type = event.get("type")
+    event_id = event.get("id")
+    obj = (event.get("data") or {}).get("object") or {}
 
     handler = _HANDLERS.get(event_type)
     if handler is None:
