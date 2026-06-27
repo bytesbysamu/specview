@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 
 from flask import Blueprint, g, jsonify, request
 from pydantic import ValidationError
@@ -39,6 +38,7 @@ from modules.auth.service import (
     refresh_token_for_user,
     token_expires_at_iso,
 )
+from config import verify_base_for_product
 from modules.data.db.engine import get_engine
 from modules.email.service import send_magic_link
 from modules.observability.errors import core_error
@@ -48,24 +48,19 @@ logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
-def _frontend_url() -> str:
-    """Base URL the magic link points at. Reads at call time so deploy env and
-    tests can override. Falls back to SITE_URL, then the public oll.am host."""
-    return (
-        os.environ.get("FRONTEND_URL")
-        or os.environ.get("SITE_URL")
-        or "https://oll.am"
-    ).rstrip("/")
-
-
 @auth_bp.post("/magic-link")
 @ip_rate_limit
 def magic_link():
-    """POST /api/auth/magic-link — {email} → {sent: true} (always 200).
+    """POST /api/auth/magic-link — {email, product?} → {sent: true} (always 200).
 
     Mints a single-use token, emails the sign-in link, and ALWAYS reports
     success so the response cannot be used to enumerate which emails have
     accounts. Rate-limited per IP.
+
+    ``product`` selects which frontend the verify link points at, resolved
+    against Core's per-product allow-list. An unknown product is rejected 400
+    — that leaks nothing about the account (it is purely a config error), so
+    anti-enumeration is preserved.
     """
     try:
         req = MagicLinkRequest.model_validate(request.get_json(silent=True) or {})
@@ -74,12 +69,17 @@ def magic_link():
         # account-enumeration / probing signal.
         return jsonify(MagicLinkResponse(sent=True).model_dump()), 200
 
+    product = getattr(req, "product", None)
+    verify_base = verify_base_for_product(product)
+    if verify_base is None:
+        return core_error("INVALID_PRODUCT", f"unknown product: {product}", 400)
+
     email = normalize_email(str(req.email))
 
     with Session(get_engine()) as session:
         raw_token = create_magic_link_token(session, email)
 
-    link = f"{_frontend_url()}/auth/verify?token={raw_token}"
+    link = f"{verify_base}/auth/verify?token={raw_token}"
     send_magic_link(email, link)  # best-effort; never raises, never blocks 200
 
     email_hash = hashlib.sha256(email.encode()).hexdigest()[:12]

@@ -199,6 +199,46 @@ def test_verify_expired_token_returns_401(client, captured_links, _mem_engine):
     assert resp.status_code == 401
 
 
+# ── product key → per-product verify base ───────────────────────────────────
+
+def test_magic_link_default_base_when_no_product(client, captured_links, monkeypatch):
+    monkeypatch.setenv("FRONTEND_URL", "https://specview.dev")
+    resp = client.post(
+        "/api/auth/magic-link",
+        json={"email": _EMAIL},
+        headers={"Authorization": ""},
+    )
+    assert resp.status_code == 200
+    _, link = captured_links[0]
+    assert link.startswith("https://specview.dev/auth/verify?token=")
+
+
+def test_magic_link_known_product_uses_configured_base(client, captured_links, monkeypatch):
+    monkeypatch.setenv("PRODUCT_VERIFY_BASE_FOTO", "https://foto.ch")
+    resp = client.post(
+        "/api/auth/magic-link",
+        json={"email": _EMAIL, "product": "foto"},
+        headers={"Authorization": ""},
+    )
+    assert resp.status_code == 200
+    _, link = captured_links[0]
+    assert link.startswith("https://foto.ch/auth/verify?token=")
+
+
+def test_magic_link_unknown_product_rejected_400(client, captured_links, monkeypatch):
+    monkeypatch.delenv("PRODUCT_VERIFY_BASE_NOPE", raising=False)
+    resp = client.post(
+        "/api/auth/magic-link",
+        json={"email": _EMAIL, "product": "nope"},
+        headers={"Authorization": ""},
+    )
+    assert resp.status_code == 400
+    assert resp.get_json()["code"] == "INVALID_PRODUCT"
+    # No token minted, no link issued — the unknown product is rejected before
+    # any account-state side effect, so nothing about the email is revealed.
+    assert captured_links == []
+
+
 def test_existing_user_reused_on_verify(client, captured_links, _mem_engine):
     from modules.auth.models import User
     with Session(_mem_engine) as session:
