@@ -538,3 +538,54 @@ def test_handle_webhook_rejects_forged_signature(db_session, monkeypatch):
                           "data": {"object": {}}}).encode()
     with pytest.raises(billing_service.BillingSignatureError):
         billing_service.handle_webhook(payload, "t=1,v1=deadbeef")
+
+
+# ── checkout resilience: self-heal stale customer + typed errors ────────────
+
+
+def test_create_checkout_self_heals_stale_customer(db_session, monkeypatch):
+    """A stale stripe_customer_id (mode switch / deleted) is dropped, a fresh
+    customer minted, and checkout retried once — not a 500."""
+    import stripe
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    monkeypatch.setenv("STRIPE_PRO_PRICE_ID", "price_x")
+    user = H.seed(db_session, email="heal@example.com", customer_id="cus_stale")
+
+    calls = {"n": 0}
+
+    def fake_session_create(**kw):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            assert kw["customer"] == "cus_stale"
+            raise stripe.error.InvalidRequestError(
+                "No such customer: 'cus_stale'", "customer", code="resource_missing"
+            )
+        assert kw["customer"] == "cus_fresh"
+        return type("S", (), {"id": "cs_1", "url": "https://checkout.stripe.com/c/pay/cs_1"})()
+
+    monkeypatch.setattr(billing_service.stripe.checkout.Session, "create", fake_session_create)
+    monkeypatch.setattr(
+        billing_service.stripe.Customer, "create",
+        lambda **kw: type("C", (), {"id": "cus_fresh"})(),
+    )
+
+    url = billing_service.create_checkout_session(user)
+    assert url.endswith("cs_1")
+    assert calls["n"] == 2  # retried exactly once
+    assert H.sub(db_session, user.id).stripe_customer_id == "cus_fresh"
+
+
+def test_create_checkout_raises_billing_error_on_other_stripe_error(db_session, monkeypatch):
+    """A non-customer Stripe failure (e.g. bad price) becomes a typed BillingError
+    (route → 502), never a raw 500."""
+    import stripe
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    monkeypatch.setenv("STRIPE_PRO_PRICE_ID", "price_missing")
+    user = H.seed(db_session, email="badprice@example.com", customer_id="cus_ok")
+
+    def boom(**kw):
+        raise stripe.error.InvalidRequestError("No such price: 'price_missing'", "line_items[0][price]", code="resource_missing")
+
+    monkeypatch.setattr(billing_service.stripe.checkout.Session, "create", boom)
+    with pytest.raises(billing_service.BillingError):
+        billing_service.create_checkout_session(user)

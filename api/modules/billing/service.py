@@ -88,6 +88,14 @@ class BillingConfigError(Exception):
     """
 
 
+class BillingError(Exception):
+    """A Stripe call failed for a reason the caller can't fix at request time
+    (provider outage, an invalid/unconfigured price, etc.). Routes map this to
+    a structured 502 instead of leaking a raw 500. The original Stripe error is
+    logged; the message here is safe to surface.
+    """
+
+
 # ── handler registry ────────────────────────────────────────────────────────
 
 
@@ -120,17 +128,33 @@ def _ensure_api_key() -> None:
     stripe.api_key = key
 
 
-def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "monthly") -> str:
-    """Create a Stripe Checkout session and return its URL.
+def _is_missing_customer_error(exc: "stripe.error.StripeError") -> bool:
+    """True when Stripe rejected a request because the `customer` no longer
+    exists — e.g. the stored ID was minted in a different mode (test↔live) or
+    the customer was deleted in the dashboard. Stripe signals this with
+    code='resource_missing' on the `customer` param."""
+    return (
+        isinstance(exc, stripe.error.InvalidRequestError)
+        and getattr(exc, "code", None) == "resource_missing"
+        and (getattr(exc, "param", None) == "customer" or "customer" in str(exc).lower())
+    )
 
-    product: slug identifying the product (oll_pro, headshot_chf29, etc.)
-    plan:    billing interval (monthly, yearly, one_time)
-    """
-    _ensure_api_key()
-    customer_id = _get_or_create_stripe_customer(user)
-    price_id = _price_id_for(product, plan)
-    mode = "payment" if plan == "one_time" else "subscription"
-    session = stripe.checkout.Session.create(
+
+def _clear_stripe_customer(user_id: int) -> None:
+    """Drop a stale stripe_customer_id so the next call mints a fresh one."""
+    with get_session() as session:
+        sub = session.exec(
+            select(Subscription).where(Subscription.user_id == user_id)
+        ).first()
+        if sub and sub.stripe_customer_id:
+            sub.stripe_customer_id = None
+            session.add(sub)
+            session.commit()
+
+
+def _open_checkout(user: User, customer_id: str, mode: str, price_id: str,
+                   product: str, plan: str):
+    return stripe.checkout.Session.create(
         customer=customer_id,
         mode=mode,
         line_items=[{"price": price_id, "quantity": 1}],
@@ -139,6 +163,43 @@ def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "m
         client_reference_id=str(user.id),
         metadata={"user_id": str(user.id), "product": product, "plan": plan},
     )
+
+
+def create_checkout_session(user: User, product: str = "oll_pro", plan: str = "monthly") -> str:
+    """Create a Stripe Checkout session and return its URL.
+
+    product: slug identifying the product (oll_pro, headshot_chf29, etc.)
+    plan:    billing interval (monthly, yearly, one_time)
+
+    Resilience: a stale stripe_customer_id (mode switch / deleted customer) is
+    self-healed once — drop it, mint a fresh customer, retry. Any other Stripe
+    failure is re-raised as a typed BillingError so the route returns a
+    structured 502 rather than a raw 500.
+    """
+    _ensure_api_key()
+    price_id = _price_id_for(product, plan)
+    mode = "payment" if plan == "one_time" else "subscription"
+    try:
+        session = _open_checkout(
+            user, _get_or_create_stripe_customer(user), mode, price_id, product, plan
+        )
+    except stripe.error.StripeError as exc:
+        if _is_missing_customer_error(exc):
+            # Stored customer is gone — drop it, recreate, retry exactly once.
+            logger.warning("checkout: stale customer for user_id=%d — self-healing", user.id)
+            _clear_stripe_customer(user.id)
+            try:
+                session = _open_checkout(
+                    user, _get_or_create_stripe_customer(user), mode, price_id, product, plan
+                )
+            except stripe.error.StripeError as exc2:
+                audit("billing.checkout", outcome="failure", user_id=user.id,
+                      product=product, plan=plan, error=str(exc2)[:200])
+                raise BillingError("could not start checkout — please try again") from exc2
+        else:
+            audit("billing.checkout", outcome="failure", user_id=user.id,
+                  product=product, plan=plan, error=str(exc)[:200])
+            raise BillingError("could not start checkout — please try again") from exc
     audit(
         "billing.checkout",
         outcome="created",

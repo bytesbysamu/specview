@@ -1,0 +1,8 @@
+# Local override: host ports for the full-stack run (no local DB; api uses Neon oll_core via .env).
+services:
+  web:
+    ports:
+      - "8095:80"
+  api:
+    ports:
+      - "3101:3101"
