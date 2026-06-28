@@ -10,4 +10,7 @@ RUN npm run generate:api && npm run build
 # ── Stage 2: Serve with nginx ─────────────────
 FROM nginx:alpine
 COPY --from=build /app/dist/web-ng/browser /usr/share/nginx/html/
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# C2/C3: deployed specview is a Core CLIENT — the core-split conf proxies
+# /api/auth|billing|email → https://core.oll.am (TLS) and product /api/* → api:3101.
+# (Old self-contained monolith conf kept as nginx.conf for reference/rollback.)
+COPY nginx.core-split.conf /etc/nginx/conf.d/default.conf
