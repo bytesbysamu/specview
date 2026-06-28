@@ -318,3 +318,17 @@ class TestBillingPortal:
     def test_returns_401_without_auth(self, client):
         resp = client.post("/api/billing/portal", headers={"Authorization": ""})
         assert resp.status_code == 401
+
+
+def test_create_checkout_billing_error_returns_502(client):
+    from modules.billing.service import BillingError
+    with patch(
+        "modules.billing.routes.create_checkout_session",
+        side_effect=BillingError("could not start checkout — please try again"),
+    ):
+        resp = client.post(
+            "/api/billing/create-checkout-session",
+            headers={"X-User-Id": "u1", "X-User-Email": "u1@example.com"},
+        )
+    assert resp.status_code == 502
+    assert resp.get_json()["code"] == "CHECKOUT_FAILED"

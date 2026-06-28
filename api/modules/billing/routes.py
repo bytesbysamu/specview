@@ -36,6 +36,7 @@ from modules.observability.errors import core_error
 from .models import Subscription
 from .service import (
     BillingConfigError,
+    BillingError,
     BillingOwnershipError,
     BillingSessionError,
     BillingSignatureError,
@@ -74,6 +75,8 @@ def create_checkout():
         url = create_checkout_session(user, product=product, plan=plan)
     except BillingConfigError as exc:
         return core_error("STRIPE_NOT_CONFIGURED", str(exc), 503)
+    except BillingError as exc:
+        return core_error("CHECKOUT_FAILED", str(exc), 502)
     return jsonify(CheckoutSessionResponse(url=url).model_dump()), 200
 
 
