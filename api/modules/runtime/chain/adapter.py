@@ -28,12 +28,16 @@ def _resolve_provider_name() -> str:
 
     Precedence:
       1. CHAIN_PROVIDER explicitly set -> use it as-is.
-      2. ANTHROPIC_API_KEY present -> "claude" (SDK, production default).
-      3. Otherwise -> "cli" (uses Claude Code credential file / keychain).
+      2. OLL_MODEL_BASE_URL present -> "gateway" (route the model call through the
+         frozen oll-model gateway: "any model, pay once", keyless).
+      3. ANTHROPIC_API_KEY present -> "claude" (SDK, direct).
+      4. Otherwise -> "cli" (uses Claude Code credential file / keychain).
     """
     explicit = os.environ.get("CHAIN_PROVIDER")
     if explicit:
         return explicit
+    if os.environ.get("OLL_MODEL_BASE_URL"):
+        return "gateway"
     if os.environ.get("ANTHROPIC_API_KEY"):
         return "claude"
     return "cli"
@@ -49,6 +53,7 @@ def _select_provider():
     mapping = {
         "claude": providers.claude,
         "anthropic": providers.claude,  # alias - brain dump uses this name
+        "gateway": providers.gateway,
         "cli": providers.cli,
         "mock": providers.mock,
     }
