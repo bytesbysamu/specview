@@ -226,3 +226,43 @@ def getUsageSummary_includesResolvedProviderName(monkeypatch):
     resetUsage()
     summary = _adapter.get_usage_summary()
     assert summary["provider"] == "mock"
+
+
+# ── Model / provider forwarding through to the oll-model gateway ───────────
+
+
+def gatewayCaptureJson(monkeypatch):
+    """Route the adapter at the gateway provider and capture the POSTed JSON."""
+    import requests
+    monkeypatch.setenv("CHAIN_PROVIDER", "gateway")
+    monkeypatch.setenv("OLL_MODEL_BASE_URL", "http://oll-model:5003")
+    captured = {}
+
+    def fake_post(url, headers, json, timeout):  # noqa: A002
+        captured.update(json=json)
+        resp = type("R", (), {})()
+        resp.raise_for_status = lambda: None
+        resp.json = lambda: {"text": "ok"}
+        return resp
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    return captured
+
+
+def generate_defaultProvider_omitsProviderFromGatewayPayload(monkeypatch):
+    """No provider override -> the gateway payload carries no provider key
+    (default path is unchanged; the gateway picks its own provider)."""
+    captured = gatewayCaptureJson(monkeypatch)
+    resetUsage()
+    generate("sys", "p")
+    assert "provider" not in captured["json"]
+
+
+def generate_forwardsModelAndProvider_toGatewayPayload(monkeypatch):
+    """generate(model=..., provider=...) reaches the gateway /api/text/complete
+    body — proving the chain adapter forwards both end to end."""
+    captured = gatewayCaptureJson(monkeypatch)
+    resetUsage()
+    generate("sys", "p", model="llama3.2", provider="ollama")
+    assert captured["json"]["model"] == "llama3.2"
+    assert captured["json"]["provider"] == "ollama"
