@@ -34,6 +34,41 @@ ai_bp = Blueprint("ai", __name__, url_prefix="/api/ai/text")
 # § In-Process Job Registry. Co-located with both handlers that mutate it.
 _BOOTSTRAP_JOBS: dict[str, WorkflowExecution] = {}
 
+# Model providers a caller may select per request. Forwarded to the oll-model
+# gateway, which owns the actual switch ("any model, pay once"). Kept in sync
+# with the providers the gateway understands; an unknown value is a clean 400.
+_ALLOWED_PROVIDERS = frozenset({"groq", "ollama", "claude"})
+
+
+def _validate_provider(provider):
+    """Return a 400 (body, status) tuple if ``provider`` is set but unknown, else None.
+
+    Mirrors the explicit ``if not project_name`` 400 already used in this module
+    (and humaniz's TextRewriteRequest allow-list) rather than relying on the
+    global ValidationError->422 handler, so an unknown provider gets a clean,
+    self-describing 400.
+    """
+    if provider is not None and provider not in _ALLOWED_PROVIDERS:
+        return jsonify({
+            "error": "invalid provider",
+            "allowed": sorted(_ALLOWED_PROVIDERS),
+        }), 400
+    return None
+
+
+def _model_overrides(inputs: dict) -> dict:
+    """Build the optional ``provider=`` / ``model=`` kwargs for chain_adapter.generate.
+
+    Empty when neither was supplied, so the default bootstrap call is byte-for-byte
+    unchanged (model defaults to chain_adapter.DEFAULT_MODEL, provider stays None).
+    """
+    overrides: dict = {}
+    if inputs.get("provider"):
+        overrides["provider"] = inputs["provider"]
+    if inputs.get("model"):
+        overrides["model"] = inputs["model"]
+    return overrides
+
 # ---------------------------------------------------------------------------
 # Bootstrap prompt builders (inlined from text_prompts.py — Thin API Phase 3)
 # ---------------------------------------------------------------------------
@@ -232,12 +267,15 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
     """Background thread body. Drives the three-step chain; state machine via WorkflowExecution."""
     t0 = time.monotonic()
     inputs = execution.inputs
+    # Optional per-request provider/model override (gateway-only); empty dict on
+    # the default path keeps every generate() call below byte-for-byte unchanged.
+    overrides = _model_overrides(inputs)
     try:
         execution.current_step_name = "analysis"
         system, prompt = _bootstrap_analysis_prompt(
             inputs["braindump"], inputs["project_name"], inputs["builder"]
         )
-        analysis = chain_adapter.generate(system, prompt).text
+        analysis = chain_adapter.generate(system, prompt, **overrides).text
         execution.outputs["analysis"] = analysis
 
         if execution.status is ExecutionStatus.CANCELLING:
@@ -250,7 +288,7 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
             inputs["braindump"], inputs["project_name"], analysis,
             inputs["builder"], inputs["principles"],
         )
-        epic = chain_adapter.generate(system, prompt).text
+        epic = chain_adapter.generate(system, prompt, **overrides).text
         execution.outputs["epic"] = epic
 
         if execution.status is ExecutionStatus.CANCELLING:
@@ -264,7 +302,9 @@ def _run_bootstrap_thread(execution: WorkflowExecution) -> None:
             inputs["builder"], inputs["principles"],
             inputs["codebase"], inputs["references"],
         )
-        architecture = chain_adapter.generate(system, prompt, max_tokens=16384).text
+        architecture = chain_adapter.generate(
+            system, prompt, max_tokens=16384, **overrides
+        ).text
         execution.outputs["architecture"] = architecture
 
         execution.outputs["latency_ms"] = int((time.monotonic() - t0) * 1000)
@@ -293,6 +333,9 @@ def bootstrap_project():
     braindump = req.braindump.strip()
     if not project_name or not braindump:
         return jsonify({"error": "project_name and braindump are required"}), 400
+    invalid = _validate_provider(req.provider)
+    if invalid:
+        return invalid
 
     job_id = str(uuid.uuid4())
     _projects_dir = Path(PROJECTS_DIR)
@@ -307,6 +350,8 @@ def bootstrap_project():
         "principles": req.principles or read_context("principles"),
         "codebase": req.codebase or read_context("codebase"),
         "references": req.references or read_context("references"),
+        "provider": req.provider,
+        "model": req.model,
     }
     execution = WorkflowExecution(workflow_ref="ai/bootstrap-project", inputs=inputs)
     execution.start()
@@ -570,6 +615,9 @@ def anonymous_bootstrap_project():
     braindump = req.braindump.strip()
     if not project_name or not braindump:
         return jsonify({"error": "project_name and braindump are required"}), 400
+    invalid = _validate_provider(req.provider)
+    if invalid:
+        return invalid
 
     job_id = str(uuid.uuid4())
     _projects_dir = Path(PROJECTS_DIR)
@@ -583,6 +631,8 @@ def anonymous_bootstrap_project():
         "principles": req.principles or read_context("principles"),
         "codebase": "",
         "references": "",
+        "provider": req.provider,
+        "model": req.model,
     }
     execution = WorkflowExecution(workflow_ref="ai/bootstrap-project", inputs=inputs)
     execution.start()

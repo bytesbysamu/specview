@@ -12,6 +12,7 @@ Tests verify:
 from __future__ import annotations
 
 import os
+import time as _time
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -20,6 +21,7 @@ import pytest
 # Force mock provider before create_app imports the chain module.
 os.environ.setdefault("CHAIN_PROVIDER", "mock")
 
+from modules.runtime.chain.adapter import DEFAULT_MODEL
 from modules.runtime.workflows.execution import WorkflowExecution
 from modules.runtime.workflows.workflow import Workflow
 
@@ -429,3 +431,130 @@ class TestCancellation:
         body = response.get_json()
         assert "cannot cancel" in body.get("error", "")
         assert body.get("status") == ExecutionStatus.COMPLETED.value
+
+
+# ---------------------------------------------------------------------------
+# Provider/model selection — completes #125 (route exposure) + gateway guard
+# ---------------------------------------------------------------------------
+#
+# These exercise the per-request provider/model override threaded from the
+# bootstrap routes through chain_adapter.generate to the oll-model gateway
+# payload, plus the gateway-only guard (a provider override on a non-gateway
+# backend must not crash). They run the REAL bootstrap thread (no Thread mock)
+# with requests.post patched, then poll the status endpoint until done.
+#
+# Helper names are camelCase with NO underscores so pytest's
+# python_functions=["test_*", "*_*"] does not collect them as tests.
+
+
+def pollUntilDone(client, statusUrl: str, timeoutS: float = 5.0) -> dict:
+    """Poll a bootstrap status endpoint until done=true (or timeout). Returns the body.
+
+    The status route evicts the job on the first terminal read, so the first
+    done=true body is the one to assert on.
+    """
+    deadline = _time.monotonic() + timeoutS
+    body: dict = {}
+    while _time.monotonic() < deadline:
+        body = client.get(statusUrl).get_json() or {}
+        if body.get("done"):
+            return body
+        _time.sleep(0.02)
+    return body
+
+
+@contextmanager
+def gatewayCapture(monkeypatch):
+    """Point the chain at the gateway provider and capture every POSTed JSON body."""
+    import requests
+
+    monkeypatch.setenv("CHAIN_PROVIDER", "gateway")
+    monkeypatch.setenv("OLL_MODEL_BASE_URL", "http://oll-model:5003")
+    posts: list[dict] = []
+
+    def fake_post(url, headers, json, timeout):  # noqa: A002
+        posts.append(json)
+        resp = type("R", (), {})()
+        resp.raise_for_status = lambda: None
+        resp.json = lambda: {"text": "generated body", "tokens_in": 1, "tokens_out": 1}
+        return resp
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    yield posts
+
+
+def provider_omitted_route_keepsGatewayPayloadDefault(client, monkeypatch):
+    """(a) Omitting provider/model leaves the gateway payload at the chain
+    default — no provider override key, model == chain DEFAULT_MODEL — proven
+    end to end through the route (default behaviour unchanged)."""
+    with gatewayCapture(monkeypatch) as posts:
+        resp = client.post("/api/ai/text/bootstrap-project", json=_H.body())
+        assert resp.status_code == 202, resp.get_json()
+        job_id = resp.get_json()["job_id"]
+        body = pollUntilDone(client, f"/api/ai/text/bootstrap-project/status/{job_id}")
+
+    assert body.get("done") is True, body
+    assert posts, "expected the bootstrap thread to call the gateway"
+    for payload in posts:
+        assert "provider" not in payload          # no caller provider override
+        assert payload["model"] == DEFAULT_MODEL   # chain default, not a caller value
+
+
+def provider_and_model_route_forwardsToGatewayPayload(client, monkeypatch):
+    """(b) provider=ollama + model=... selected on the route reach the gateway
+    /api/text/complete payload for every chain step."""
+    with gatewayCapture(monkeypatch) as posts:
+        resp = client.post(
+            "/api/ai/text/bootstrap-project",
+            json=_H.body(provider="ollama", model="llama3.2"),
+        )
+        assert resp.status_code == 202, resp.get_json()
+        job_id = resp.get_json()["job_id"]
+        body = pollUntilDone(client, f"/api/ai/text/bootstrap-project/status/{job_id}")
+
+    assert body.get("done") is True, body
+    assert posts, "expected the bootstrap thread to call the gateway"
+    for payload in posts:
+        assert payload["provider"] == "ollama"
+        assert payload["model"] == "llama3.2"
+
+
+def invalidProvider_route_returns400(client):
+    """(c) An unknown provider is rejected with a clean 400 before any work starts."""
+    resp = client.post(
+        "/api/ai/text/bootstrap-project",
+        json=_H.body(provider="gpt-4"),
+    )
+    assert resp.status_code == 400, resp.get_json()
+    body = resp.get_json()
+    assert body.get("error") == "invalid provider"
+    assert sorted(body.get("allowed", [])) == ["claude", "groq", "ollama"]
+
+
+def invalidProvider_anonymousRoute_returns400(client):
+    """(c) Same 400 guard on the anonymous landing-page bootstrap route."""
+    resp = client.post(
+        "/api/ai/text/anonymous/bootstrap-project",
+        json=_H.body(provider="nope"),
+        headers={"Authorization": ""},  # anonymous route needs no auth
+    )
+    assert resp.status_code == 400, resp.get_json()
+    assert resp.get_json().get("error") == "invalid provider"
+
+
+def providerOverride_nonGatewayBackend_route_doesNotCrash(client, monkeypatch):
+    """(d) The guard at the route level: a provider override while the active
+    backend is the (non-gateway) mock provider must NOT 500 — the override is
+    dropped and the bootstrap completes successfully."""
+    monkeypatch.setenv("CHAIN_PROVIDER", "mock")
+    resp = client.post(
+        "/api/ai/text/bootstrap-project",
+        json=_H.body(provider="ollama", model="llama3.2"),
+    )
+    assert resp.status_code == 202, resp.get_json()
+    job_id = resp.get_json()["job_id"]
+    body = pollUntilDone(client, f"/api/ai/text/bootstrap-project/status/{job_id}")
+    # done=true with files (not an error) proves no TypeError->500 in the thread.
+    assert body.get("done") is True, body
+    assert body.get("status") != "ERROR", body
+    assert "files" in body, body

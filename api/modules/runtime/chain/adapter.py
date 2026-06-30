@@ -138,16 +138,32 @@ def _get_active_provider():
     return _select_provider()
 
 
-def _provider_kwarg(provider: str | None) -> dict:
-    """Build the optional ``provider=`` kwarg for a provider call.
+def _provider_kwarg(provider: str | None, active) -> dict:
+    """Build the optional ``provider=`` kwarg for a call on the ``active`` provider.
 
     Returned empty when no provider override is requested, so the kwarg is never
-    passed on the default path — keeping every existing provider call site (and
-    the claude/cli/mock providers, which don't take a ``provider``) untouched.
-    Only the oll-model gateway provider understands a provider switch, and only
-    when a caller explicitly targets one.
+    passed on the default path — keeping every existing provider call site
+    untouched.
+
+    GATEWAY-ONLY GUARD: only the oll-model gateway provider's ``create_message`` /
+    ``stream_*`` accept a ``provider`` kwarg; ``claude`` / ``cli`` / ``mock`` do
+    NOT, so forwarding ``provider`` to them would raise ``TypeError`` -> 500. The
+    override is also meaningless for those backends (they speak to a single model
+    family). So when the active provider is not the gateway we DROP the override
+    (logged once) rather than crash — the active backend's own model is used.
+    This keeps a ``provider=`` argument safe to pass regardless of which backend
+    ``CHAIN_PROVIDER`` selects.
     """
-    return {} if provider is None else {"provider": provider}
+    if provider is None:
+        return {}
+    if active is not providers.gateway:
+        logger.warning(
+            "provider override %r ignored: active provider %s does not support a "
+            "provider switch (only the oll-model gateway does)",
+            provider, getattr(active, "__name__", active),
+        )
+        return {}
+    return {"provider": provider}
 
 
 def generate(
@@ -170,7 +186,7 @@ def generate(
     t0 = time.monotonic()
     text, tokens_in, tokens_out = active.create_message(
         effective_system, prompt, model=model, max_tokens=max_tokens,
-        **_provider_kwarg(provider),
+        **_provider_kwarg(provider, active),
     )
     result = ChainResult(
         text=text,
@@ -199,7 +215,7 @@ def rewrite(
     t0 = time.monotonic()
     text, tokens_in, tokens_out = active.create_message(
         system, prompt, model=model, max_tokens=max_tokens,
-        **_provider_kwarg(provider),
+        **_provider_kwarg(provider, active),
     )
     result = ChainResult(
         text=text,
@@ -227,7 +243,7 @@ def stream(
     active = _select_provider()
     yield from active.stream_message(
         effective_system, prompt, model=model, max_tokens=max_tokens,
-        **_provider_kwarg(provider),
+        **_provider_kwarg(provider, active),
     )
 
 
@@ -261,5 +277,5 @@ def stream_generate(
         )
     yield from active.stream_generate(
         system=system, prompt=prompt, model=model, max_tokens=max_tokens,
-        **_provider_kwarg(provider),
+        **_provider_kwarg(provider, active),
     )

@@ -266,3 +266,62 @@ def generate_forwardsModelAndProvider_toGatewayPayload(monkeypatch):
     generate("sys", "p", model="llama3.2", provider="ollama")
     assert captured["json"]["model"] == "llama3.2"
     assert captured["json"]["provider"] == "ollama"
+
+
+# ── Gateway-only guard: a provider override is SAFE on non-gateway backends ──
+# Only the gateway provider's create_message accepts a `provider` kwarg;
+# claude/cli/mock do NOT. Passing `provider=` while the active backend is one of
+# those must NOT raise TypeError -> 500; the adapter drops the meaningless
+# override instead.
+
+
+def providerOverride_onNonGatewayBackend_doesNotCrash_andIsDropped(monkeypatch):
+    """generate(provider=...) with a non-gateway active provider (mock) must not
+    TypeError — the adapter drops the override rather than forwarding a kwarg the
+    mock provider can't accept."""
+    monkeypatch.setenv("CHAIN_PROVIDER", "mock")
+    captured = {}
+
+    # Spy with the REAL mock signature — no `provider` kwarg. If the adapter
+    # forwarded provider= here, this call would TypeError.
+    def spy(system, prompt, *, model="mock", max_tokens=4096):
+        captured["model"] = model
+        captured["called"] = True
+        from modules.runtime.chain.providers.mock import _MOCK_PAYLOAD
+        return _MOCK_PAYLOAD, None, None
+
+    monkeypatch.setattr(providers.mock, "create_message", spy)
+    resetUsage()
+    # Would raise TypeError before the guard; must succeed now.
+    result = generate("sys", "p", provider="ollama")
+    assert captured["called"] is True
+    assert result.latency_ms >= 0
+
+
+def providerKwarg_dropsOverride_whenActiveIsNotGateway():
+    """Unit-level: _provider_kwarg honours provider only for the gateway module."""
+    # Non-gateway active provider -> override dropped (empty kwargs).
+    assert adapter._provider_kwarg("ollama", providers.mock) == {}
+    assert adapter._provider_kwarg("ollama", providers.claude) == {}
+    # Gateway active provider -> override forwarded.
+    assert adapter._provider_kwarg("ollama", providers.gateway) == {"provider": "ollama"}
+    # No override requested -> always empty, regardless of backend.
+    assert adapter._provider_kwarg(None, providers.gateway) == {}
+    assert adapter._provider_kwarg(None, providers.mock) == {}
+
+
+def defaultPath_onNonGatewayBackend_unchanged_noProviderKwarg(monkeypatch):
+    """Omitting provider on a non-gateway backend is byte-for-byte unchanged:
+    create_message is called with no provider kwarg."""
+    monkeypatch.setenv("CHAIN_PROVIDER", "mock")
+    seen = {}
+
+    def spy(system, prompt, *, model="mock", max_tokens=4096, **extra):
+        seen["extra"] = extra
+        from modules.runtime.chain.providers.mock import _MOCK_PAYLOAD
+        return _MOCK_PAYLOAD, None, None
+
+    monkeypatch.setattr(providers.mock, "create_message", spy)
+    resetUsage()
+    generate("sys", "p")
+    assert seen["extra"] == {}  # no provider kwarg leaked on the default path

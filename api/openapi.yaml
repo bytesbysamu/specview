@@ -1945,6 +1945,22 @@ components:
         references:
           type: string
           default: ''
+        provider:
+          type: string
+          nullable: true
+          description: >
+            Optional model-provider override, forwarded to the oll-model
+            gateway ("any model, pay once"). One of: groq, ollama, claude.
+            Omit to use the gateway's configured default (Groq). Unknown
+            values are rejected with 400. Honoured only when the backend is
+            the gateway; ignored for direct/CLI/mock backends.
+        model:
+          type: string
+          nullable: true
+          description: >
+            Optional model id to target on the chosen provider (e.g.
+            "llama3.2" for ollama). Omit to use the provider's default model.
+            Forwarded verbatim to the oll-model gateway.
 
     BootstrapFile:
       type: object
