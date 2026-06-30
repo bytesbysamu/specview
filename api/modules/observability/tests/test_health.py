@@ -123,68 +123,6 @@ class TestNeonHealth:
 
 
 # ---------------------------------------------------------------------------
-# Stripe — API probe: skipped / ok / degraded.
-# ---------------------------------------------------------------------------
-
-
-class TestStripeHealth:
-    def test_skipped_whenSecretKeyUnset(self, client, monkeypatch):
-        """No STRIPE_SECRET_KEY -> 200 {"status": "skipped"}."""
-        monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
-        resp = client.get("/api/health/stripe")
-        assert resp.status_code == 200
-        assert resp.get_json() == {"status": "skipped"}
-
-    def test_ok_whenBalanceRetrieveSucceeds(self, client, monkeypatch):
-        """Successful Balance.retrieve() -> 200 {"status": "ok"}."""
-        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_fake")
-
-        mock_stripe = MagicMock()
-        mock_stripe.Balance.retrieve.return_value = MagicMock()
-
-        with patch.dict("sys.modules", {"stripe": mock_stripe}):
-            resp = client.get("/api/health/stripe")
-
-        assert resp.status_code == 200
-        assert resp.get_json() == {"status": "ok"}
-
-    def test_degraded_whenBalanceRetrieveRaises(self, client, monkeypatch):
-        """stripe exception -> 503 {"status": "degraded", "error": ...}."""
-        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_fake")
-
-        mock_stripe = MagicMock()
-        mock_stripe.Balance.retrieve.side_effect = Exception("invalid api key")
-
-        with patch.dict("sys.modules", {"stripe": mock_stripe}):
-            resp = client.get("/api/health/stripe")
-
-        assert resp.status_code == 503
-        body = resp.get_json()
-        assert body["status"] == "degraded"
-        assert body["error"] == "invalid api key"
-
-    def test_degraded_truncatesLongErrorMessage(self, client, monkeypatch):
-        """Stripe error message is truncated to _MAX_ERROR_CHARS."""
-        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_fake")
-
-        mock_stripe = MagicMock()
-        mock_stripe.Balance.retrieve.side_effect = Exception("e" * 500)
-
-        with patch.dict("sys.modules", {"stripe": mock_stripe}):
-            resp = client.get("/api/health/stripe")
-
-        assert resp.status_code == 503
-        body = resp.get_json()
-        assert body["status"] == "degraded"
-        assert len(body["error"]) == _MAX_ERROR_CHARS
-
-    def test_returnsJsonContentType(self, client, monkeypatch):
-        monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
-        resp = client.get("/api/health/stripe")
-        assert "application/json" in resp.content_type
-
-
-# ---------------------------------------------------------------------------
 # Anthropic — live probe, three branches: skipped / ok / degraded.
 # ---------------------------------------------------------------------------
 
@@ -368,10 +306,9 @@ class TestHealthBlueprintWiring:
     def test_urlPrefix_matchesContract(self):
         assert health_bp.url_prefix == "/api/health"
 
-    def test_allThreeRoutes_registered(self, app):
+    def test_allRoutes_registered(self, app):
         rules = {r.rule for r in app.url_map.iter_rules() if r.rule.startswith("/api/health")}
         assert rules == {
             "/api/health/anthropic",
             "/api/health/neon",
-            "/api/health/stripe",
         }

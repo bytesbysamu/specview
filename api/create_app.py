@@ -27,15 +27,17 @@ ENABLED_MODULES = [
     ('modules.data.templates.routes', 'templates_bp'),
     ('modules.ai.routes.task_gen',  'task_gen_bp'),
     ('modules.ai.routes.spec_gen',  'spec_gen_bp'),   # Task 5
-    ('modules.billing.routes',      'billing_bp'),    # SaaS Foundation Wave 2 (Mon-T2)
     ('modules.ai.routes.stats',     'stats_bp'),      # SaaS Anthropic SDK Provider (SDK-T3)
-    ('modules.auth.routes',         'auth_bp'),       # SaaS Auth Magic Link (Auth-T2)
     ('modules.ai.routes.generic_skill_route', 'skill_bp'),  # Thin API Phase 2 — generic skill route
     ('modules.ai.routes.actions', 'actions_bp'),            # Thin API Phase 3 — action routes
     ('modules.data.public.routes', 'public_bp'),            # Task 1 — public shareable spec URLs
     ('modules.ai.routes.public_analyze', 'public_analyze_bp'),  # Anonymous analysis endpoint
-    ('modules.email.routes',            'email_bp'),         # Core email service (Resend)
 ]
+# NOTE: auth/billing/email blueprints were retired (2026-06-30) — they were the
+# in-repo dev-bench for Core. The deployed product proxies /api/(auth|billing|
+# email)/* to the remote oll-core (core.oll.am); the local copies were dead by
+# routing. The live SSO spine (require_auth → verify_token, the shared
+# AUTH_JWT_SECRET, and the User model) is retained outside this list.
 
 
 def _parse_cors_origins() -> list[str]:
@@ -69,20 +71,21 @@ def _enforce_secret_boot_gate() -> None:
     """Fail-fast in production when security-critical secrets are unset.
 
     Unlike the AI-provider gate (which only warns so the container stays
-    healthy), missing auth/webhook secrets are a hard security failure: a
-    forged Stripe webhook or an unsigned JWT must never be possible. In
-    production we refuse to boot rather than run insecurely; outside
-    production we warn so local dev stays frictionless.
+    healthy), a missing auth secret is a hard security failure: an unsigned
+    JWT must never be possible, since the JWT is the live SSO spine that
+    protects every product route. In production we refuse to boot rather than
+    run insecurely; outside production we warn so local dev stays frictionless.
+
+    The Stripe webhook secret is no longer required here: billing was retired
+    from this product container (it proxies /api/billing/* to the remote
+    oll-core, which owns the webhook). Only the JWT secret remains mandatory.
     """
     is_production = os.environ.get("APP_ENV") == "production"
     jwt_secret = os.environ.get("AUTH_JWT_SECRET") or os.environ.get("JWT_SECRET")
-    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
 
     missing = []
     if not jwt_secret:
         missing.append("AUTH_JWT_SECRET (or JWT_SECRET)")
-    if not webhook_secret:
-        missing.append("STRIPE_WEBHOOK_SECRET")
 
     if not missing:
         return

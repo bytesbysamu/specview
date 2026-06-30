@@ -19,11 +19,9 @@ Contract:
     * configured                       -> executes `SELECT 1` with 5s timeout
         - succeeds                     -> 200 {"status": "ok"}
         - exception                    -> 503 {"status": "degraded", "error": ...}
-- `GET /api/health/stripe` — Stripe API probe.
-    * `STRIPE_SECRET_KEY` not set      -> 200 {"status": "skipped"}
-    * configured                       -> calls `stripe.Balance.retrieve()`
-        - succeeds                     -> 200 {"status": "ok"}
-        - exception                    -> 503 {"status": "degraded", "error": ...}
+
+The Stripe probe was retired with the billing module (2026-06-30); this product
+container no longer talks to Stripe.
 
 Anthropic SDK call uses `Anthropic(timeout=5.0)` to bound the probe; importing
 the SDK lazily inside the handler keeps test collection fast and keeps the
@@ -36,10 +34,6 @@ combined output are surfaced in degraded responses.
 Neon probe executes a trivial `SELECT 1` via SQLAlchemy with a 5-second
 connect_timeout (passed through the query string for Postgres URLs). On any
 exception the probe degrades and surfaces a truncated error message.
-
-Stripe probe lazily imports the `stripe` SDK and calls `Balance.retrieve()`
-with a 5-second request timeout. Lazy import keeps the dependency optional
-so the app starts cleanly when Stripe is not wired.
 """
 
 from __future__ import annotations
@@ -178,32 +172,7 @@ def neon_health():
         )
 
 
-@health_bp.get("/stripe")
-def stripe_health():
-    """Stripe API probe — calls Balance.retrieve() as a lightweight auth check.
-
-    When STRIPE_SECRET_KEY is not set the probe returns skipped (200).  When
-    set, the probe calls stripe.Balance.retrieve() with a 5-second timeout.
-    The stripe SDK is imported lazily so the app starts cleanly when Stripe is
-    not wired.
-    """
-    secret_key = os.environ.get("STRIPE_SECRET_KEY")
-    if not secret_key:
-        return jsonify({"status": "skipped"}), 200
-
-    try:
-        import stripe  # noqa: PLC0415 — lazy import by design
-
-        stripe.Balance.retrieve(
-            stripe_version=None,
-            api_key=secret_key,
-            stripe_account=None,
-            timeout=5,
-        )
-        return jsonify({"status": "ok"}), 200
-    except Exception as exc:  # noqa: BLE001 — probe must survive all failure modes
-        logger.warning("stripe health probe degraded: %s", str(exc)[:_MAX_ERROR_CHARS])
-        return (
-            jsonify({"status": "degraded", "error": str(exc)[:_MAX_ERROR_CHARS]}),
-            503,
-        )
+# NOTE: the /api/health/stripe probe was retired (2026-06-30) along with the
+# billing module — this product container no longer talks to Stripe (it proxies
+# /api/billing/* to the remote oll-core, which owns the Stripe probe). The
+# /neon probe and the root liveness route are unchanged.
