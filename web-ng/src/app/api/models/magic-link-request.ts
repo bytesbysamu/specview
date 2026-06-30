@@ -7,4 +7,9 @@ export interface MagicLinkRequest {
    * Address to send the single-use sign-in link to.
    */
   email: string;
+
+  /**
+   * Optional product key selecting which frontend the sign-in link points at. Core resolves it against a per-product allow-list (PRODUCT_VERIFY_BASE_<PRODUCT>) instead of trusting the Origin header. Omit for the default frontend; an unknown product is rejected with 400 INVALID_PRODUCT.
+   */
+  product?: string;
 }
