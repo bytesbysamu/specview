@@ -409,43 +409,11 @@ def test_create_checkout_session_invokes_stripe_with_pro_price(monkeypatch, make
     assert kwargs["cancel_url"].endswith("/upgrade")
 
 
-def test_create_checkout_recreates_stale_customer(monkeypatch, db_session):
-    """A stored customer ID from another Stripe account/mode (e.g. test→live
-    switch) must not 500 checkout: the service discards it and mints a fresh
-    customer, then persists the new ID."""
-    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_live_x")
-    monkeypatch.setenv("STRIPE_PRO_PRICE_ID", "price_pro_live")
-    monkeypatch.setenv("FRONTEND_URL", "http://localhost:4201")
-    monkeypatch.delenv("STRIPE_PRICE_OLL_PRO_MONTHLY", raising=False)
-    import stripe as _stripe
-
-    user = H.seed(db_session, auth_user_id="auth-stale", email="stale@example.com",
-                  customer_id="cus_test_stale")
-
-    fake_customer = type("C", (), {"id": "cus_live_new"})()
-    fake_session = type("S", (), {"url": "https://checkout.stripe.com/pay/live"})()
-
-    with (
-        patch.object(
-            billing_service.stripe.Customer, "retrieve",
-            side_effect=_stripe.error.InvalidRequestError(
-                "No such customer: 'cus_test_stale'", "customer"),
-        ),
-        patch.object(
-            billing_service.stripe.Customer, "create", return_value=fake_customer
-        ) as customer_create,
-        patch.object(
-            billing_service.stripe.checkout.Session, "create", return_value=fake_session
-        ) as session_create,
-    ):
-        url = billing_service.create_checkout_session(user)
-
-    assert url == "https://checkout.stripe.com/pay/live"
-    customer_create.assert_called_once()
-    # Checkout used the freshly minted live customer, not the stale test one.
-    assert session_create.call_args.kwargs["customer"] == "cus_live_new"
-    # And the new ID is persisted so the next checkout reuses it.
-    assert H.sub(db_session, user.id).stripe_customer_id == "cus_live_new"
+# NOTE: test_create_checkout_recreates_stale_customer was removed — it pinned the
+# old PROACTIVE _stripe_customer_exists/Customer.retrieve behaviour, which has been
+# replaced by the REACTIVE self-heal (see test_create_checkout_self_heals_stale_customer,
+# which covers the same test→live stale-customer scenario without a per-checkout
+# retrieve). Removed verbatim with the proactive code, matching feat/core-lift-phase-a.
 
 
 def test_create_portal_session_returns_stripe_url(monkeypatch):
