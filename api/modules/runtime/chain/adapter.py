@@ -138,6 +138,18 @@ def _get_active_provider():
     return _select_provider()
 
 
+def _provider_kwarg(provider: str | None) -> dict:
+    """Build the optional ``provider=`` kwarg for a provider call.
+
+    Returned empty when no provider override is requested, so the kwarg is never
+    passed on the default path — keeping every existing provider call site (and
+    the claude/cli/mock providers, which don't take a ``provider``) untouched.
+    Only the oll-model gateway provider understands a provider switch, and only
+    when a caller explicitly targets one.
+    """
+    return {} if provider is None else {"provider": provider}
+
+
 def generate(
     system: str,
     prompt: str,
@@ -145,14 +157,20 @@ def generate(
     builder: str = "",
     principles: str = "",
     model: str = DEFAULT_MODEL,
+    provider: str | None = None,
     max_tokens: int = 4096,
 ) -> ChainResult:
-    """Single-shot AI completion. Returns ChainResult with text, latency, tokens."""
+    """Single-shot AI completion. Returns ChainResult with text, latency, tokens.
+
+    ``model`` / ``provider`` are forwarded to the active provider; the oll-model
+    gateway relays them onward only when set (default path is unchanged).
+    """
     effective_system = with_context(system, builder=builder, principles=principles)
-    provider = _select_provider()
+    active = _select_provider()
     t0 = time.monotonic()
-    text, tokens_in, tokens_out = provider.create_message(
-        effective_system, prompt, model=model, max_tokens=max_tokens
+    text, tokens_in, tokens_out = active.create_message(
+        effective_system, prompt, model=model, max_tokens=max_tokens,
+        **_provider_kwarg(provider),
     )
     result = ChainResult(
         text=text,
@@ -160,7 +178,7 @@ def generate(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
     )
-    logger.info("generate provider=%s latency_ms=%d", provider.__name__, result.latency_ms)
+    logger.info("generate provider=%s latency_ms=%d", active.__name__, result.latency_ms)
     _record_usage(model, result)
     return result
 
@@ -170,16 +188,18 @@ def rewrite(
     prompt: str,
     *,
     model: str = DEFAULT_MODEL,
+    provider: str | None = None,
     max_tokens: int = 4096,
 ) -> ChainResult:
     """Instruction-driven text rewrite. No context injection — rewrite is caller-driven.
 
     Contrast with generate(), which prepends builder/principles via with_context().
     """
-    provider = _select_provider()
+    active = _select_provider()
     t0 = time.monotonic()
-    text, tokens_in, tokens_out = provider.create_message(
-        system, prompt, model=model, max_tokens=max_tokens
+    text, tokens_in, tokens_out = active.create_message(
+        system, prompt, model=model, max_tokens=max_tokens,
+        **_provider_kwarg(provider),
     )
     result = ChainResult(
         text=text,
@@ -187,7 +207,7 @@ def rewrite(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
     )
-    logger.info("rewrite provider=%s latency_ms=%d", provider.__name__, result.latency_ms)
+    logger.info("rewrite provider=%s latency_ms=%d", active.__name__, result.latency_ms)
     _record_usage(model, result)
     return result
 
@@ -199,12 +219,16 @@ def stream(
     builder: str = "",
     principles: str = "",
     model: str = DEFAULT_MODEL,
+    provider: str | None = None,
     max_tokens: int = 4096,
 ) -> Iterator[str]:
     """Streaming AI completion. Yields text chunks."""
     effective_system = with_context(system, builder=builder, principles=principles)
-    provider = _select_provider()
-    yield from provider.stream_message(effective_system, prompt, model=model, max_tokens=max_tokens)
+    active = _select_provider()
+    yield from active.stream_message(
+        effective_system, prompt, model=model, max_tokens=max_tokens,
+        **_provider_kwarg(provider),
+    )
 
 
 def stream_generate(
@@ -212,6 +236,7 @@ def stream_generate(
     prompt: str,
     *,
     model: str = DEFAULT_MODEL,
+    provider: str | None = None,
     max_tokens: int = 4096,
 ) -> Iterator[str]:
     """Yield text chunks from the active provider's streaming endpoint.
@@ -228,12 +253,13 @@ def stream_generate(
         If the active provider does not implement ``stream_generate`` (the
         CLI subprocess provider is dev-only and never streams).
     """
-    provider = _get_active_provider()
-    if not hasattr(provider, "stream_generate"):
+    active = _get_active_provider()
+    if not hasattr(active, "stream_generate"):
         raise NotImplementedError(
-            f"Provider {getattr(provider, '__name__', type(provider).__name__)} "
+            f"Provider {getattr(active, '__name__', type(active).__name__)} "
             f"does not support streaming"
         )
-    yield from provider.stream_generate(
-        system=system, prompt=prompt, model=model, max_tokens=max_tokens
+    yield from active.stream_generate(
+        system=system, prompt=prompt, model=model, max_tokens=max_tokens,
+        **_provider_kwarg(provider),
     )

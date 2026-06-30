@@ -9,9 +9,13 @@ The HTTP discipline (one boundary module, single auth header, explicit timeout,
 
 The gateway is identity-free + internal-only: specview authenticates the user
 itself; here we send only the shared ``X-Service-Token``. The gateway owns the
-provider switch ("any model, pay once" — default Groq), so specview does NOT send
-a model id (the gateway applies its configured default). Token counts come back
-in the response body and thread into ``ChainResult`` exactly like the SDK path.
+provider switch ("any model, pay once" — default Groq): when ``provider`` /
+``model`` are omitted the gateway applies its configured default, so the default
+call still sends only ``messages``. When the caller DOES target a specific
+provider/model (e.g. a local Ollama model), those fields are forwarded — added to
+the payload ONLY when non-None, mirroring oll-am's ``text_client.complete``.
+Token counts come back in the response body and thread into ``ChainResult``
+exactly like the SDK path.
 
 Env:
   OLL_MODEL_BASE_URL       base URL of the gateway (e.g. http://oll-model:5003)
@@ -39,8 +43,16 @@ def _service_token() -> str:
     return os.environ.get("OLL_MODEL_SERVICE_TOKEN", "")
 
 
-def _post(messages: list[dict]) -> dict:
+def _post(
+    messages: list[dict], *, provider: str | None = None, model: str | None = None
+) -> dict:
     """POST messages to the gateway's /api/text/complete; return the parsed body.
+
+    ``provider`` / ``model`` are optional per-call targeting overrides — added to
+    the JSON body ONLY when non-None, so the default call sends just ``messages``
+    and the gateway applies its own configured default. This conditional-key
+    build mirrors oll-am's ``text_client.complete`` (the same gateway client on
+    the product side).
 
     Maps every failure to ProviderError (never leaks a raw stack or a gateway
     5xx straight through) — mirroring claude.py's error contract so the chain
@@ -49,11 +61,16 @@ def _post(messages: list[dict]) -> dict:
     base = _base_url()
     if not base:
         raise ProviderError("Model gateway not configured (OLL_MODEL_BASE_URL).", 502)
+    payload: dict = {"messages": messages}
+    if provider is not None:
+        payload["provider"] = provider
+    if model is not None:
+        payload["model"] = model
     try:
         resp = requests.post(
             f"{base}/api/text/complete",
             headers={"X-Service-Token": _service_token()},
-            json={"messages": messages},
+            json=payload,
             timeout=_TIMEOUT,
         )
         resp.raise_for_status()
@@ -71,33 +88,62 @@ def _post(messages: list[dict]) -> dict:
 
 
 def create_message(
-    system: str, prompt: str, *, model: str, max_tokens: int = 4096
+    system: str,
+    prompt: str,
+    *,
+    model: str | None = None,
+    provider: str | None = None,
+    max_tokens: int = 4096,
 ) -> tuple[str, int | None, int | None]:
     """Single-shot relay. Returns ``(text, input_tokens, output_tokens)``.
 
-    ``model`` is accepted for signature-compatibility with the SDK providers but
-    not forwarded — the gateway applies its own configured default (Groq), which
-    is the whole point of "any model, pay once". Token counts may be null when a
-    backend doesn't report usage; the adapter tolerates that.
+    ``model`` / ``provider`` are optional targeting overrides. When omitted
+    (None) nothing is sent and the gateway applies its own configured default
+    (Groq) — the "any model, pay once" behaviour. When set, they're forwarded so
+    the caller can target a specific provider/model (e.g. a local Ollama model).
+    Token counts may be null when a backend doesn't report usage; the adapter
+    tolerates that.
     """
-    data = _post([
-        {"role": "system", "content": system},
-        {"role": "user", "content": prompt},
-    ])
+    data = _post(
+        [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+        provider=provider,
+        model=model,
+    )
     text = (data.get("text") or "").strip()
     if not text:
         raise ProviderError("AI service returned no output. Please try again.", 502)
     return text, data.get("tokens_in"), data.get("tokens_out")
 
 
-def stream_message(system: str, prompt: str, *, model: str, max_tokens: int = 4096):
+def stream_message(
+    system: str,
+    prompt: str,
+    *,
+    model: str | None = None,
+    provider: str | None = None,
+    max_tokens: int = 4096,
+):
     """The gateway's /complete is single-shot, so streaming degrades to one
     chunk — the full text yielded once. Keeps the streaming call-path working
     without the gateway needing a streaming endpoint."""
-    text, _, _ = create_message(system, prompt, model=model, max_tokens=max_tokens)
+    text, _, _ = create_message(
+        system, prompt, model=model, provider=provider, max_tokens=max_tokens
+    )
     yield text
 
 
-def stream_generate(*, system: str, prompt: str, model: str, max_tokens: int = 4096):
+def stream_generate(
+    *,
+    system: str,
+    prompt: str,
+    model: str | None = None,
+    provider: str | None = None,
+    max_tokens: int = 4096,
+):
     """Match claude.py's stream_generate surface (keyword-only) for the adapter."""
-    yield from stream_message(system, prompt, model=model, max_tokens=max_tokens)
+    yield from stream_message(
+        system, prompt, model=model, provider=provider, max_tokens=max_tokens
+    )

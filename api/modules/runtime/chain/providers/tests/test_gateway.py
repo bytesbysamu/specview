@@ -1,6 +1,7 @@
 """Verify the oll-model gateway provider: it posts messages to the gateway,
-returns ``(text, tokens_in, tokens_out)``, sends the service token, omits the
-model id (the gateway picks its own default), and maps failures to ProviderError.
+returns ``(text, tokens_in, tokens_out)``, sends the service token, forwards
+``model`` / ``provider`` ONLY when targeted (omitted on the default path so the
+gateway applies its own default), and maps failures to ProviderError.
 
 The HTTP boundary (``requests.post``) is mocked — no real network call.
 """
@@ -34,15 +35,49 @@ def test_createMessage_postsMessagesAndReturnsTextAndTokens(monkeypatch):
 
     monkeypatch.setattr(requests, "post", fake_post)
 
-    text, tin, tout = gateway.create_message("be terse", "fix this", model="claude-opus-4-6")
+    text, tin, tout = gateway.create_message("be terse", "fix this")
 
     assert text == "a gateway rewrite"  # trimmed
     assert (tin, tout) == (9, 13)
     assert captured["url"].endswith("/api/text/complete")
     assert captured["headers"]["X-Service-Token"] == "tok-123"
     assert [m["role"] for m in captured["json"]["messages"]] == ["system", "user"]
-    # The gateway owns the provider/model switch — specview must NOT forward a model id.
-    assert "model" not in captured["json"]
+
+
+def test_createMessage_omitsModelAndProvider_whenNotTargeted(monkeypatch):
+    """Default path: no model/provider given -> payload carries ONLY messages,
+    so the gateway applies its own configured default ("any model, pay once")."""
+    monkeypatch.setenv("OLL_MODEL_BASE_URL", "http://oll-model:5003")
+    captured = {}
+
+    def fake_post(url, headers, json, timeout):  # noqa: A002
+        captured.update(json=json)
+        return okResponse({"text": "ok"})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    gateway.create_message("s", "p")
+
+    assert set(captured["json"]) == {"messages"}  # only messages, nothing else
+
+
+def test_createMessage_forwardsModelAndProvider_whenTargeted(monkeypatch):
+    """Targeting a specific provider/model (e.g. local Ollama) forwards both
+    fields in the POSTed JSON so the gateway routes to them."""
+    monkeypatch.setenv("OLL_MODEL_BASE_URL", "http://oll-model:5003")
+    captured = {}
+
+    def fake_post(url, headers, json, timeout):  # noqa: A002
+        captured.update(json=json)
+        return okResponse({"text": "ok"})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    gateway.create_message("s", "p", provider="ollama", model="llama3.2")
+
+    assert captured["json"]["provider"] == "ollama"
+    assert captured["json"]["model"] == "llama3.2"
+    assert [m["role"] for m in captured["json"]["messages"]] == ["system", "user"]
 
 
 def test_createMessage_tolerates_null_tokens(monkeypatch):
