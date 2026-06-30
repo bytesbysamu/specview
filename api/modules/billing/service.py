@@ -368,41 +368,22 @@ def _activate_pro_from_session(cs: Any, user_id: int) -> None:
     logger.info("verify_session: activated pro for user_id=%d customer=%s", user_id, customer_id)
 
 
-def _stripe_customer_exists(customer_id: str) -> bool:
-    """True if the customer exists (and isn't deleted) in the current Stripe account.
-
-    A stored customer ID can go stale when the app switches Stripe keys (test and
-    live are separate namespaces, so a test-mode cus_ does not exist under a live
-    key) or when the customer is deleted in Stripe. The SDK raises
-    InvalidRequestError ("No such customer") for an unknown ID and returns an
-    object with deleted=True for a deleted one.
-    """
-    try:
-        customer = stripe.Customer.retrieve(customer_id)
-    except stripe.error.InvalidRequestError:
-        return False
-    return not getattr(customer, "deleted", False)
-
-
 def _get_or_create_stripe_customer(user: User) -> str:
     """Return the User's Stripe customer ID, creating one lazily on first call.
 
-    Self-heals a stale ID: if the stored customer no longer exists in the current
-    Stripe account (key/mode switch, or deleted in Stripe), discard it and mint a
-    fresh one instead of letting checkout 500 with "No such customer".
+    A stale stored ID (key/mode switch, or deleted in Stripe) is NOT pre-checked
+    here — that would cost a live ``Customer.retrieve`` on every checkout. Instead
+    ``create_checkout_session`` self-heals REACTIVELY: if checkout fails with a
+    missing-customer error, it drops the stored ID, mints a fresh customer, and
+    retries once. (Lifted verbatim from feat/core-lift-phase-a — the proactive
+    ``_stripe_customer_exists`` retrieve was removed there.)
     """
     with get_session() as session:
         sub = session.exec(
             select(Subscription).where(Subscription.user_id == user.id)
         ).first()
         if sub and sub.stripe_customer_id:
-            if _stripe_customer_exists(sub.stripe_customer_id):
-                return sub.stripe_customer_id
-            logger.warning(
-                "billing: stored stripe_customer_id=%s not found in current "
-                "Stripe account (key/mode switch or deleted) — recreating",
-                sub.stripe_customer_id,
-            )
+            return sub.stripe_customer_id
 
         customer = stripe.Customer.create(
             email=user.email,
