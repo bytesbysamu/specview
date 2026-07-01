@@ -26,7 +26,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
         id: filter
         with:
@@ -46,7 +46,7 @@ jobs:
     name: Compose config lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: No localhost in healthchecks
         run: |
           # localhost in a container resolves to ::1 (IPv6), but gunicorn/nginx
@@ -70,7 +70,7 @@ jobs:
       run:
         working-directory: api
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -127,7 +127,7 @@ jobs:
       run:
         working-directory: web-ng
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: "20"
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -226,7 +226,7 @@ jobs:
     env:
       CHAIN_PROVIDER: mock
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Build images
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
       - name: Start stack
