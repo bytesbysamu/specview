@@ -4,6 +4,8 @@
 .env.*.local
 .env.production
 .env.coolify
+.env.prod
+.env-archive/
 
 # Claude Code runtime (docker container sessions, credentials)
 .claude-docker/
