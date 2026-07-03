@@ -49,7 +49,6 @@ _STYLE_INSTRUCTIONS = {
     "Narrative": "Rewrite in a narrative style: smooth, flowing prose with natural connective tissue.",
     "Punchy": "Rewrite in a punchy style: short, high-energy sentences built on strong verbs.",
 }
-_VALID_STYLES = list(_STYLE_INSTRUCTIONS)
 
 
 def _text_or_400(body: dict):
