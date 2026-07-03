@@ -75,3 +75,35 @@ def verify_base_for_product(product: str | None) -> str | None:
     if not product or product.strip().lower() == DEFAULT_PRODUCT:
         return default_verify_base()
     return (os.environ.get(_product_env_key(product)) or "").rstrip("/") or None
+
+
+# ── Shared oll-am write-service (the ONE text-ops engine) ────────────────────
+# specview's inline text verbs (expand · compress · clarify · simplify · tldr ·
+# bullets · rewrite · brainstorm) are NO LONGER served by per-product SKILL.md
+# prompts + an in-process model call. All EIGHT are delegated to the shared oll-am
+# write-service (POST /api/write/<verb>), which owns BOTH the prompt + the
+# oll-model gateway call AND the Core auth/plan gate. This completes the "no
+# backend per product" PoC (humaniz.me migrated first) — specview keeps a backend
+# only for its stateful surface (spec pipelines, git-backed project data,
+# coherence lint), not for flat text ops.
+#
+# NON-SECRET, so it DEFAULTS to the deployed engine (https://write.oll.am) and is
+# NOT required at boot — override WRITE_SERVICE_BASE_URL for local dev (e.g. the
+# Docker service name http://write-service:5002 on the shared `ollam` net, or a
+# local oll-write). The caller's Bearer JWT is forwarded verbatim; write-service
+# does the auth + live-plan gate itself, so specview does not double-gate the model
+# call. Config principle: non-secrets get a sensible default in code (configurable
+# + simple); only secrets must be set in env.
+DEFAULT_WRITE_SERVICE_BASE_URL = "https://write.oll.am"
+
+
+def write_service_base_url() -> str:
+    return (
+        os.environ.get("WRITE_SERVICE_BASE_URL") or DEFAULT_WRITE_SERVICE_BASE_URL
+    ).rstrip("/")
+
+
+# Explicit timeout (seconds) on every write-service call — never unbounded. Sized
+# to cover write-service's own (possibly multi-pass) model calls, each a gateway
+# round-trip. Override via WRITE_SERVICE_HTTP_TIMEOUT.
+WRITE_SERVICE_HTTP_TIMEOUT = float(os.environ.get("WRITE_SERVICE_HTTP_TIMEOUT", "90"))
