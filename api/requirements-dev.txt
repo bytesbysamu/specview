@@ -1,9 +1,9 @@
 -r requirements.txt
 pytest>=9.1.1
 openapi-spec-validator>=0.9.0
-datamodel-code-generator==0.66.0
+datamodel-code-generator==0.68.0
 flake8
 pytest-httpserver>=1.1.5
 jsonschema>=4.26.0
 pyyaml>=6.0.3
-syrupy>=5.3.4
+syrupy>=5.5.1
